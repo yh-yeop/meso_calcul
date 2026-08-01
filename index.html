@@ -235,7 +235,7 @@
           <button class="btn" id="btn-add">캐릭터 추가</button>
           <button class="btn" id="btn-paste" aria-expanded="false" aria-controls="paste">정산표 붙여넣기</button>
         </div>
-        <textarea id="paste" aria-label="maplescouter 정산표 붙여넣기" placeholder="maplescouter 주간 보스 정산 페이지에서 텍스트를 긁어 그대로 붙여넣으면 캐릭터별로 분해됨.&#10;&#10;예)&#10;주간보스 수익&#10;14억 2580만&#10;월간보스 수익&#10;6억 6500만"></textarea>
+        <textarea id="paste" aria-label="maplescouter 캐릭터 목록 붙여넣기" placeholder="maplescouter 보스 정산 페이지의 캐릭터 목록을 통째로 드래그해서 붙여넣으면 이름·주간·월간이 자동으로 잡힘.&#10;&#10;#1제네시스 2차 해방&#10;베라&#10;호야시치&#10;Lv.289 소마&#10;주간수익&#10;2,131,700,000&#10;월간수익&#10;665,000,000"></textarea>
         <div class="parsemsg" id="parsemsg"></div>
       </section>
 
@@ -394,71 +394,115 @@
   });
 
   /* ---------- paste parser ----------
-     maplescouter 정산표는 [라벨][값] 순서로 나옴.
-     "주간보스 수익" / "월간보스 수익"만 취하고 "합계"는 버림.        */
+     maplescouter 캐릭터 목록을 통째로 긁으면 캐릭터마다 이런 블록이 나옴:
 
+       #1제네시스 2차 해방
+       베라
+       호야시치            <- 이름 (Lv. 줄 바로 위)
+       Lv.289 소마
+       57,101
+       주간수익
+       2,131,700,000       <- 원 단위 메소
+       월간수익
+       665,000,000
+       🪙 12 / sole 1.51 / de 16   <- 뒤에 붙는 잡다한 숫자
+
+     그래서 #N 으로 블록을 자르고, 블록 안에서 주간수익/월간수익 라벨
+     바로 뒤 숫자만 읽는다. 앞뒤 UI 텍스트는 자연스럽게 버려짐.       */
+
+  // "2,131,700,000"(원) / "21억 3170만" / "21.317"(억) 을 전부 억 단위로
   function parseMeso(s){
-    var eok = 0, man = 0;
+    s = String(s).trim();
     var me = s.match(/([\d,]+(?:\.\d+)?)\s*억/);
     var mm = s.match(/([\d,]+(?:\.\d+)?)\s*만/);
-    if (me) eok = parseFloat(me[1].replace(/,/g,""));
-    if (mm) man = parseFloat(mm[1].replace(/,/g,""));
-    if (!me && !mm){
-      var plain = s.match(/^\s*([\d,]+(?:\.\d+)?)\s*$/);
-      if (plain) return parseFloat(plain[1].replace(/,/g,""));
-      return null;
+    if (me || mm){
+      return (me ? parseFloat(me[1].replace(/,/g,"")) : 0) +
+             (mm ? parseFloat(mm[1].replace(/,/g,"")) : 0) / 10000;
     }
-    return eok + man / 10000;
+    var plain = s.match(/^([\d,]+(?:\.\d+)?)$/);
+    if (!plain) return null;
+    var v = parseFloat(plain[1].replace(/,/g,""));
+    if (!isFinite(v)) return null;
+    // 사이트는 메소를 원 단위로 찍음. 주 수익이 1만억일 리도, 1만 메소일 리도 없음
+    return v >= 10000 ? v / 1e8 : v;
   }
 
-  function parsePaste(text){
-    var lines = text.split(/\r?\n/).map(function(l){ return l.trim(); }).filter(Boolean);
-    var chars = [], pend = {}, mode = null, lastNum = null;
+  // from 부터 몇 줄 안에서 처음 나오는 숫자
+  function nextMeso(lines, from){
+    for (var i = from; i < lines.length && i < from + 3; i++){
+      var v = parseMeso(lines[i]);
+      if (v !== null) return v;
+    }
+    return 0;
+  }
 
+  function readBlock(block){
+    var name = "", weekly = 0, monthly = 0;
+    for (var i = 0; i < block.length; i++){
+      var l = block[i];
+      if (!name && i > 0 && /^Lv\.?\s*\d+/i.test(l)) name = block[i-1];
+      if (/주간\s*수익/.test(l))      weekly  = nextMeso(block, i+1);
+      else if (/월간\s*수익/.test(l)) monthly = nextMeso(block, i+1);
+    }
+    if (!name) name = block[2] || block[1] || "";
+    return {name:name.replace(/^#\d+\s*/, ""), weekly:weekly, monthly:monthly};
+  }
+
+  // 라벨-값 쌍만 있는 형식 (정산표 일부만 긁었을 때)
+  function readPairs(lines){
+    var chars = [], pend = {}, mode = null;
     lines.forEach(function(line){
-      var isLabel = /수익|합계|정산/.test(line) && !/^\s*[\d,]/.test(line);
-      if (isLabel){
-        if (/합계/.test(line))            mode = "skip";
-        else if (/주간\s*보스|주간보스/.test(line)) mode = "weekly";
-        else if (/월간\s*보스|월간보스/.test(line)) mode = "monthly";
-        else mode = null;
-        return;
-      }
+      if (/합계/.test(line)){ mode = null; return; }
+      if (/주간/.test(line) && /수익/.test(line)){ mode = "weekly";  return; }
+      if (/월간/.test(line) && /수익/.test(line)){ mode = "monthly"; return; }
+      if (!mode) return;
       var v = parseMeso(line);
       if (v === null) return;
-
-      if (mode === "weekly"){ pend.weekly = v; }
-      else if (mode === "monthly"){
-        // 라벨이 잘려 주간값이 안 잡혔으면 직전 숫자를 주간으로 본다
-        if (pend.weekly === undefined && lastNum !== null) pend.weekly = lastNum;
-        pend.monthly = v;
-      }
+      pend[mode] = v;
       mode = null;
-      lastNum = v;
-
       if (pend.weekly !== undefined && pend.monthly !== undefined){
-        chars.push({weekly:pend.weekly, monthly:pend.monthly});
+        chars.push({name:"", weekly:pend.weekly, monthly:pend.monthly});
         pend = {};
       }
     });
     return chars;
   }
 
+  function parsePaste(text){
+    var lines = text.split(/\r?\n/).map(function(l){ return l.trim(); }).filter(Boolean);
+
+    var starts = [];
+    lines.forEach(function(l, i){ if (/^#\d+/.test(l)) starts.push(i); });
+
+    if (starts.length){
+      return starts.map(function(s, k){
+        return readBlock(lines.slice(s, k + 1 < starts.length ? starts[k+1] : lines.length));
+      }).filter(function(c){ return c.weekly > 0 || c.monthly > 0; });
+    }
+    return readPairs(lines);
+  }
+
   $("paste").addEventListener("input", function(){
     var msg = $("parsemsg");
     var txt = this.value;
     if (!txt.trim()){ msg.textContent = ""; msg.className = "parsemsg"; return; }
+
     var found = parsePaste(txt);
     if (!found.length){
-      msg.textContent = "숫자를 못 찾았음. 라벨과 값이 같이 붙었는지 확인해봐.";
+      msg.textContent = "캐릭터를 못 찾았음. 캐릭터 목록을 통째로 드래그해서 붙여봐.";
       msg.className = "parsemsg bad";
       return;
     }
+
     roster = found.map(function(c, i){
-      return {name:(i === 0 ? "본캐" : "부캐 " + i), weekly:c.weekly, monthly:c.monthly};
+      return {name: c.name || (i === 0 ? "본캐" : "부캐 " + i),
+              weekly: c.weekly, monthly: c.monthly};
     });
     renderRoster(); render();
-    msg.textContent = "캐릭터 " + found.length + "개 불러옴.";
+
+    var names = roster.map(function(c){ return c.name; }).slice(0, 4).join(", ");
+    msg.textContent = "캐릭터 " + found.length + "개 불러옴 — " + names +
+                      (found.length > 4 ? " 외 " + (found.length - 4) + "명" : "");
     msg.className = "parsemsg";
   });
 
