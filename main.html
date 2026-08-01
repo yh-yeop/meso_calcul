@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>메소 적립 계산기</title>
+<style>
+  :root{
+    --ink:#141220;
+    --ink-2:#1C1930;
+    --surface:#211D38;
+    --line:#332D52;
+    --line-soft:#2A2543;
+    --gold:#E9B949;
+    --gold-dim:#8A6E2C;
+    --violet:#9C7BF0;
+    --rose:#E8639B;
+    --mint:#4FD1AA;
+    --text:#EFECF8;
+    --muted:#948DB4;
+    --muted-2:#6E668C;
+    --mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,Consolas,"D2Coding",monospace;
+    --sans:"Pretendard",-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1100px 620px at 82% -12%, #2C2450 0%, transparent 62%),
+      radial-gradient(760px 480px at -8% 108%, #23203C 0%, transparent 58%),
+      var(--ink);
+    color:var(--text);font-family:var(--sans);line-height:1.55;
+    min-height:100vh;padding:36px 24px 72px;-webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1120px;margin:0 auto}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted-2)}
+
+  .hero{border-bottom:1px solid var(--line);padding-bottom:30px;margin-bottom:32px}
+  .hero h1{font-size:clamp(26px,4.4vw,40px);font-weight:760;letter-spacing:-.025em;margin-top:10px}
+  .hero p{color:var(--muted);font-size:14.5px;margin-top:9px;max-width:60ch}
+
+  .readout{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(216px,1fr));
+    gap:1px;background:var(--line-soft);border:1px solid var(--line-soft);
+    border-radius:14px;overflow:hidden;margin-top:30px;
+  }
+  .cell{background:var(--ink-2);padding:20px 22px}
+  .cell .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted-2)}
+  .cell .v{font-family:var(--mono);font-size:31px;font-weight:600;letter-spacing:-.03em;
+           font-variant-numeric:tabular-nums;margin-top:9px;line-height:1.1}
+  .cell .v small{font-size:15px;font-weight:500;color:var(--muted);margin-left:3px}
+  .cell .s{font-size:12.5px;color:var(--muted);margin-top:7px;font-variant-numeric:tabular-nums}
+  .v.gold{color:var(--gold)} .v.mint{color:var(--mint)}
+
+  .grid{display:grid;grid-template-columns:372px 1fr;gap:26px;align-items:start}
+  .panel{background:var(--ink-2);border:1px solid var(--line-soft);border-radius:14px;padding:22px}
+  .panel + .panel{margin-top:20px}
+  .panel h2{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+            color:var(--muted-2);font-weight:500;margin-bottom:16px;
+            display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .panel h2 em{font-style:normal;letter-spacing:0;text-transform:none;font-size:11.5px;color:var(--gold);
+               font-variant-numeric:tabular-nums}
+
+  .row{display:flex;align-items:center;justify-content:space-between;gap:14px;
+       padding:11px 0;border-bottom:1px solid var(--line-soft)}
+  .row:last-of-type{border-bottom:0;padding-bottom:0}
+  .row label{font-size:13.5px;color:var(--text);flex:1;min-width:0}
+  .row label i{display:block;font-style:normal;font-size:11.5px;color:var(--muted-2);margin-top:2px}
+  .field{display:flex;align-items:center;gap:7px;flex-shrink:0}
+  .field .unit{font-family:var(--mono);font-size:12px;color:var(--muted-2)}
+
+  input[type=number],input[type=date],input[type=text],textarea{
+    background:var(--surface);border:1px solid var(--line);border-radius:8px;color:var(--text);
+    font-family:var(--mono);font-size:13.5px;font-variant-numeric:tabular-nums;
+    padding:8px 10px;transition:border-color .14s,box-shadow .14s;
+  }
+  input[type=number]{width:112px;text-align:right}
+  input[type=date]{width:146px}
+  input:focus,textarea:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(233,185,73,.14)}
+  input::-webkit-calendar-picker-indicator{filter:invert(.72)}
+
+  /* roster */
+  .rhead,.rrow{display:grid;grid-template-columns:1fr 84px 84px 26px;gap:8px;align-items:center}
+  .rhead{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--muted-2);
+         text-transform:uppercase;padding-bottom:8px;border-bottom:1px solid var(--line-soft);margin-bottom:10px}
+  .rhead span:nth-child(2),.rhead span:nth-child(3){text-align:right}
+  .rrow{margin-bottom:8px}
+  .rrow input[type=text]{width:100%;font-family:var(--sans);font-size:13px;text-align:left;padding:7px 9px}
+  .rrow input[type=number]{width:100%;font-size:12.5px;padding:7px 8px}
+  .del{background:transparent;border:0;color:var(--muted-2);font-size:17px;line-height:1;
+       cursor:pointer;padding:4px;border-radius:6px;transition:color .14s}
+  .del:hover{color:var(--rose)}
+  .del:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+
+  .btnrow{display:flex;gap:8px;margin-top:12px}
+  .btn{flex:1;background:transparent;border:1px dashed var(--line);border-radius:9px;color:var(--muted);
+       font-family:var(--sans);font-size:12.5px;padding:10px;cursor:pointer;transition:border-color .14s,color .14s}
+  .btn:hover{border-color:var(--gold-dim);color:var(--gold)}
+  .btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+  textarea{width:100%;min-height:96px;resize:vertical;font-size:12px;line-height:1.6;margin-top:12px;display:none}
+  textarea.open{display:block}
+  .parsemsg{font-size:12px;margin-top:9px;color:var(--mint);min-height:1em}
+  .parsemsg.bad{color:var(--rose)}
+
+  .check{display:flex;align-items:center;gap:9px;padding-top:14px;margin-top:4px;border-top:1px solid var(--line-soft)}
+  .check input{width:16px;height:16px;accent-color:var(--gold);flex-shrink:0}
+  .check label{font-size:13px;color:var(--muted);cursor:pointer}
+
+  .chartbox{position:relative}
+  svg{display:block;width:100%;height:auto;overflow:visible}
+  .legend{display:flex;flex-wrap:wrap;gap:18px;margin-top:16px;font-size:12px;color:var(--muted)}
+  .legend span{display:flex;align-items:center;gap:7px}
+  .swatch{width:13px;height:2.5px;border-radius:2px;flex-shrink:0}
+
+  .bars{display:flex;flex-direction:column;gap:13px}
+  .bar-row .top{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;margin-bottom:6px}
+  .bar-row .top b{font-weight:500}
+  .bar-row .top span{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--muted);font-size:12.5px}
+  .track{height:7px;background:var(--surface);border-radius:4px;overflow:hidden}
+  .fill{height:100%;border-radius:4px;transition:width .3s ease}
+
+  .note{margin-top:18px;padding-top:16px;border-top:1px solid var(--line-soft);
+        font-size:13px;color:var(--muted);line-height:1.75}
+  .note b{color:var(--gold);font-weight:600;font-variant-numeric:tabular-nums}
+  .warn{margin-top:16px;padding:13px 15px;background:rgba(232,99,155,.09);
+        border:1px solid rgba(232,99,155,.26);border-radius:10px;font-size:12.5px;color:#F1A9C7}
+
+  @media (max-width:900px){
+    body{padding:26px 16px 56px}
+    .grid{grid-template-columns:1fr}
+    .cell .v{font-size:27px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="eyebrow">Meso Projection</div>
+    <h1>메소 적립 계산기</h1>
+    <p>주간보스는 목요일, 월간보스는 매월 1일에 한 번에 들어옴. 사냥만 매일 쌓임. 그래서 잔고는 매끄럽게 늘지 않고 계단으로 올라감.</p>
+
+    <div class="readout">
+      <div class="cell">
+        <div class="k">목표 메소 도달</div>
+        <div class="v gold" id="out-days">—</div>
+        <div class="s" id="out-date">—</div>
+      </div>
+      <div class="cell">
+        <div class="k">목표 날짜 예상 잔고</div>
+        <div class="v mint" id="out-bal">—</div>
+        <div class="s" id="out-bal-sub">—</div>
+      </div>
+      <div class="cell">
+        <div class="k">월 평균 수익</div>
+        <div class="v" id="out-month">—</div>
+        <div class="s" id="out-day">—</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div>
+      <section class="panel">
+        <h2>캐릭터 <em id="roster-sum">—</em></h2>
+        <div class="rhead"><span>캐릭터</span><span>주간보스</span><span>월간보스</span><span></span></div>
+        <div id="roster"></div>
+        <div class="btnrow">
+          <button class="btn" id="btn-add">캐릭터 추가</button>
+          <button class="btn" id="btn-paste">정산표 붙여넣기</button>
+        </div>
+        <textarea id="paste" placeholder="maplescouter 주간 보스 정산 페이지에서 텍스트를 긁어 그대로 붙여넣으면 캐릭터별로 분해됨.&#10;&#10;예)&#10;주간보스 수익&#10;14억 2580만&#10;월간보스 수익&#10;6억 6500만"></textarea>
+        <div class="parsemsg" id="parsemsg"></div>
+      </section>
+
+      <section class="panel">
+        <h2>사냥</h2>
+        <div class="row">
+          <label>재획 시급 <i>사냥 1시간당</i></label>
+          <div class="field"><input type="number" id="in-rate" step="0.01" value="3"><span class="unit">억</span></div>
+        </div>
+        <div class="row">
+          <label>일 사냥 시간</label>
+          <div class="field"><input type="number" id="in-hours" step="0.5" min="0" max="24" value="2"><span class="unit">시간</span></div>
+        </div>
+        <div class="check">
+          <input type="checkbox" id="in-skip" checked>
+          <label for="in-skip">목요일은 보스런으로 사냥 못 함</label>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>기간 · 목표</h2>
+        <div class="row">
+          <label>시작일 <i>당일 수익부터 포함</i></label>
+          <div class="field"><input type="date" id="in-start"></div>
+        </div>
+        <div class="row">
+          <label>시작 보유 메소</label>
+          <div class="field"><input type="number" id="in-have" step="1" value="0"><span class="unit">억</span></div>
+        </div>
+        <div class="row">
+          <label>목표 메소</label>
+          <div class="field"><input type="number" id="in-goal" step="1" value="781.25"><span class="unit">억</span></div>
+        </div>
+        <div class="row">
+          <label>목표 날짜</label>
+          <div class="field"><input type="date" id="in-target"></div>
+        </div>
+      </section>
+    </div>
+
+    <div>
+      <section class="panel chartbox">
+        <h2>누적 잔고</h2>
+        <div id="chart"></div>
+        <div class="legend">
+          <span><i class="swatch" style="background:var(--gold)"></i>주간보스 (목)</span>
+          <span><i class="swatch" style="background:var(--rose)"></i>월간보스 (1일)</span>
+          <span><i class="swatch" style="background:var(--violet)"></i>사냥</span>
+          <span><i class="swatch" style="background:var(--mint)"></i>목표선</span>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>월 수익 구성</h2>
+        <div class="bars" id="bars"></div>
+        <div class="note" id="insight"></div>
+        <div id="warnbox"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var WEEK_PER_MONTH = 365.2425 / 12 / 7;
+  var DAYS_PER_MONTH = 365.2425 / 12;
+  var MAX_DAYS = 3650;
+  var $ = function(id){ return document.getElementById(id); };
+
+  /* ---------- roster state ---------- */
+  var roster = [
+    {name:"본캐",  weekly:34.8012, monthly:13.3},
+    {name:"부캐 1", weekly:14.2580, monthly:6.65}
+  ];
+
+  function renderRoster(){
+    var box = $("roster");
+    box.innerHTML = "";
+    roster.forEach(function(c, idx){
+      var r = document.createElement("div");
+      r.className = "rrow";
+      r.innerHTML =
+        '<input type="text" value="" data-f="name" data-i="'+idx+'" placeholder="이름">' +
+        '<input type="number" step="0.0001" data-f="weekly" data-i="'+idx+'">' +
+        '<input type="number" step="0.0001" data-f="monthly" data-i="'+idx+'">' +
+        '<button class="del" data-del="'+idx+'" title="삭제" aria-label="캐릭터 삭제">&times;</button>';
+      r.querySelector('[data-f=name]').value = c.name;
+      r.querySelector('[data-f=weekly]').value = c.weekly;
+      r.querySelector('[data-f=monthly]').value = c.monthly;
+      box.appendChild(r);
+    });
+  }
+
+  function rosterTotals(){
+    var w = 0, m = 0;
+    roster.forEach(function(c){
+      w += (isFinite(c.weekly) ? c.weekly : 0);
+      m += (isFinite(c.monthly) ? c.monthly : 0);
+    });
+    return {weekly:w, monthly:m};
+  }
+
+  $("roster").addEventListener("input", function(e){
+    var t = e.target;
+    if (t.dataset.f === undefined) return;
+    var i = +t.dataset.i, f = t.dataset.f;
+    roster[i][f] = (f === "name") ? t.value : (parseFloat(t.value) || 0);
+    render();
+  });
+
+  $("roster").addEventListener("click", function(e){
+    var d = e.target.closest("[data-del]");
+    if (!d) return;
+    if (roster.length <= 1) return;
+    roster.splice(+d.dataset.del, 1);
+    renderRoster(); render();
+  });
+
+  $("btn-add").addEventListener("click", function(){
+    roster.push({name:"부캐 " + roster.length, weekly:0, monthly:0});
+    renderRoster(); render();
+  });
+
+  $("btn-paste").addEventListener("click", function(){
+    var ta = $("paste");
+    ta.classList.toggle("open");
+    if (ta.classList.contains("open")) ta.focus();
+  });
+
+  /* ---------- paste parser ----------
+     maplescouter 정산표는 [라벨][값] 순서로 나옴.
+     "주간보스 수익" / "월간보스 수익"만 취하고 "합계"는 버림.        */
+
+  function parseMeso(s){
+    var eok = 0, man = 0;
+    var me = s.match(/([\d,]+(?:\.\d+)?)\s*억/);
+    var mm = s.match(/([\d,]+(?:\.\d+)?)\s*만/);
+    if (me) eok = parseFloat(me[1].replace(/,/g,""));
+    if (mm) man = parseFloat(mm[1].replace(/,/g,""));
+    if (!me && !mm){
+      var plain = s.match(/^\s*([\d,]+(?:\.\d+)?)\s*$/);
+      if (plain) return parseFloat(plain[1].replace(/,/g,""));
+      return null;
+    }
+    return eok + man / 10000;
+  }
+
+  function parsePaste(text){
+    var lines = text.split(/\r?\n/).map(function(l){ return l.trim(); }).filter(Boolean);
+    var chars = [], pend = {}, mode = null, lastNum = null;
+
+    lines.forEach(function(line){
+      var isLabel = /수익|합계|정산/.test(line) && !/^\s*[\d,]/.test(line);
+      if (isLabel){
+        if (/합계/.test(line))            mode = "skip";
+        else if (/주간\s*보스|주간보스/.test(line)) mode = "weekly";
+        else if (/월간\s*보스|월간보스/.test(line)) mode = "monthly";
+        else mode = null;
+        return;
+      }
+      var v = parseMeso(line);
+      if (v === null) return;
+
+      if (mode === "weekly"){ pend.weekly = v; }
+      else if (mode === "monthly"){
+        // 라벨이 잘려 주간값이 안 잡혔으면 직전 숫자를 주간으로 본다
+        if (pend.weekly === undefined && lastNum !== null) pend.weekly = lastNum;
+        pend.monthly = v;
+      }
+      mode = null;
+      lastNum = v;
+
+      if (pend.weekly !== undefined && pend.monthly !== undefined){
+        chars.push({weekly:pend.weekly, monthly:pend.monthly});
+        pend = {};
+      }
+    });
+    return chars;
+  }
+
+  $("paste").addEventListener("input", function(){
+    var msg = $("parsemsg");
+    var txt = this.value;
+    if (!txt.trim()){ msg.textContent = ""; msg.className = "parsemsg"; return; }
+    var found = parsePaste(txt);
+    if (!found.length){
+      msg.textContent = "숫자를 못 찾았음. 라벨과 값이 같이 붙었는지 확인해봐.";
+      msg.className = "parsemsg bad";
+      return;
+    }
+    roster = found.map(function(c, i){
+      return {name:(i === 0 ? "본캐" : "부캐 " + i), weekly:c.weekly, monthly:c.monthly};
+    });
+    renderRoster(); render();
+    msg.textContent = "캐릭터 " + found.length + "개 불러옴.";
+    msg.className = "parsemsg";
+  });
+
+  /* ---------- helpers ---------- */
+  function num(id){ var v = parseFloat($(id).value); return isFinite(v) ? v : 0; }
+
+  function fmtEok(v){
+    if (!isFinite(v)) return "—";
+    var neg = v < 0; v = Math.abs(v); var out;
+    if (v >= 10000){
+      var jo = Math.floor(v/10000), rest = Math.round(v - jo*10000);
+      out = jo + "조" + (rest > 0 ? " " + rest.toLocaleString("ko-KR") + "억" : "");
+    } else {
+      out = v.toLocaleString("ko-KR", {maximumFractionDigits: v < 100 ? 1 : 0}) + "억";
+    }
+    return (neg ? "-" : "") + out;
+  }
+  function fmtShort(v){
+    if (v >= 10000) return (v/10000).toFixed(1) + "조";
+    return Math.round(v).toLocaleString("ko-KR");
+  }
+  var DOW = ["일","월","화","수","목","금","토"];
+  function fmtDate(d){
+    return d.getFullYear() + "." + String(d.getMonth()+1).padStart(2,"0") + "." +
+           String(d.getDate()).padStart(2,"0") + " (" + DOW[d.getDay()] + ")";
+  }
+  function parseDate(str){
+    if (!str) return null;
+    var p = str.split("-"); if (p.length !== 3) return null;
+    var d = new Date(+p[0], +p[1]-1, +p[2]);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  function toISO(d){
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" +
+           String(d.getDate()).padStart(2,"0");
+  }
+  function addDays(d,n){ var x = new Date(d.getTime()); x.setDate(x.getDate()+n); return x; }
+
+  /* ---------- simulation ---------- */
+  function simulate(cfg, days){
+    var pts = [{x:0, y:cfg.have, kind:"start"}], daily = [], run = cfg.have, hit = -1;
+    var d = new Date(cfg.start.getTime());
+    for (var i = 0; i < days; i++){
+      var isThu = d.getDay() === 4, isFirst = d.getDate() === 1;
+      if (isThu && cfg.weekly !== 0){ run += cfg.weekly; pts.push({x:i,y:run,kind:"weekly"}); }
+      if (isFirst && cfg.monthly !== 0){ run += cfg.monthly; pts.push({x:i,y:run,kind:"monthly"}); }
+      run += (isThu && cfg.skipThu) ? 0 : cfg.rate * cfg.hours;
+      pts.push({x:i+1, y:run, kind:"hunt"});
+      daily.push(run);
+      if (hit < 0 && run >= cfg.goal) hit = i;
+      d = addDays(d, 1);
+    }
+    return {pts:pts, daily:daily, hitIndex:hit, end:run};
+  }
+
+  function findGoal(cfg){
+    var perDay = cfg.weekly/7 + cfg.monthly/DAYS_PER_MONTH +
+                 cfg.rate*cfg.hours*(cfg.skipThu ? 6/7 : 1);
+    if (cfg.have >= cfg.goal) return {days:0};
+    if (perDay <= 0) return {days:-1};
+    var est = Math.ceil((cfg.goal - cfg.have)/perDay) + 40;
+    var span = Math.min(MAX_DAYS, Math.max(est, 60));
+    var sim = simulate(cfg, span);
+    if (sim.hitIndex < 0 && span < MAX_DAYS) sim = simulate(cfg, MAX_DAYS);
+    return sim.hitIndex < 0 ? {days:-1} : {days:sim.hitIndex + 1};
+  }
+
+  /* ---------- chart ---------- */
+  function drawChart(cfg, sim, days, goalIdx){
+    var W = 760, H = 300, padL = 62, padR = 18, padT = 18, padB = 30;
+    var iw = W - padL - padR, ih = H - padT - padB;
+    var maxY = Math.max(sim.end, cfg.goal, cfg.have, 1) * 1.08;
+    function sx(x){ return padL + (x/days)*iw; }
+    function sy(y){ return padT + ih - (y/maxY)*ih; }
+
+    var s = ['<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="누적 메소 그래프">'];
+    for (var t = 0; t <= 4; t++){
+      var val = maxY*t/4, y = sy(val);
+      s.push('<line x1="'+padL+'" y1="'+y.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+y.toFixed(1)+'" stroke="#2A2543" stroke-width="1"/>');
+      s.push('<text x="'+(padL-10)+'" y="'+(y+4).toFixed(1)+'" text-anchor="end" fill="#6E668C" font-size="10.5" font-family="monospace">'+fmtShort(val)+'</text>');
+    }
+    if (cfg.goal > 0 && cfg.goal <= maxY){
+      var gy = sy(cfg.goal);
+      s.push('<line x1="'+padL+'" y1="'+gy.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+gy.toFixed(1)+'" stroke="#4FD1AA" stroke-width="1.2" stroke-dasharray="5 4" opacity=".8"/>');
+    }
+    var pts = sim.pts;
+    var area = "M " + sx(pts[0].x).toFixed(1) + " " + sy(pts[0].y).toFixed(1), segs = [];
+    for (var i = 1; i < pts.length; i++){
+      var a = pts[i-1], b = pts[i];
+      var x1 = sx(a.x), y1 = sy(a.y), x2 = sx(b.x), y2 = sy(b.y);
+      area += " L " + x2.toFixed(1) + " " + y2.toFixed(1);
+      var col = b.kind === "weekly" ? "#E9B949" : b.kind === "monthly" ? "#E8639B" : "#9C7BF0";
+      segs.push('<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y2.toFixed(1)+'" stroke="'+col+'" stroke-width="'+(b.kind==="hunt"?1.5:2.2)+'" stroke-linecap="round"/>');
+    }
+    s.push('<defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#9C7BF0" stop-opacity=".26"/><stop offset="100%" stop-color="#9C7BF0" stop-opacity="0"/></linearGradient></defs>');
+    s.push('<path d="'+area+' L '+sx(pts[pts.length-1].x).toFixed(1)+' '+sy(0).toFixed(1)+' L '+sx(0).toFixed(1)+' '+sy(0).toFixed(1)+' Z" fill="url(#ag)"/>');
+    s.push(segs.join(""));
+    if (goalIdx >= 0 && goalIdx < days){
+      var mx = sx(goalIdx+1);
+      s.push('<line x1="'+mx.toFixed(1)+'" y1="'+padT+'" x2="'+mx.toFixed(1)+'" y2="'+(padT+ih)+'" stroke="#4FD1AA" stroke-width="1" opacity=".45"/>');
+      s.push('<circle cx="'+mx.toFixed(1)+'" cy="'+sy(sim.daily[goalIdx]).toFixed(1)+'" r="4.5" fill="#141220" stroke="#4FD1AA" stroke-width="2"/>');
+    }
+    s.push('<line x1="'+padL+'" y1="'+(padT+ih)+'" x2="'+(W-padR)+'" y2="'+(padT+ih)+'" stroke="#332D52" stroke-width="1"/>');
+    for (var k = 0; k <= 5; k++){
+      var dn = Math.round(days*k/5);
+      s.push('<text x="'+sx(dn).toFixed(1)+'" y="'+(padT+ih+18)+'" text-anchor="middle" fill="#6E668C" font-size="10.5" font-family="monospace">'+dn+'일</text>');
+    }
+    s.push('</svg>');
+    $("chart").innerHTML = s.join("");
+  }
+
+  /* ---------- render ---------- */
+  function render(){
+    var start = parseDate($("in-start").value);
+    var target = parseDate($("in-target").value);
+    if (!start) return;
+
+    var tot = rosterTotals();
+    $("roster-sum").textContent = "주 " + fmtEok(tot.weekly) + " · 월 " + fmtEok(tot.monthly);
+
+    var cfg = {
+      weekly: tot.weekly, monthly: tot.monthly,
+      rate: num("in-rate"),
+      hours: Math.max(0, Math.min(24, num("in-hours"))),
+      skipThu: $("in-skip").checked,
+      have: num("in-have"), goal: num("in-goal"), start: start
+    };
+
+    var mWeekly = cfg.weekly * WEEK_PER_MONTH;
+    var mMonthly = cfg.monthly;
+    var mHunt = cfg.rate * cfg.hours * DAYS_PER_MONTH * (cfg.skipThu ? 6/7 : 1);
+    var mTotal = mWeekly + mMonthly + mHunt;
+
+    $("out-month").textContent = fmtEok(mTotal);
+    $("out-day").textContent = "일 평균 " + fmtEok(mTotal / DAYS_PER_MONTH);
+
+    var g = findGoal(cfg);
+    if (g.days === 0){
+      $("out-days").textContent = "이미 달성";
+      $("out-date").textContent = "보유 메소가 목표 이상";
+    } else if (g.days < 0){
+      $("out-days").textContent = "—";
+      $("out-date").textContent = "수익이 없어 도달 불가";
+    } else {
+      var hitDate = addDays(start, g.days - 1);
+      var mo = Math.floor(g.days / 30.44), rd = Math.round(g.days - mo*30.44);
+      $("out-days").innerHTML = g.days + '<small>일</small>';
+      $("out-date").textContent = fmtDate(hitDate) + (mo > 0 ? "  ·  약 " + mo + "개월 " + rd + "일" : "");
+    }
+
+    var span = (target && target >= start) ? Math.round((target - start)/86400000) + 1 : 0;
+    var chartDays = Math.min(MAX_DAYS, Math.max(span, g.days > 0 ? Math.ceil(g.days*1.12) : 60, 30));
+    var sim = simulate(cfg, chartDays);
+
+    if (span > 0){
+      var bal = sim.daily[Math.min(span, sim.daily.length) - 1];
+      $("out-bal").textContent = fmtEok(bal);
+      var diff = bal - cfg.goal;
+      $("out-bal-sub").textContent = span + "일간  ·  목표 대비 " + (diff >= 0 ? "+" : "") + fmtEok(diff);
+    } else {
+      $("out-bal").textContent = "—";
+      $("out-bal-sub").textContent = "목표 날짜를 시작일 이후로";
+    }
+
+    drawChart(cfg, sim, chartDays, g.days > 0 ? g.days - 1 : -1);
+
+    var parts = [
+      {name:"주간보스", val:mWeekly,  color:"#E9B949"},
+      {name:"사냥",     val:mHunt,    color:"#9C7BF0"},
+      {name:"월간보스", val:mMonthly, color:"#E8639B"}
+    ];
+    $("bars").innerHTML = parts.map(function(p){
+      var pct = mTotal > 0 ? p.val/mTotal*100 : 0;
+      return '<div class="bar-row"><div class="top"><b>'+p.name+'</b><span>'+fmtEok(p.val)+' · '+
+             pct.toFixed(1)+'%</span></div><div class="track"><div class="fill" style="width:'+
+             pct.toFixed(1)+'%;background:'+p.color+'"></div></div></div>';
+    }).join("");
+
+    var ins = "";
+    if (cfg.rate > 0){
+      var th = cfg.weekly / cfg.rate;
+      ins += "목요일 주간보스 한 번 = 사냥 <b>" + th.toFixed(1) + "시간</b>";
+      ins += cfg.hours > 0 ? " = 지금 페이스로 <b>" + (th/cfg.hours).toFixed(1) + "일</b>치.<br>" : ".<br>";
+    }
+    if (cfg.skipThu && cfg.hours > 0){
+      var lost = cfg.rate * cfg.hours;
+      ins += "목요일에 못 채우는 사냥은 " + fmtEok(lost) + "인데 받는 건 " + fmtEok(cfg.weekly) +
+             ". 보스런이 <b>" + (cfg.weekly/(lost||1)).toFixed(1) + "배</b> 이득이라 순서는 보스 먼저.<br>";
+    }
+    ins += '<span style="color:var(--muted-2)">maplescouter 합계는 한 달을 4주로 잡음. 여기는 4.35주 기준이라 ' +
+           fmtEok(mWeekly + mMonthly - (cfg.weekly*4 + cfg.monthly)) + ' 더 높게 나옴.</span>';
+    $("insight").innerHTML = ins;
+
+    var w = "";
+    if (g.days > 0 && cfg.weekly > 0 && addDays(start, g.days-1).getDay() === 4){
+      w = '<div class="warn">도달일이 목요일임. 주간보스 ' + fmtEok(cfg.weekly) +
+          '이 그날 들어와서 넘기는 구조라, 보스를 못 돌면 그 주 통째로 밀림.</div>';
+    }
+    if (g.days < 0 && mTotal <= 0){
+      w = '<div class="warn">수익이 0이라 목표에 도달할 수 없음. 수치를 확인해봐.</div>';
+    }
+    $("warnbox").innerHTML = w;
+  }
+
+  /* ---------- init ---------- */
+  var today = new Date();
+  $("in-start").value = toISO(today);
+  $("in-target").value = toISO(addDays(today, 90));
+
+  ["in-rate","in-hours","in-skip","in-start","in-have","in-goal","in-target"].forEach(function(id){
+    $(id).addEventListener("input", render);
+    $(id).addEventListener("change", render);
+  });
+
+  renderRoster();
+  render();
+})();
+</script>
+</body>
+</html>
