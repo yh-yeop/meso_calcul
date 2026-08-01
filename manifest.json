@@ -1,0 +1,20 @@
+{
+  "name": "메소 적립 계산기",
+  "short_name": "메소계산기",
+  "description": "주간보스·월간보스·재획 시급으로 목표 메소 도달일을 하루 단위로 계산함.",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#141220",
+  "theme_color": "#141220",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

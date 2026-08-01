@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="메소 적립 계산기">
+  <rect width="512" height="512" rx="112" fill="#141220"/>
+  <rect x="14" y="14" width="484" height="484" rx="100" fill="none" stroke="#2A2543" stroke-width="8"/>
+  <!-- 목표선 -->
+  <line x1="96" y1="150" x2="416" y2="150" stroke="#4FD1AA" stroke-width="9" stroke-dasharray="26 20" stroke-linecap="round" opacity=".75"/>
+  <!-- 계단식 누적: 사냥 기울기 + 목요일 점프 -->
+  <path d="M96 396 L168 366 L168 288 L240 258 L240 196 L312 166 L312 122 L416 92"
+        fill="none" stroke="#E9B949" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="416" cy="92" r="30" fill="#141220" stroke="#4FD1AA" stroke-width="16"/>
+</svg>
