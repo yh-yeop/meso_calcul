@@ -31,7 +31,7 @@
     --mint:#4FD1AA;
     --text:#EFECF8;
     --muted:#948DB4;
-    --muted-2:#6E668C;
+    --muted-2:#8880AB;
     --mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,Consolas,"D2Coding",monospace;
     --sans:"Pretendard",-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
   }
@@ -50,12 +50,11 @@
   .wrap{max-width:1120px;margin:0 auto}
   .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted-2)}
 
-  .hero{border-bottom:1px solid var(--line);padding-bottom:30px;margin-bottom:32px}
-  .hero .toprow{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+  .hero{position:relative;border-bottom:1px solid var(--line);padding-bottom:30px;margin-bottom:32px}
   .hero h1{font-size:clamp(26px,4.4vw,40px);font-weight:760;letter-spacing:-.025em;margin-top:10px}
-  .hero p{color:var(--muted);font-size:14.5px;margin-top:9px;max-width:60ch}
+  .hero p{color:var(--muted);font-size:14.5px;margin-top:9px;max-width:56ch}
 
-  .tools{display:flex;gap:7px;flex-shrink:0;padding-top:4px}
+  .tools{position:absolute;top:0;right:0;display:flex;gap:7px}
   .tool{background:transparent;border:1px solid var(--line);border-radius:8px;color:var(--muted);
         font-family:var(--sans);font-size:12px;padding:7px 12px;cursor:pointer;white-space:nowrap;
         transition:border-color .14s,color .14s}
@@ -101,7 +100,8 @@
   input[type=number]{width:112px;text-align:right}
   input[type=date]{width:146px}
   input:focus,textarea:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(233,185,73,.14)}
-  input::-webkit-calendar-picker-indicator{filter:invert(.72)}
+  input::-webkit-calendar-picker-indicator{opacity:.7;cursor:pointer}
+  input::-webkit-calendar-picker-indicator:hover{opacity:1}
 
   .mini{background:transparent;border:1px solid var(--line);border-radius:7px;color:var(--muted-2);
         font-family:var(--sans);font-size:11px;padding:6px 9px;cursor:pointer;white-space:nowrap;
@@ -119,7 +119,8 @@
   .rrow input[type=number]{width:100%;font-size:12.5px;padding:7px 8px}
   .del{background:transparent;border:0;color:var(--muted-2);font-size:17px;line-height:1;
        cursor:pointer;padding:4px;border-radius:6px;transition:color .14s}
-  .del:hover{color:var(--rose)}
+  .del:hover:not(:disabled){color:var(--rose)}
+  .del:disabled{opacity:.26;cursor:default}
   .del:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
 
   .btnrow{display:flex;gap:8px;margin-top:12px}
@@ -170,8 +171,7 @@
   .note{margin-top:18px;padding-top:16px;border-top:1px solid var(--line-soft);
         font-size:13px;color:var(--muted);line-height:1.75}
   .note b{color:var(--gold);font-weight:600;font-variant-numeric:tabular-nums}
-  .warn{margin-top:16px;padding:13px 15px;background:rgba(232,99,155,.09);
-        border:1px solid rgba(232,99,155,.26);border-radius:10px;font-size:12.5px;color:#F1A9C7}
+  .thu{color:var(--gold);cursor:help;border-bottom:1px dotted var(--gold-dim)}
 
   .foot{margin-top:34px;padding-top:18px;border-top:1px solid var(--line-soft);font-size:12px;
         color:var(--muted-2);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
@@ -182,8 +182,7 @@
     body{padding:26px 16px 56px}
     .grid{grid-template-columns:1fr}
     .cell .v{font-size:27px}
-    .hero .toprow{flex-direction:column-reverse;align-items:stretch;gap:12px}
-    .tools{justify-content:flex-end}
+    .tools{position:static;margin-top:16px}
   }
   @media (max-width:560px){
     .scen .date{display:none}
@@ -199,17 +198,13 @@
 <div class="wrap">
 
   <header class="hero">
-    <div class="toprow">
-      <div>
-        <div class="eyebrow">Meso Projection</div>
-        <h1>메소 적립 계산기</h1>
-      </div>
-      <div class="tools">
-        <button class="tool" id="btn-share" title="현재 설정이 담긴 링크 복사">링크 복사</button>
-        <button class="tool" id="btn-reset" title="저장된 값 지우고 기본값으로">초기화</button>
-      </div>
-    </div>
+    <div class="eyebrow">Meso Projection</div>
+    <h1>메소 적립 계산기</h1>
     <p>주간보스는 목요일, 월간보스는 매월 1일에 한 번에 들어옴. 사냥만 매일 쌓임. 그래서 잔고는 매끄럽게 늘지 않고 계단으로 올라감.</p>
+    <div class="tools">
+      <button class="tool" id="btn-share" title="현재 설정이 담긴 링크 복사">링크 복사</button>
+      <button class="tool" id="btn-reset" title="저장된 값 지우고 기본값으로">초기화</button>
+    </div>
 
     <div class="readout">
       <div class="cell">
@@ -238,20 +233,20 @@
         <div id="roster"></div>
         <div class="btnrow">
           <button class="btn" id="btn-add">캐릭터 추가</button>
-          <button class="btn" id="btn-paste">정산표 붙여넣기</button>
+          <button class="btn" id="btn-paste" aria-expanded="false" aria-controls="paste">정산표 붙여넣기</button>
         </div>
-        <textarea id="paste" placeholder="maplescouter 주간 보스 정산 페이지에서 텍스트를 긁어 그대로 붙여넣으면 캐릭터별로 분해됨.&#10;&#10;예)&#10;주간보스 수익&#10;14억 2580만&#10;월간보스 수익&#10;6억 6500만"></textarea>
+        <textarea id="paste" aria-label="maplescouter 정산표 붙여넣기" placeholder="maplescouter 주간 보스 정산 페이지에서 텍스트를 긁어 그대로 붙여넣으면 캐릭터별로 분해됨.&#10;&#10;예)&#10;주간보스 수익&#10;14억 2580만&#10;월간보스 수익&#10;6억 6500만"></textarea>
         <div class="parsemsg" id="parsemsg"></div>
       </section>
 
       <section class="panel">
         <h2>사냥</h2>
         <div class="row">
-          <label>재획 시급 <i>사냥 1시간당</i></label>
+          <label for="in-rate">재획 시급 <i>사냥 1시간당</i></label>
           <div class="field"><input type="number" id="in-rate" step="0.01" value="3"><span class="unit">억</span></div>
         </div>
         <div class="row">
-          <label>일 사냥 시간</label>
+          <label for="in-hours">일 사냥 시간</label>
           <div class="field"><input type="number" id="in-hours" step="0.5" min="0" max="24" value="2"><span class="unit">시간</span></div>
         </div>
         <div class="check">
@@ -263,22 +258,22 @@
       <section class="panel">
         <h2>기간 · 목표</h2>
         <div class="row">
-          <label>시작일 <i>당일 수익부터 포함</i></label>
+          <label for="in-start">시작일 <i>당일 수익부터 포함</i></label>
           <div class="field">
             <button class="mini" id="btn-today" title="시작일을 오늘로 맞춤">오늘</button>
             <input type="date" id="in-start">
           </div>
         </div>
         <div class="row">
-          <label>시작 보유 메소</label>
+          <label for="in-have">시작 보유 메소</label>
           <div class="field"><input type="number" id="in-have" step="1" value="0"><span class="unit">억</span></div>
         </div>
         <div class="row">
-          <label>목표 메소</label>
+          <label for="in-goal">목표 메소</label>
           <div class="field"><input type="number" id="in-goal" step="1" value="781.25"><span class="unit">억</span></div>
         </div>
         <div class="row">
-          <label>목표 날짜</label>
+          <label for="in-target">목표 날짜</label>
           <div class="field"><input type="date" id="in-target"></div>
         </div>
       </section>
@@ -314,10 +309,8 @@
       </section>
 
       <section class="panel">
-        <h2>월 수익 구성</h2>
+        <h2>월 수익 구성 <em id="mix-total">—</em></h2>
         <div class="bars" id="bars"></div>
-        <div class="note" id="insight"></div>
-        <div id="warnbox"></div>
       </section>
     </div>
   </div>
@@ -351,11 +344,12 @@
     roster.forEach(function(c, idx){
       var r = document.createElement("div");
       r.className = "rrow";
+      var lock = roster.length <= 1 ? " disabled" : "";
       r.innerHTML =
-        '<input type="text" value="" data-f="name" data-i="'+idx+'" placeholder="이름">' +
-        '<input type="number" step="0.0001" data-f="weekly" data-i="'+idx+'">' +
-        '<input type="number" step="0.0001" data-f="monthly" data-i="'+idx+'">' +
-        '<button class="del" data-del="'+idx+'" title="삭제" aria-label="캐릭터 삭제">&times;</button>';
+        '<input type="text" value="" data-f="name" data-i="'+idx+'" placeholder="이름" aria-label="캐릭터 이름">' +
+        '<input type="number" step="0.0001" data-f="weekly" data-i="'+idx+'" aria-label="주간보스 수익 (억)">' +
+        '<input type="number" step="0.0001" data-f="monthly" data-i="'+idx+'" aria-label="월간보스 수익 (억)">' +
+        '<button class="del" data-del="'+idx+'" title="삭제" aria-label="캐릭터 삭제"'+lock+'>&times;</button>';
       r.querySelector('[data-f=name]').value = c.name;
       r.querySelector('[data-f=weekly]').value = c.weekly;
       r.querySelector('[data-f=monthly]').value = c.monthly;
@@ -394,9 +388,9 @@
   });
 
   $("btn-paste").addEventListener("click", function(){
-    var ta = $("paste");
-    ta.classList.toggle("open");
-    if (ta.classList.contains("open")) ta.focus();
+    var ta = $("paste"), open = ta.classList.toggle("open");
+    this.setAttribute("aria-expanded", open ? "true" : "false");
+    if (open) ta.focus();
   });
 
   /* ---------- paste parser ----------
@@ -508,17 +502,22 @@
   function addDays(d,n){ var x = new Date(d.getTime()); x.setDate(x.getDate()+n); return x; }
 
   /* ---------- simulation ---------- */
-  function simulate(cfg, days){
-    var pts = [{x:0, y:cfg.have, kind:"start"}], daily = [], run = cfg.have, hit = -1;
+  // light = 그래프용 배열을 안 만들고 도달 시점에서 바로 끊음 (시나리오 표에서 8번 돌아서)
+  function simulate(cfg, days, light){
+    var pts = light ? null : [{x:0, y:cfg.have, kind:"start"}];
+    var daily = [], run = cfg.have, hit = -1;
     var d = new Date(cfg.start.getTime());
     for (var i = 0; i < days; i++){
       var isThu = d.getDay() === 4, isFirst = d.getDate() === 1;
-      if (isThu && cfg.weekly !== 0){ run += cfg.weekly; pts.push({x:i,y:run,kind:"weekly"}); }
-      if (isFirst && cfg.monthly !== 0){ run += cfg.monthly; pts.push({x:i,y:run,kind:"monthly"}); }
+      if (isThu && cfg.weekly !== 0){ run += cfg.weekly; if (pts) pts.push({x:i,y:run,kind:"weekly"}); }
+      if (isFirst && cfg.monthly !== 0){ run += cfg.monthly; if (pts) pts.push({x:i,y:run,kind:"monthly"}); }
       run += (isThu && cfg.skipThu) ? 0 : cfg.rate * cfg.hours;
-      pts.push({x:i+1, y:run, kind:"hunt"});
-      daily.push(run);
-      if (hit < 0 && run >= cfg.goal) hit = i;
+      if (pts) pts.push({x:i+1, y:run, kind:"hunt"});
+      if (!light) daily.push(run);
+      if (hit < 0 && run >= cfg.goal){
+        hit = i;
+        if (light) return {pts:null, daily:daily, hitIndex:hit, end:run};
+      }
       d = addDays(d, 1);
     }
     return {pts:pts, daily:daily, hitIndex:hit, end:run};
@@ -531,8 +530,8 @@
     if (perDay <= 0) return {days:-1};
     var est = Math.ceil((cfg.goal - cfg.have)/perDay) + 40;
     var span = Math.min(MAX_DAYS, Math.max(est, 60));
-    var sim = simulate(cfg, span);
-    if (sim.hitIndex < 0 && span < MAX_DAYS) sim = simulate(cfg, MAX_DAYS);
+    var sim = simulate(cfg, span, true);
+    if (sim.hitIndex < 0 && span < MAX_DAYS) sim = simulate(cfg, MAX_DAYS, true);
     return sim.hitIndex < 0 ? {days:-1} : {days:sim.hitIndex + 1};
   }
 
@@ -556,7 +555,7 @@
     for (var t = 0; t <= 4; t++){
       var val = maxY*t/4, y = sy(val);
       s.push('<line x1="'+padL+'" y1="'+y.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+y.toFixed(1)+'" stroke="#2A2543" stroke-width="1"/>');
-      s.push('<text x="'+(padL-10)+'" y="'+(y+4).toFixed(1)+'" text-anchor="end" fill="#6E668C" font-size="10.5" font-family="monospace">'+fmtShort(val)+'</text>');
+      s.push('<text x="'+(padL-10)+'" y="'+(y+4).toFixed(1)+'" text-anchor="end" fill="#8880AB" font-size="10.5" font-family="monospace">'+fmtShort(val)+'</text>');
     }
     if (cfg.goal > 0 && cfg.goal <= maxY){
       var gy = sy(cfg.goal);
@@ -582,7 +581,8 @@
     s.push('<line x1="'+padL+'" y1="'+(padT+ih)+'" x2="'+(W-padR)+'" y2="'+(padT+ih)+'" stroke="#332D52" stroke-width="1"/>');
     for (var k = 0; k <= 5; k++){
       var dn = Math.round(days*k/5);
-      s.push('<text x="'+sx(dn).toFixed(1)+'" y="'+(padT+ih+18)+'" text-anchor="middle" fill="#6E668C" font-size="10.5" font-family="monospace">'+dn+'일</text>');
+      s.push('<text x="'+sx(dn).toFixed(1)+'" y="'+(padT+ih+18)+'" text-anchor="'+(k === 0 ? "start" : "middle")+
+             '" fill="#8880AB" font-size="10.5" font-family="monospace">'+(dn === 0 ? "시작" : dn+"일")+'</text>');
     }
     s.push('</svg>');
     $("chart").innerHTML = s.join("");
@@ -601,7 +601,7 @@
                skipThu:cfg.skipThu, have:cfg.have, goal:cfg.goal, start:cfg.start};
       var inc = monthIncome(c);
       var mTot = inc.weekly + inc.monthly + inc.hunt;
-      var g = findGoal(c);
+      var g = cfg.goal > 0 ? findGoal(c) : {days:-1};
 
       var days = "—", dateCell = "—", delta = "";
       if (g.days === 0){ days = "달성"; }
@@ -624,7 +624,7 @@
              '<td>' + delta + '</td></tr>';
     }).join("");
 
-    $("scen-goal").textContent = "목표 " + fmtEok(cfg.goal);
+    $("scen-goal").textContent = cfg.goal > 0 ? "목표 " + fmtEok(cfg.goal) : "목표 미입력";
   }
 
   function renderSensitivity(cfg, baseDays){
@@ -759,8 +759,11 @@
     $("out-month").textContent = fmtEok(mTotal);
     $("out-day").textContent = "일 평균 " + fmtEok(mTotal / DAYS_PER_MONTH);
 
-    var g = findGoal(cfg);
-    if (g.days === 0){
+    var g = cfg.goal > 0 ? findGoal(cfg) : {days:-2};
+    if (g.days === -2){
+      $("out-days").textContent = "—";
+      $("out-date").textContent = "목표 메소를 입력해줘";
+    } else if (g.days === 0){
       $("out-days").textContent = "이미 달성";
       $("out-date").textContent = "보유 메소가 목표 이상";
     } else if (g.days < 0){
@@ -769,8 +772,13 @@
     } else {
       var hitDate = addDays(start, g.days - 1);
       var mo = Math.floor(g.days / 30.44), rd = Math.round(g.days - mo*30.44);
+      var ds = fmtDate(hitDate);
+      // 도달일이 목요일이면 주간보스가 그날 들어와 넘기는 구조 — 요일에 표시만 남김
+      if (hitDate.getDay() === 4 && cfg.weekly > 0){
+        ds = ds.replace("(목)", '<span class="thu" title="주간보스가 들어오는 날. 그 주에 못 돌면 도달이 일주일 밀림">(목)</span>');
+      }
       $("out-days").innerHTML = g.days + '<small>일</small>';
-      $("out-date").textContent = fmtDate(hitDate) + (mo > 0 ? "  ·  약 " + mo + "개월 " + rd + "일" : "");
+      $("out-date").innerHTML = ds + (mo > 0 ? "  ·  약 " + mo + "개월 " + rd + "일" : "");
     }
 
     var span = (target && target >= start) ? Math.round((target - start)/86400000) + 1 : 0;
@@ -796,37 +804,13 @@
       {name:"사냥",     val:mHunt,    color:"#9C7BF0"},
       {name:"월간보스", val:mMonthly, color:"#E8639B"}
     ];
+    $("mix-total").textContent = "월 " + fmtEok(mTotal);
     $("bars").innerHTML = parts.map(function(p){
       var pct = mTotal > 0 ? p.val/mTotal*100 : 0;
       return '<div class="bar-row"><div class="top"><b>'+p.name+'</b><span>'+fmtEok(p.val)+' · '+
              pct.toFixed(1)+'%</span></div><div class="track"><div class="fill" style="width:'+
              pct.toFixed(1)+'%;background:'+p.color+'"></div></div></div>';
     }).join("");
-
-    var ins = "";
-    if (cfg.rate > 0){
-      var th = cfg.weekly / cfg.rate;
-      ins += "목요일 주간보스 한 번 = 사냥 <b>" + th.toFixed(1) + "시간</b>";
-      ins += cfg.hours > 0 ? " = 지금 페이스로 <b>" + (th/cfg.hours).toFixed(1) + "일</b>치.<br>" : ".<br>";
-    }
-    if (cfg.skipThu && cfg.hours > 0){
-      var lost = cfg.rate * cfg.hours;
-      ins += "목요일에 못 채우는 사냥은 " + fmtEok(lost) + "인데 받는 건 " + fmtEok(cfg.weekly) +
-             ". 보스런이 <b>" + (cfg.weekly/(lost||1)).toFixed(1) + "배</b> 이득이라 순서는 보스 먼저.<br>";
-    }
-    ins += '<span style="color:var(--muted-2)">maplescouter 합계는 한 달을 4주로 잡음. 여기는 4.35주 기준이라 ' +
-           fmtEok(mWeekly + mMonthly - (cfg.weekly*4 + cfg.monthly)) + ' 더 높게 나옴.</span>';
-    $("insight").innerHTML = ins;
-
-    var w = "";
-    if (g.days > 0 && cfg.weekly > 0 && addDays(start, g.days-1).getDay() === 4){
-      w = '<div class="warn">도달일이 목요일임. 주간보스 ' + fmtEok(cfg.weekly) +
-          '이 그날 들어와서 넘기는 구조라, 보스를 못 돌면 그 주 통째로 밀림.</div>';
-    }
-    if (g.days < 0 && mTotal <= 0){
-      w = '<div class="warn">수익이 0이라 목표에 도달할 수 없음. 수치를 확인해봐.</div>';
-    }
-    $("warnbox").innerHTML = w;
 
     save();
   }
