@@ -159,7 +159,25 @@
     letter-spacing:.08em;color:var(--ink);background:var(--gold);border-radius:4px;
     padding:2px 5px;margin-left:8px;vertical-align:1px}
   .scen td.date{color:var(--muted)}
+  .scen tr.cheap td,.scen tr.cheap td:first-child{color:var(--mint)}
   .scen .d-up{color:var(--mint)} .scen .d-dn{color:var(--rose)} .scen .d-0{color:var(--muted-2)}
+
+  /* sensitivity */
+  .subh{font-size:12px;color:var(--muted-2);margin-bottom:14px}
+  .subh.mt{margin-top:24px;padding-top:19px;border-top:1px solid var(--line-soft)}
+  .tor-row{display:grid;grid-template-columns:78px 1fr 104px;gap:12px;align-items:center;margin-bottom:11px}
+  .tor-row:last-child{margin-bottom:0}
+  .tor-name{font-size:13px;color:var(--text)}
+  .tor-track{position:relative;height:8px;background:var(--surface);border-radius:4px}
+  .tor-track::before{content:"";position:absolute;left:50%;top:-4px;bottom:-4px;width:1px;background:var(--line)}
+  .tor-bar{position:absolute;top:0;height:100%;border-radius:3px;transition:width .25s ease}
+  .tor-bar.good{background:var(--mint)}
+  .tor-bar.bad{background:var(--rose)}
+  .tor-val{font-family:var(--mono);font-size:12px;text-align:right;color:var(--muted);
+           font-variant-numeric:tabular-nums}
+  .tor-val b{font-weight:500;color:var(--mint)}
+  .tor-val s{text-decoration:none;color:var(--rose)}
+  .tor-val em{font-style:normal;color:var(--muted-2)}
 
   .bars{display:flex;flex-direction:column;gap:13px}
   .bar-row .top{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;margin-bottom:6px}
@@ -305,7 +323,19 @@
           </thead>
           <tbody id="scen"></tbody>
         </table>
-        <div class="note" id="sens"></div>
+      </section>
+
+      <section class="panel">
+        <h2>민감도 <em id="sens-base">—</em></h2>
+        <div class="subh">수입원을 ±10% 흔들면 도달일이 얼마나 움직이나 (마지막 줄만 켜고 끔)</div>
+        <div id="tor"></div>
+        <div class="subh mt">도달을 하루 당기려면 각각 얼마가 필요한가</div>
+        <table class="scen">
+          <thead>
+            <tr><th>레버</th><th>필요 증가분</th><th>월 환산</th></tr>
+          </thead>
+          <tbody id="cost"></tbody>
+        </table>
       </section>
 
       <section class="panel">
@@ -671,26 +701,116 @@
     $("scen-goal").textContent = cfg.goal > 0 ? "목표 " + fmtEok(cfg.goal) : "목표 미입력";
   }
 
-  function renderSensitivity(cfg, baseDays){
-    var out = [];
-    var perHour = cfg.rate * DAYS_PER_MONTH * (cfg.skipThu ? 6/7 : 1);  // 사냥 +1h/일의 월 가치
+  /* ---------- 민감도 ----------
+     같은 입력에서 파생되는 두 가지 질문에 답한다.
+       (1) 어느 수입원이 도달일을 크게 움직이나  -> ±10% 토네이도
+       (2) 도달을 하루 당기는 데 각각 얼마가 드나 -> 이분 탐색            */
 
-    if (cfg.rate > 0){
-      out.push("사냥 <b>+1시간/일</b> = 월 <b>" + fmtEok(perHour) + "</b>" +
-               (cfg.skipThu ? ' <span style="color:var(--muted-2)">(목요일 빼고 주 6일)</span>' : ""));
-      out.push("바꿔 말하면 주간보스를 <b>+" + (perHour / WEEK_PER_MONTH).toFixed(1) +
-               "억</b> 더 뚫는 게 사냥 1시간/일과 같음. " +
-               "캐릭 하나 더 세팅이 이 선을 넘으면 사냥 늘리는 것보다 나음.");
+  function withCfg(cfg, key, val){
+    var c = {weekly:cfg.weekly, monthly:cfg.monthly, rate:cfg.rate, hours:cfg.hours,
+             skipThu:cfg.skipThu, have:cfg.have, goal:cfg.goal, start:cfg.start};
+    c[key] = val;
+    return c;
+  }
+
+  // 잔고 곡선은 어느 입력에 대해서도 단조라 도달일도 단조. 이분 탐색이 성립함
+  function costFor1Day(cfg, key, baseDays){
+    if (!(baseDays > 1)) return null;
+    var cur = cfg[key];
+    var hi = Math.max(Math.abs(cur), 1) * 0.02, lo = 0, n = 0;
+    while (findGoal(withCfg(cfg, key, cur + hi)).days > baseDays - 1){
+      lo = hi; hi *= 2;
+      if (++n > 30) return null;          // 아무리 올려도 안 줄면 무의미한 레버
     }
-    if (cfg.hours > 0 && baseDays > 0){
-      var g0 = findGoal({weekly:cfg.weekly, monthly:cfg.monthly, rate:cfg.rate, hours:0,
-                         skipThu:cfg.skipThu, have:cfg.have, goal:cfg.goal, start:cfg.start});
-      if (g0.days > 0){
-        out.push("지금 사냥 " + cfg.hours + "시간이 도달을 <b>" + (g0.days - baseDays) +
-                 "일</b> 당기고 있음. 아예 안 하면 " + g0.days + "일 걸림.");
+    for (var i = 0; i < 26; i++){
+      var mid = (lo + hi) / 2;
+      if (findGoal(withCfg(cfg, key, cur + mid)).days <= baseDays - 1) hi = mid; else lo = mid;
+    }
+    return hi;
+  }
+
+  function fmtFine(v){
+    if (v >= 0.1) return (+v.toFixed(2)) + "억";
+    return Math.round(v * 10000).toLocaleString("ko-KR") + "만";
+  }
+
+  function renderSensitivity(cfg, baseDays){
+    var tor = $("tor"), cost = $("cost");
+
+    if (!(baseDays > 0)){
+      $("sens-base").textContent = "—";
+      tor.innerHTML = '<div class="subh" style="margin:0">도달 가능한 목표가 있어야 계산됨.</div>';
+      cost.innerHTML = "";
+      return;
+    }
+    $("sens-base").textContent = baseDays + "일 기준";
+
+    function d(key, val){ return findGoal(withCfg(cfg, key, val)).days; }
+
+    var rows = [
+      {name:"주간보스", up:d("weekly",  cfg.weekly  * 1.1), dn:d("weekly",  cfg.weekly  * 0.9)},
+      {name:"사냥",     up:d("hours",   cfg.hours   * 1.1), dn:d("hours",   cfg.hours   * 0.9)},
+      {name:"월간보스", up:d("monthly", cfg.monthly * 1.1), dn:d("monthly", cfg.monthly * 0.9)}
+    ];
+    // 목요일 사냥은 켜고 끄는 값이라 한쪽 방향만 존재
+    var thuDays = findGoal(withCfg(cfg, "skipThu", !cfg.skipThu)).days;
+    rows.push({name: cfg.skipThu ? "목요일도 사냥" : "목요일 사냥 중단",
+               up: cfg.skipThu ? thuDays : baseDays,
+               dn: cfg.skipThu ? baseDays : thuDays});
+
+    var span = 0;
+    rows.forEach(function(r){
+      r.gain = r.up > 0 ? baseDays - r.up : 0;   // 당겨지는 일수 (+)
+      r.loss = r.dn > 0 ? r.dn - baseDays : 0;   // 밀리는 일수 (+)
+      span = Math.max(span, Math.abs(r.gain), Math.abs(r.loss));
+    });
+    if (span <= 0) span = 1;
+
+    tor.innerHTML = rows.map(function(r){
+      var g = Math.max(0, r.gain) / span * 50, b = Math.max(0, r.loss) / span * 50;
+      var val = (r.gain > 0 ? '<b>&minus;' + r.gain + '</b>' : "") +
+                (r.gain > 0 && r.loss > 0 ? " / " : "") +
+                (r.loss > 0 ? '<s>+' + r.loss + '</s>' : "") +
+                (r.gain <= 0 && r.loss <= 0 ? '<em>영향 없음</em>' : "일");
+      return '<div class="tor-row"><div class="tor-name">' + r.name + '</div>' +
+             '<div class="tor-track">' +
+               '<div class="tor-bar good" style="right:50%;width:' + g.toFixed(1) + '%"></div>' +
+               '<div class="tor-bar bad" style="left:50%;width:' + b.toFixed(1) + '%"></div>' +
+             '</div><div class="tor-val">' + val + '</div></div>';
+    }).join("");
+
+    var huntFactor = DAYS_PER_MONTH * (cfg.skipThu ? 6/7 : 1);
+    var levers = [
+      {name:"사냥 시간", key:"hours",
+       unit:function(v){ return v < 1 ? "+" + (v*60).toFixed(1) + "분/일" : "+" + v.toFixed(2) + "시간/일"; },
+       month:function(v){ return cfg.rate * v * huntFactor; }},
+      {name:"재획 시급", key:"rate",
+       unit:function(v){ return "+" + fmtFine(v) + "/시간"; },
+       month:function(v){ return v * cfg.hours * huntFactor; }},
+      {name:"주간보스", key:"weekly",
+       unit:function(v){ return "+" + fmtFine(v) + "/주"; },
+       month:function(v){ return v * WEEK_PER_MONTH; }},
+      {name:"월간보스", key:"monthly",
+       unit:function(v){ return "+" + fmtFine(v) + "/월"; },
+       month:function(v){ return v; }}
+    ];
+
+    var results = levers.map(function(l){
+      var v = costFor1Day(cfg, l.key, baseDays);
+      return {name:l.name, v:v, unit:v === null ? null : l.unit(v), m:v === null ? null : l.month(v)};
+    });
+    var best = null;
+    results.forEach(function(r){ if (r.m !== null && (best === null || r.m < best)) best = r.m; });
+
+    cost.innerHTML = results.map(function(r){
+      if (r.v === null){
+        return '<tr><td>' + r.name + '</td><td colspan="2" style="color:var(--muted-2)">이 목표에선 못 움직임</td></tr>';
       }
-    }
-    $("sens").innerHTML = out.join("<br>");
+      var cheap = best !== null && r.m <= best * 1.02;
+      return '<tr' + (cheap ? ' class="cheap"' : '') + '><td>' + r.name + '</td>' +
+             '<td>' + r.unit + '</td>' +
+             '<td>' + fmtEok(r.m) + '/월</td></tr>';
+    }).join("");
   }
 
   /* ---------- 저장 / 복원 ---------- */
