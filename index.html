@@ -139,6 +139,19 @@
   .del:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
 
   .btnrow{display:flex;gap:8px;margin-top:12px}
+
+  /* one-off items */
+  .ohead,.orow{display:grid;grid-template-columns:132px 1fr 82px 26px;gap:8px;align-items:center}
+  .ohead{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;color:var(--muted-2);
+         text-transform:uppercase;padding-bottom:9px;border-bottom:1px solid var(--line-soft);margin-bottom:11px}
+  .ohead span:nth-child(3){text-align:right}
+  .orow{margin-bottom:8px}
+  .orow input[type=date]{width:100%;font-size:var(--fs-md);padding:7px 8px}
+  .orow input[type=text]{width:100%;font-family:var(--sans);font-size:var(--fs-md);text-align:left;padding:7px 9px}
+  .orow input[type=number]{width:100%;font-size:var(--fs-md);padding:7px 8px}
+  .orow input.neg{color:var(--rose)}
+  .oempty{font-size:var(--fs-md);color:var(--muted-2);padding:2px 0 4px}
+  [hidden]{display:none!important}
   .btn{flex:1;background:transparent;border:1px dashed var(--line);border-radius:9px;color:var(--muted);
        font-family:var(--sans);font-size:var(--fs-md);padding:11px;cursor:pointer;transition:border-color .14s,color .14s}
   .btn:hover{border-color:var(--gold-dim);color:var(--gold)}
@@ -216,6 +229,7 @@
   @media (max-width:560px){
     .scen .inc{display:none}
     .rhead,.rrow{grid-template-columns:1fr 76px 76px 24px;gap:6px}
+    .ohead,.orow{grid-template-columns:118px 1fr 72px 24px;gap:6px}
     .tor-row{grid-template-columns:92px 1fr 88px;gap:10px}
     .panel{padding:18px 16px}
     input[type=number]{width:100px}
@@ -307,6 +321,16 @@
           <div class="field"><input type="date" id="in-target"></div>
         </div>
       </section>
+
+      <section class="panel">
+        <h2>일회성 항목 <em id="once-sum">—</em></h2>
+        <div class="ohead"><span>날짜</span><span>내용</span><span>억</span><span></span></div>
+        <div id="once"></div>
+        <div class="btnrow">
+          <button class="btn" id="btn-once-add">항목 추가</button>
+        </div>
+        <div class="subh" style="margin:12px 0 0">이벤트 보상이나 아이템 판매처럼 특정 날짜에 한 번 들어오는 돈. 큐브·스타포스 같은 지출은 음수로 넣으면 그날 잔고에서 빠짐.</div>
+      </section>
     </div>
 
     <div>
@@ -318,6 +342,7 @@
           <span><i class="swatch" style="background:var(--rose)"></i>월간보스 (1일)</span>
           <span><i class="swatch" style="background:var(--violet)"></i>사냥</span>
           <span><i class="swatch" style="background:var(--mint)"></i>목표선</span>
+          <span id="legend-once" hidden><i class="swatch" style="background:#5AB0F2"></i>일회성</span>
         </div>
       </section>
 
@@ -360,77 +385,16 @@
   </footer>
 </div>
 
-<script>
-(function(){
+<script id="meso-core">
+/* 순수 계산 로직. DOM을 만지지 않는다.
+   test/core.test.js 가 이 <script> 블록을 그대로 추출해 Node에서 검사한다.
+   브라우저에서는 전역 MesoCore 로, Node에서는 module.exports 로 노출된다. */
+var MesoCore = (function(){
   "use strict";
 
   var WEEK_PER_MONTH = 365.2425 / 12 / 7;
   var DAYS_PER_MONTH = 365.2425 / 12;
   var MAX_DAYS = 3650;
-  var STORE_KEY = "meso-calc-v1";
-  var $ = function(id){ return document.getElementById(id); };
-
-  var roster = [
-    {name:"본캐",  weekly:34.8012, monthly:13.3},
-    {name:"부캐 1", weekly:14.2580, monthly:6.65}
-  ];
-  var booting = true;
-
-  /* ---------- roster ---------- */
-  function renderRoster(){
-    var box = $("roster");
-    box.innerHTML = "";
-    roster.forEach(function(c, idx){
-      var r = document.createElement("div");
-      r.className = "rrow";
-      var lock = roster.length <= 1 ? " disabled" : "";
-      r.innerHTML =
-        '<input type="text" value="" data-f="name" data-i="'+idx+'" placeholder="이름" aria-label="캐릭터 이름">' +
-        '<input type="number" step="0.0001" data-f="weekly" data-i="'+idx+'" aria-label="주간보스 수익 (억)">' +
-        '<input type="number" step="0.0001" data-f="monthly" data-i="'+idx+'" aria-label="월간보스 수익 (억)">' +
-        '<button class="del" data-del="'+idx+'" title="삭제" aria-label="캐릭터 삭제"'+lock+'>&times;</button>';
-      r.querySelector('[data-f=name]').value = c.name;
-      r.querySelector('[data-f=weekly]').value = c.weekly;
-      r.querySelector('[data-f=monthly]').value = c.monthly;
-      box.appendChild(r);
-    });
-  }
-
-  function rosterTotals(){
-    var w = 0, m = 0;
-    roster.forEach(function(c){
-      w += (isFinite(c.weekly) ? c.weekly : 0);
-      m += (isFinite(c.monthly) ? c.monthly : 0);
-    });
-    return {weekly:w, monthly:m};
-  }
-
-  $("roster").addEventListener("input", function(e){
-    var t = e.target;
-    if (t.dataset.f === undefined) return;
-    var i = +t.dataset.i, f = t.dataset.f;
-    roster[i][f] = (f === "name") ? t.value : (parseFloat(t.value) || 0);
-    render();
-  });
-
-  $("roster").addEventListener("click", function(e){
-    var d = e.target.closest("[data-del]");
-    if (!d) return;
-    if (roster.length <= 1) return;
-    roster.splice(+d.dataset.del, 1);
-    renderRoster(); render();
-  });
-
-  $("btn-add").addEventListener("click", function(){
-    roster.push({name:"부캐 " + roster.length, weekly:0, monthly:0});
-    renderRoster(); render();
-  });
-
-  $("btn-paste").addEventListener("click", function(){
-    var ta = $("paste"), open = ta.classList.toggle("open");
-    this.setAttribute("aria-expanded", open ? "true" : "false");
-    if (open) ta.focus();
-  });
 
   /* ---------- paste parser ----------
      maplescouter 캐릭터 목록을 통째로 긁으면 캐릭터마다 이런 블록이 나옴:
@@ -521,6 +485,280 @@
     return readPairs(lines);
   }
 
+  function fmtEok(v){
+    if (!isFinite(v)) return "—";
+    var neg = v < 0; v = Math.abs(v); var out;
+    if (v >= 10000){
+      var jo = Math.floor(v/10000), rest = Math.round(v - jo*10000);
+      out = jo + "조" + (rest > 0 ? " " + rest.toLocaleString("ko-KR") + "억" : "");
+    } else {
+      out = v.toLocaleString("ko-KR", {maximumFractionDigits: v < 100 ? 1 : 0}) + "억";
+    }
+    return (neg ? "-" : "") + out;
+  }
+  function fmtShort(v){
+    if (v >= 10000) return (v/10000).toFixed(1) + "조";
+    return Math.round(v).toLocaleString("ko-KR");
+  }
+  var DOW = ["일","월","화","수","목","금","토"];
+  function parseDate(str){
+    if (!str) return null;
+    var p = str.split("-"); if (p.length !== 3) return null;
+    var d = new Date(+p[0], +p[1]-1, +p[2]);
+    // 2026-13-99 같은 값은 Date가 다음 해로 넘겨 버리므로 되돌려 확인한다
+    if (isNaN(d.getTime()) || d.getMonth() !== +p[1]-1 || d.getDate() !== +p[2]) return null;
+    return d;
+  }
+  function toISO(d){
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" +
+           String(d.getDate()).padStart(2,"0");
+  }
+  function addDays(d,n){ var x = new Date(d.getTime()); x.setDate(x.getDate()+n); return x; }
+
+  /* ---------- simulation ---------- */
+  // light = 그래프용 배열을 안 만들고 도달 시점에서 바로 끊음 (시나리오 표에서 8번 돌아서)
+  function simulate(cfg, days, light){
+    var pts = light ? null : [{x:0, y:cfg.have, kind:"start"}];
+    var daily = [], run = cfg.have, hit = -1;
+    var d = new Date(cfg.start.getTime());
+    for (var i = 0; i < days; i++){
+      var isThu = d.getDay() === 4, isFirst = d.getDate() === 1;
+      if (isThu && cfg.weekly !== 0){ run += cfg.weekly; if (pts) pts.push({x:i,y:run,kind:"weekly"}); }
+      if (isFirst && cfg.monthly !== 0){ run += cfg.monthly; if (pts) pts.push({x:i,y:run,kind:"monthly"}); }
+      // 일회성 항목: 시작일 기준 i일째에 들어오는(또는 나가는) 돈. cfg.once = {dayOffset: 억}
+      if (cfg.once && cfg.once[i]){ run += cfg.once[i]; if (pts) pts.push({x:i,y:run,kind:"once"}); }
+      run += (isThu && cfg.skipThu) ? 0 : cfg.rate * cfg.hours;
+      if (pts) pts.push({x:i+1, y:run, kind:"hunt"});
+      if (!light) daily.push(run);
+      if (hit < 0 && run >= cfg.goal){
+        hit = i;
+        if (light) return {pts:null, daily:daily, hitIndex:hit, end:run};
+      }
+      d = addDays(d, 1);
+    }
+    return {pts:pts, daily:daily, hitIndex:hit, end:run};
+  }
+
+  function findGoal(cfg){
+    var perDay = cfg.weekly/7 + cfg.monthly/DAYS_PER_MONTH +
+                 cfg.rate*cfg.hours*(cfg.skipThu ? 6/7 : 1);
+    if (cfg.have >= cfg.goal) return {days:0};
+    var hasOnce = false;
+    if (cfg.once) for (var k in cfg.once) if (cfg.once[k] > 0){ hasOnce = true; break; }
+    if (perDay <= 0 && !hasOnce) return {days:-1};
+    var est = perDay > 0 ? Math.ceil((cfg.goal - cfg.have)/perDay) + 40 : MAX_DAYS;
+    var span = Math.min(MAX_DAYS, Math.max(est, 60));
+    var sim = simulate(cfg, span, true);
+    if (sim.hitIndex < 0 && span < MAX_DAYS) sim = simulate(cfg, MAX_DAYS, true);
+    return sim.hitIndex < 0 ? {days:-1} : {days:sim.hitIndex + 1};
+  }
+
+  function monthIncome(cfg){
+    return {
+      weekly:  cfg.weekly * WEEK_PER_MONTH,
+      monthly: cfg.monthly,
+      hunt:    cfg.rate * cfg.hours * DAYS_PER_MONTH * (cfg.skipThu ? 6/7 : 1)
+    };
+  }
+
+  // cfg 복사본에서 키 하나만 바꾼다 (once 같은 부가 필드도 그대로 따라감)
+  function withCfg(cfg, key, val){
+    var c = {};
+    for (var k in cfg) c[k] = cfg[k];
+    c[key] = val;
+    return c;
+  }
+
+  // 잔고 곡선은 어느 입력에 대해서도 단조라 도달일도 단조. 이분 탐색이 성립함
+  function costFor1Day(cfg, key, baseDays){
+    if (!(baseDays > 1)) return null;
+    var cur = cfg[key];
+    var hi = Math.max(Math.abs(cur), 1) * 0.02, lo = 0, n = 0;
+    while (findGoal(withCfg(cfg, key, cur + hi)).days > baseDays - 1){
+      lo = hi; hi *= 2;
+      if (++n > 30) return null;          // 아무리 올려도 안 줄면 무의미한 레버
+    }
+    for (var i = 0; i < 26; i++){
+      var mid = (lo + hi) / 2;
+      if (findGoal(withCfg(cfg, key, cur + mid)).days <= baseDays - 1) hi = mid; else lo = mid;
+    }
+    return hi;
+  }
+
+  function fmtFine(v){
+    if (v >= 0.1) return (+v.toFixed(2)) + "억";
+    return Math.round(v * 10000).toLocaleString("ko-KR") + "만";
+  }
+
+
+  function b64e(str){
+    var bytes = new TextEncoder().encode(str), bin = "";
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+  }
+  function b64d(str){
+    str = str.replace(/-/g,"+").replace(/_/g,"/");
+    var bin = atob(str), bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+
+
+  return {
+    WEEK_PER_MONTH: WEEK_PER_MONTH, DAYS_PER_MONTH: DAYS_PER_MONTH, MAX_DAYS: MAX_DAYS,
+    parseMeso: parseMeso, parsePaste: parsePaste,
+    fmtEok: fmtEok, fmtShort: fmtShort, fmtFine: fmtFine,
+    DOW: DOW, parseDate: parseDate, toISO: toISO, addDays: addDays,
+    simulate: simulate, findGoal: findGoal, monthIncome: monthIncome,
+    withCfg: withCfg, costFor1Day: costFor1Day,
+    b64e: b64e, b64d: b64d
+  };
+})();
+if (typeof module === "object" && module.exports) module.exports = MesoCore;
+</script>
+<script>
+(function(){
+  "use strict";
+
+  var WEEK_PER_MONTH = MesoCore.WEEK_PER_MONTH, DAYS_PER_MONTH = MesoCore.DAYS_PER_MONTH, MAX_DAYS = MesoCore.MAX_DAYS;
+  var parseMeso = MesoCore.parseMeso, parsePaste = MesoCore.parsePaste;
+  var fmtEok = MesoCore.fmtEok, fmtShort = MesoCore.fmtShort, fmtFine = MesoCore.fmtFine, DOW = MesoCore.DOW;
+  var parseDate = MesoCore.parseDate, toISO = MesoCore.toISO, addDays = MesoCore.addDays;
+  var simulate = MesoCore.simulate, findGoal = MesoCore.findGoal, monthIncome = MesoCore.monthIncome;
+  var withCfg = MesoCore.withCfg, costFor1Day = MesoCore.costFor1Day, b64e = MesoCore.b64e, b64d = MesoCore.b64d;
+
+  var STORE_KEY = "meso-calc-v1";
+  var $ = function(id){ return document.getElementById(id); };
+
+  var roster = [
+    {name:"본캐",  weekly:34.8012, monthly:13.3},
+    {name:"부캐 1", weekly:14.2580, monthly:6.65}
+  ];
+  var booting = true;
+
+  // 일회성 항목: {date:"YYYY-MM-DD", label, amount(억, 음수면 지출)}
+  var once = [];
+
+  /* ---------- roster ---------- */
+  function renderRoster(){
+    var box = $("roster");
+    box.innerHTML = "";
+    roster.forEach(function(c, idx){
+      var r = document.createElement("div");
+      r.className = "rrow";
+      var lock = roster.length <= 1 ? " disabled" : "";
+      r.innerHTML =
+        '<input type="text" value="" data-f="name" data-i="'+idx+'" placeholder="이름" aria-label="캐릭터 이름">' +
+        '<input type="number" step="0.0001" data-f="weekly" data-i="'+idx+'" aria-label="주간보스 수익 (억)">' +
+        '<input type="number" step="0.0001" data-f="monthly" data-i="'+idx+'" aria-label="월간보스 수익 (억)">' +
+        '<button class="del" data-del="'+idx+'" title="삭제" aria-label="캐릭터 삭제"'+lock+'>&times;</button>';
+      r.querySelector('[data-f=name]').value = c.name;
+      r.querySelector('[data-f=weekly]').value = c.weekly;
+      r.querySelector('[data-f=monthly]').value = c.monthly;
+      box.appendChild(r);
+    });
+  }
+
+  function rosterTotals(){
+    var w = 0, m = 0;
+    roster.forEach(function(c){
+      w += (isFinite(c.weekly) ? c.weekly : 0);
+      m += (isFinite(c.monthly) ? c.monthly : 0);
+    });
+    return {weekly:w, monthly:m};
+  }
+
+  $("roster").addEventListener("input", function(e){
+    var t = e.target;
+    if (t.dataset.f === undefined) return;
+    var i = +t.dataset.i, f = t.dataset.f;
+    roster[i][f] = (f === "name") ? t.value : (parseFloat(t.value) || 0);
+    render();
+  });
+
+  $("roster").addEventListener("click", function(e){
+    var d = e.target.closest("[data-del]");
+    if (!d) return;
+    if (roster.length <= 1) return;
+    roster.splice(+d.dataset.del, 1);
+    renderRoster(); render();
+  });
+
+  $("btn-add").addEventListener("click", function(){
+    roster.push({name:"부캐 " + roster.length, weekly:0, monthly:0});
+    renderRoster(); render();
+  });
+
+  /* ---------- one-off items ---------- */
+  function renderOnce(){
+    var box = $("once");
+    box.innerHTML = "";
+    if (!once.length){
+      box.innerHTML = '<div class="oempty">없음</div>';
+      return;
+    }
+    once.forEach(function(o, idx){
+      var r = document.createElement("div");
+      r.className = "orow";
+      r.innerHTML =
+        '<input type="date" data-of="date" data-oi="'+idx+'" aria-label="날짜">' +
+        '<input type="text" data-of="label" data-oi="'+idx+'" placeholder="내용" aria-label="내용">' +
+        '<input type="number" step="0.01" data-of="amount" data-oi="'+idx+'" placeholder="+수입 −지출" aria-label="금액 (억)">' +
+        '<button class="del" data-odel="'+idx+'" title="삭제" aria-label="항목 삭제">&times;</button>';
+      r.querySelector('[data-of=date]').value = o.date;
+      r.querySelector('[data-of=label]').value = o.label;
+      var a = r.querySelector('[data-of=amount]');
+      a.value = o.amount;
+      if (o.amount < 0) a.classList.add("neg");
+      box.appendChild(r);
+    });
+  }
+
+  $("once").addEventListener("input", function(e){
+    var t = e.target;
+    if (t.dataset.of === undefined) return;
+    var i = +t.dataset.oi, f = t.dataset.of;
+    if (f === "amount"){ once[i].amount = parseFloat(t.value) || 0; t.classList.toggle("neg", once[i].amount < 0); }
+    else once[i][f] = t.value;
+    render();
+  });
+
+  $("once").addEventListener("click", function(e){
+    var d = e.target.closest("[data-odel]");
+    if (!d) return;
+    once.splice(+d.dataset.odel, 1);
+    renderOnce(); render();
+  });
+
+  $("btn-once-add").addEventListener("click", function(){
+    var start = parseDate($("in-start").value) || new Date();
+    once.push({date: toISO(addDays(start, 7)), label: "", amount: 0});
+    renderOnce(); render();
+    var last = $("once").querySelector(".orow:last-child [data-of=label]");
+    if (last) last.focus();
+  });
+
+  // 시작일 기준 며칠째에 얼마가 들어오는지 — simulate()가 쓰는 형태로 바꾼다
+  function onceByDay(start){
+    var map = {}, any = false;
+    once.forEach(function(o){
+      var d = parseDate(o.date);
+      if (!d || !o.amount) return;
+      var off = Math.round((d - start) / 86400000);
+      if (off < 0 || off >= MAX_DAYS) return;
+      map[off] = (map[off] || 0) + o.amount;
+      any = true;
+    });
+    return any ? map : null;
+  }
+
+  $("btn-paste").addEventListener("click", function(){
+    var ta = $("paste"), open = ta.classList.toggle("open");
+    this.setAttribute("aria-expanded", open ? "true" : "false");
+    if (open) ta.focus();
+  });
+
+
   $("paste").addEventListener("input", function(){
     var msg = $("parsemsg");
     var txt = this.value;
@@ -548,75 +786,7 @@
   /* ---------- helpers ---------- */
   function num(id){ var v = parseFloat($(id).value); return isFinite(v) ? v : 0; }
 
-  function fmtEok(v){
-    if (!isFinite(v)) return "—";
-    var neg = v < 0; v = Math.abs(v); var out;
-    if (v >= 10000){
-      var jo = Math.floor(v/10000), rest = Math.round(v - jo*10000);
-      out = jo + "조" + (rest > 0 ? " " + rest.toLocaleString("ko-KR") + "억" : "");
-    } else {
-      out = v.toLocaleString("ko-KR", {maximumFractionDigits: v < 100 ? 1 : 0}) + "억";
-    }
-    return (neg ? "-" : "") + out;
-  }
-  function fmtShort(v){
-    if (v >= 10000) return (v/10000).toFixed(1) + "조";
-    return Math.round(v).toLocaleString("ko-KR");
-  }
-  var DOW = ["일","월","화","수","목","금","토"];
-  function parseDate(str){
-    if (!str) return null;
-    var p = str.split("-"); if (p.length !== 3) return null;
-    var d = new Date(+p[0], +p[1]-1, +p[2]);
-    return isNaN(d.getTime()) ? null : d;
-  }
-  function toISO(d){
-    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" +
-           String(d.getDate()).padStart(2,"0");
-  }
-  function addDays(d,n){ var x = new Date(d.getTime()); x.setDate(x.getDate()+n); return x; }
 
-  /* ---------- simulation ---------- */
-  // light = 그래프용 배열을 안 만들고 도달 시점에서 바로 끊음 (시나리오 표에서 8번 돌아서)
-  function simulate(cfg, days, light){
-    var pts = light ? null : [{x:0, y:cfg.have, kind:"start"}];
-    var daily = [], run = cfg.have, hit = -1;
-    var d = new Date(cfg.start.getTime());
-    for (var i = 0; i < days; i++){
-      var isThu = d.getDay() === 4, isFirst = d.getDate() === 1;
-      if (isThu && cfg.weekly !== 0){ run += cfg.weekly; if (pts) pts.push({x:i,y:run,kind:"weekly"}); }
-      if (isFirst && cfg.monthly !== 0){ run += cfg.monthly; if (pts) pts.push({x:i,y:run,kind:"monthly"}); }
-      run += (isThu && cfg.skipThu) ? 0 : cfg.rate * cfg.hours;
-      if (pts) pts.push({x:i+1, y:run, kind:"hunt"});
-      if (!light) daily.push(run);
-      if (hit < 0 && run >= cfg.goal){
-        hit = i;
-        if (light) return {pts:null, daily:daily, hitIndex:hit, end:run};
-      }
-      d = addDays(d, 1);
-    }
-    return {pts:pts, daily:daily, hitIndex:hit, end:run};
-  }
-
-  function findGoal(cfg){
-    var perDay = cfg.weekly/7 + cfg.monthly/DAYS_PER_MONTH +
-                 cfg.rate*cfg.hours*(cfg.skipThu ? 6/7 : 1);
-    if (cfg.have >= cfg.goal) return {days:0};
-    if (perDay <= 0) return {days:-1};
-    var est = Math.ceil((cfg.goal - cfg.have)/perDay) + 40;
-    var span = Math.min(MAX_DAYS, Math.max(est, 60));
-    var sim = simulate(cfg, span, true);
-    if (sim.hitIndex < 0 && span < MAX_DAYS) sim = simulate(cfg, MAX_DAYS, true);
-    return sim.hitIndex < 0 ? {days:-1} : {days:sim.hitIndex + 1};
-  }
-
-  function monthIncome(cfg){
-    return {
-      weekly:  cfg.weekly * WEEK_PER_MONTH,
-      monthly: cfg.monthly,
-      hunt:    cfg.rate * cfg.hours * DAYS_PER_MONTH * (cfg.skipThu ? 6/7 : 1)
-    };
-  }
 
   /* ---------- chart ---------- */
   function drawChart(cfg, sim, days, goalIdx){
@@ -642,7 +812,8 @@
       var a = pts[i-1], b = pts[i];
       var x1 = sx(a.x), y1 = sy(a.y), x2 = sx(b.x), y2 = sy(b.y);
       area += " L " + x2.toFixed(1) + " " + y2.toFixed(1);
-      var col = b.kind === "weekly" ? "#E9B949" : b.kind === "monthly" ? "#E8639B" : "#9C7BF0";
+      var col = b.kind === "weekly" ? "#E9B949" : b.kind === "monthly" ? "#E8639B"
+              : b.kind === "once" ? "#5AB0F2" : "#9C7BF0";
       segs.push('<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y2.toFixed(1)+'" stroke="'+col+'" stroke-width="'+(b.kind==="hunt"?1.5:2.2)+'" stroke-linecap="round"/>');
     }
     s.push('<defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#9C7BF0" stop-opacity=".26"/><stop offset="100%" stop-color="#9C7BF0" stop-opacity="0"/></linearGradient></defs>');
@@ -673,8 +844,7 @@
 
     var prev = null;
     $("scen").innerHTML = hours.map(function(h){
-      var c = {weekly:cfg.weekly, monthly:cfg.monthly, rate:cfg.rate, hours:h,
-               skipThu:cfg.skipThu, have:cfg.have, goal:cfg.goal, start:cfg.start};
+      var c = withCfg(cfg, "hours", h);
       var inc = monthIncome(c);
       var mTot = inc.weekly + inc.monthly + inc.hunt;
       var g = cfg.goal > 0 ? findGoal(c) : {days:-1};
@@ -713,34 +883,6 @@
      같은 입력에서 파생되는 두 가지 질문에 답한다.
        (1) 어느 수입원이 도달일을 크게 움직이나  -> ±10% 토네이도
        (2) 도달을 하루 당기는 데 각각 얼마가 드나 -> 이분 탐색            */
-
-  function withCfg(cfg, key, val){
-    var c = {weekly:cfg.weekly, monthly:cfg.monthly, rate:cfg.rate, hours:cfg.hours,
-             skipThu:cfg.skipThu, have:cfg.have, goal:cfg.goal, start:cfg.start};
-    c[key] = val;
-    return c;
-  }
-
-  // 잔고 곡선은 어느 입력에 대해서도 단조라 도달일도 단조. 이분 탐색이 성립함
-  function costFor1Day(cfg, key, baseDays){
-    if (!(baseDays > 1)) return null;
-    var cur = cfg[key];
-    var hi = Math.max(Math.abs(cur), 1) * 0.02, lo = 0, n = 0;
-    while (findGoal(withCfg(cfg, key, cur + hi)).days > baseDays - 1){
-      lo = hi; hi *= 2;
-      if (++n > 30) return null;          // 아무리 올려도 안 줄면 무의미한 레버
-    }
-    for (var i = 0; i < 26; i++){
-      var mid = (lo + hi) / 2;
-      if (findGoal(withCfg(cfg, key, cur + mid)).days <= baseDays - 1) hi = mid; else lo = mid;
-    }
-    return hi;
-  }
-
-  function fmtFine(v){
-    if (v >= 0.1) return (+v.toFixed(2)) + "억";
-    return Math.round(v * 10000).toLocaleString("ko-KR") + "만";
-  }
 
   function renderSensitivity(cfg, baseDays, over){
     var tor = $("tor"), cost = $("cost"), hint = $("tor-hint");
@@ -845,6 +987,7 @@
   function snapshot(){
     var s = {v:1, skip:$("in-skip").checked ? 1 : 0,
              r:roster.map(function(c){ return [c.name, c.weekly, c.monthly]; })};
+    if (once.length) s.o = once.map(function(o){ return [o.date, o.label, o.amount]; });
     FIELDS.forEach(function(id){ s[id.slice(3)] = $(id).value; });
     return s;
   }
@@ -858,24 +1001,17 @@
                 monthly: parseFloat(c[2]) || 0};
       });
     }
+    if (Array.isArray(s.o)){
+      once = s.o.filter(function(o){ return Array.isArray(o); }).map(function(o){
+        return {date: String(o[0] || ""), label: String(o[1] != null ? o[1] : ""), amount: parseFloat(o[2]) || 0};
+      });
+    }
     FIELDS.forEach(function(id){
       var k = id.slice(3);
       if (s[k] !== undefined && s[k] !== "") $(id).value = s[k];
     });
     if (s.skip !== undefined) $("in-skip").checked = !!s.skip;
     return true;
-  }
-
-  function b64e(str){
-    var bytes = new TextEncoder().encode(str), bin = "";
-    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-    return btoa(bin).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
-  }
-  function b64d(str){
-    str = str.replace(/-/g,"+").replace(/_/g,"/");
-    var bin = atob(str), bytes = new Uint8Array(bin.length);
-    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    return new TextDecoder().decode(bytes);
   }
 
   function save(){
@@ -940,8 +1076,16 @@
       rate: num("in-rate"),
       hours: Math.max(0, Math.min(24, num("in-hours"))),
       skipThu: $("in-skip").checked,
-      have: num("in-have"), goal: num("in-goal"), start: start
+      have: num("in-have"), goal: num("in-goal"), start: start,
+      once: onceByDay(start)
     };
+
+    var oIn = 0, oOut = 0;
+    once.forEach(function(o){ if (o.amount > 0) oIn += o.amount; else oOut -= o.amount; });
+    $("once-sum").textContent = once.length
+      ? (oIn ? "+" + fmtFine(oIn) : "") + (oIn && oOut ? " · " : "") + (oOut ? "−" + fmtFine(oOut) : "") || "0"
+      : "—";
+    $("legend-once").hidden = !cfg.once;
 
     var inc = monthIncome(cfg);
     var mWeekly = inc.weekly, mMonthly = inc.monthly, mHunt = inc.hunt;
@@ -1008,7 +1152,14 @@
   $("in-start").value = toISO(today);
   $("in-target").value = toISO(addDays(today, 90));
 
-  restore();
+  var from = restore();
+
+  // 다른 계산기(어센틱심볼 계산기 등)에서 목표 메소만 넘겨받는 진입점: #goal=781.25 (억)
+  var goalParam = location.hash.match(/[#&]goal=(\d+(?:\.\d+)?)/);
+  if (goalParam && from !== "link"){
+    $("in-goal").value = parseFloat(goalParam[1]);
+    history.replaceState(null, "", location.pathname + location.search);
+  }
 
   ["in-rate","in-hours","in-skip","in-start","in-have","in-goal","in-target"].forEach(function(id){
     $(id).addEventListener("input", render);
@@ -1016,8 +1167,10 @@
   });
 
   renderRoster();
+  renderOnce();
   booting = false;
   render();
+  if (goalParam && from !== "link") $("in-goal").focus();
 })();
 </script>
 </body>

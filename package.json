@@ -1,0 +1,8 @@
+{
+  "name": "meso_calcul",
+  "private": true,
+  "description": "메소 적립 계산기 — index.html 하나로 동작하는 정적 페이지",
+  "scripts": {
+    "test": "node --test"
+  }
+}
