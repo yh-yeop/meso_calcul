@@ -64,6 +64,47 @@ test('parsePaste: 라벨-값 쌍만 있는 형식', () => {
   assert.equal(r[1].weekly, 30);
 });
 
+test('diagnosePaste: 못 찾았을 때 어떤 단서를 봤는지 알려줌', () => {
+  const empty = M.diagnosePaste('   \n\n');
+  assert.equal(empty.lines, 0);
+  assert.deepEqual(empty.hints, ['빈 텍스트']);
+
+  // 라벨 자체가 없음 (다른 영역을 긁음)
+  const none = M.diagnosePaste('호야시치\nLv.289 소마\n57,101\n12,345');
+  assert.equal(none.weeklyLabels, 0);
+  assert.equal(none.numbers, 2);
+  assert.equal(none.levelLines, 1);
+  assert.match(none.hints[0], /라벨이 없음/);
+  assert.match(none.hints[0], /숫자 줄 2개/);
+
+  // 라벨은 있는데 값이 같은 줄에 붙어 있어서 못 읽음
+  const inline = M.diagnosePaste('#1\n주간수익: 2,131,700,000\n월간수익: 665,000,000');
+  assert.equal(inline.blocks, 1);
+  assert.equal(inline.weeklyLabels, 1);
+  assert.equal(inline.weeklyValues, 0);
+  assert.equal(inline.monthlyValues, 0);
+  assert.match(inline.hints[0], /'주간수익' 라벨 1개 뒤 3줄 안에서 숫자를 못 읽음/);
+  assert.match(inline.hints[1], /'월간수익' 라벨 1개/);
+  assert.match(inline.summary, /#N 블록 1개 · '주간수익' 1개\(값 0\) · '월간수익' 1개\(값 0\)/);
+  assert.deepEqual(M.parsePaste('#1\n주간수익: 2,131,700,000\n월간수익: 665,000,000'), [], '진단 대상과 일치');
+
+  // 주간만 긁어서 쌍을 못 만듦
+  const half = M.diagnosePaste('주간수익\n1,000,000,000\n주간수익\n500,000,000');
+  assert.equal(half.weeklyValues, 2);
+  assert.equal(half.monthlyLabels, 0);
+  assert.match(half.hints[0], /'월간수익' 라벨이 없어/);
+
+  // 블록은 있는데 수익이 전부 0
+  const zero = M.diagnosePaste('#1\n베라\n이름\nLv.200 x\n주간수익\n0\n월간수익\n0');
+  assert.equal(M.parsePaste('#1\n베라\n이름\nLv.200 x\n주간수익\n0\n월간수익\n0').length, 0);
+  assert.match(zero.hints[0], /수익이 전부 0/);
+
+  // 정상 텍스트에는 힌트가 없음
+  const ok = M.diagnosePaste('#1\n베라\n이름\nLv.200 x\n주간수익\n1,000,000,000\n월간수익\n0');
+  assert.equal(ok.weeklyValues, 1);
+  assert.equal(ok.monthlyValues, 1);
+});
+
 test('날짜 유틸: parseDate/toISO/addDays', () => {
   const d = M.parseDate('2026-02-28');
   assert.equal(M.toISO(d), '2026-02-28');

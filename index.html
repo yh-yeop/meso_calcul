@@ -191,6 +191,7 @@
   textarea.open{display:block}
   .parsemsg{font-size:var(--fs-md);margin-top:10px;color:var(--mint);min-height:1em}
   .parsemsg.bad{color:var(--rose)}
+  .parsemsg .diag{display:block;margin-top:5px;font-size:var(--fs-sm);color:var(--muted-2);line-height:1.5}
 
   .check{display:flex;align-items:center;gap:10px;padding-top:15px;margin-top:4px;border-top:1px solid var(--line-soft)}
   .check input{width:16px;height:16px;accent-color:var(--gold);flex-shrink:0}
@@ -542,6 +543,47 @@ var MesoCore = (function(){
     return readPairs(lines);
   }
 
+  /* parsePaste 가 빈 배열을 돌려줬을 때, 텍스트에서 어떤 단서를 찾았는지.
+     사이트 형식이 바뀌면 어디서 막혔는지 바로 보이게 한다. */
+  function diagnosePaste(text){
+    var lines = String(text || "").split(/\r?\n/).map(function(l){ return l.trim(); }).filter(Boolean);
+    var d = {lines:lines.length, blocks:0, weeklyLabels:0, monthlyLabels:0,
+             weeklyValues:0, monthlyValues:0, levelLines:0, numbers:0, hints:[]};
+    lines.forEach(function(l, i){
+      if (/^#\d+/.test(l)) d.blocks++;
+      if (/^Lv\.?\s*\d+/i.test(l)) d.levelLines++;
+      if (parseMeso(l) !== null) d.numbers++;
+      var w = /주간\s*수익/.test(l), m = !w && /월간\s*수익/.test(l);
+      if (w){ d.weeklyLabels++;  if (hasMesoAfter(lines, i+1)) d.weeklyValues++; }
+      if (m){ d.monthlyLabels++; if (hasMesoAfter(lines, i+1)) d.monthlyValues++; }
+    });
+    var h = d.hints;
+    if (!d.lines){
+      h.push("빈 텍스트");
+    } else if (!d.weeklyLabels && !d.monthlyLabels){
+      h.push("'주간수익'·'월간수익' 라벨이 없음 — 캐릭터 목록이 아닌 곳을 긁은 듯함" +
+             (d.numbers ? " (숫자 줄 " + d.numbers + "개는 있음)" : ""));
+    } else {
+      if (d.weeklyLabels && !d.weeklyValues)
+        h.push("'주간수익' 라벨 " + d.weeklyLabels + "개 뒤 3줄 안에서 숫자를 못 읽음 — 라벨과 값이 같은 줄에 있거나 형식이 바뀐 듯함");
+      if (d.monthlyLabels && !d.monthlyValues)
+        h.push("'월간수익' 라벨 " + d.monthlyLabels + "개 뒤 3줄 안에서 숫자를 못 읽음");
+      if (d.weeklyValues && !d.monthlyLabels)
+        h.push("'월간수익' 라벨이 없어 주간·월간 쌍을 못 만듦 — 월간보스가 0이어도 라벨까지 같이 긁어야 함");
+      if (d.blocks && d.weeklyValues + d.monthlyValues > 0)
+        h.push("#N 블록 " + d.blocks + "개는 찾았지만 수익이 전부 0 — 0인 캐릭터는 제외됨");
+      else if (!d.blocks && d.weeklyValues && d.monthlyValues)
+        h.push("#N 블록 없이 라벨-값 쌍만 있는데 짝이 안 맞음 — 주간·월간이 번갈아 나와야 함");
+    }
+    d.summary = "#N 블록 " + d.blocks + "개 · '주간수익' " + d.weeklyLabels + "개(값 " + d.weeklyValues +
+                ") · '월간수익' " + d.monthlyLabels + "개(값 " + d.monthlyValues + ") · Lv 줄 " + d.levelLines + "개";
+    return d;
+  }
+  function hasMesoAfter(lines, from){
+    for (var i = from; i < lines.length && i < from + 3; i++) if (parseMeso(lines[i]) !== null) return true;
+    return false;
+  }
+
   function fmtEok(v){
     if (!isFinite(v)) return "—";
     var neg = v < 0; v = Math.abs(v); var out;
@@ -709,7 +751,7 @@ var MesoCore = (function(){
 
   return {
     WEEK_PER_MONTH: WEEK_PER_MONTH, DAYS_PER_MONTH: DAYS_PER_MONTH, MAX_DAYS: MAX_DAYS,
-    parseMeso: parseMeso, parsePaste: parsePaste,
+    parseMeso: parseMeso, parsePaste: parsePaste, diagnosePaste: diagnosePaste,
     fmtEok: fmtEok, fmtShort: fmtShort, fmtFine: fmtFine,
     DOW: DOW, parseDate: parseDate, toISO: toISO, addDays: addDays, dayOffset: dayOffset,
     nextThursdays: nextThursdays, skipOffsets: skipOffsets, recurTotals: recurTotals,
@@ -725,7 +767,7 @@ if (typeof module === "object" && module.exports) module.exports = MesoCore;
   "use strict";
 
   var WEEK_PER_MONTH = MesoCore.WEEK_PER_MONTH, DAYS_PER_MONTH = MesoCore.DAYS_PER_MONTH, MAX_DAYS = MesoCore.MAX_DAYS;
-  var parseMeso = MesoCore.parseMeso, parsePaste = MesoCore.parsePaste;
+  var parseMeso = MesoCore.parseMeso, parsePaste = MesoCore.parsePaste, diagnosePaste = MesoCore.diagnosePaste;
   var fmtEok = MesoCore.fmtEok, fmtShort = MesoCore.fmtShort, fmtFine = MesoCore.fmtFine, DOW = MesoCore.DOW;
   var parseDate = MesoCore.parseDate, toISO = MesoCore.toISO, addDays = MesoCore.addDays;
   var simulate = MesoCore.simulate, findGoal = MesoCore.findGoal, monthIncome = MesoCore.monthIncome;
@@ -951,7 +993,9 @@ if (typeof module === "object" && module.exports) module.exports = MesoCore;
 
     var found = parsePaste(txt);
     if (!found.length){
-      msg.textContent = "캐릭터를 못 찾았음. 캐릭터 목록을 통째로 드래그해서 붙여봐.";
+      var dg = diagnosePaste(txt);
+      msg.innerHTML = "캐릭터를 못 찾았음. 캐릭터 목록을 통째로 드래그해서 붙여봐." +
+        '<span class="diag">' + dg.summary + (dg.hints.length ? "<br>" + dg.hints.join("<br>") : "") + '</span>';
       msg.className = "parsemsg bad";
       return;
     }
