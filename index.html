@@ -1714,6 +1714,13 @@ if (typeof module === "object" && module.exports) module.exports = MesoCore;
   booting = false;
   render();
   if (goalParam && from !== "link") $("in-goal").focus();
+
+  // 오프라인 캐시. file:// 로 열었을 땐 서비스 워커가 안 되므로 건너뜀
+  if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
+    window.addEventListener("load", function(){
+      navigator.serviceWorker.register("./sw.js").catch(function(){});
+    });
+  }
 })();
 </script>
 </body>
