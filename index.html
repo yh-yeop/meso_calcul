@@ -197,7 +197,20 @@
   .check label{font-size:var(--fs-base);color:var(--muted);cursor:pointer}
 
   .chartbox{position:relative}
-  svg{display:block;width:100%;height:auto;overflow:visible}
+  #chart{position:relative}
+  svg{display:block;width:100%;height:auto;overflow:visible;touch-action:pan-y;cursor:crosshair}
+  .tip{position:absolute;z-index:2;pointer-events:none;min-width:150px;max-width:240px;
+       background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:9px 11px;
+       font-size:var(--fs-sm);color:var(--muted);line-height:1.5;box-shadow:0 6px 20px rgba(0,0,0,.28)}
+  .tip b{display:block;font-family:var(--mono);font-size:var(--fs-md);color:var(--text);font-weight:600;
+         font-variant-numeric:tabular-nums}
+  .tip b small{font-weight:400;color:var(--muted-2);margin-left:6px;font-size:var(--fs-micro)}
+  .tip .tbal{font-family:var(--mono);color:var(--text);font-variant-numeric:tabular-nums;margin:2px 0 5px}
+  .tip ul{list-style:none;margin:0;padding:0}
+  .tip li{display:flex;align-items:center;gap:7px;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .tip li em{font-style:normal;color:var(--muted-2);overflow:hidden;text-overflow:ellipsis}
+  .tip .swatch{width:9px;height:9px;border-radius:50%}
+  .tip .none{color:var(--muted-2)}
   .legend{display:flex;flex-wrap:wrap;gap:18px;margin-top:18px;font-size:var(--fs-md);color:var(--muted)}
   .legend span{display:flex;align-items:center;gap:7px}
   .swatch{width:13px;height:2.5px;border-radius:2px;flex-shrink:0}
@@ -961,12 +974,26 @@ if (typeof module === "object" && module.exports) module.exports = MesoCore;
 
 
   /* ---------- chart ---------- */
+  var chart = null;   // 마지막으로 그린 그래프의 좌표계와 날짜별 항목 (hover 툴팁용)
+  var KIND_NAME = {weekly:"주간보스", monthly:"월간보스", hunt:"사냥", once:"일회성", expense:"지출"};
+  var KIND_COLOR = {weekly:"var(--gold)", monthly:"var(--rose)", hunt:"var(--violet)", once:"var(--sky)", expense:"var(--orange)"};
+
   function drawChart(cfg, sim, days, goalIdx){
     var W = 760, H = 300, padL = 62, padR = 18, padT = 18, padB = 30;
     var iw = W - padL - padR, ih = H - padT - padB;
     var maxY = Math.max(sim.end, cfg.goal, cfg.have, 1) * 1.08;
     function sx(x){ return padL + (x/days)*iw; }
     function sy(y){ return padT + ih - (y/maxY)*ih; }
+
+    // 날짜별로 그날 들어온(나간) 항목을 모은다. 점프는 x=i 에, 사냥은 x=i+1 에 찍혀 있음
+    var events = [];
+    for (var e = 0; e < days; e++) events.push([]);
+    sim.pts.forEach(function(p, i){
+      if (i === 0) return;
+      var day = p.kind === "hunt" ? p.x - 1 : p.x, amt = p.y - sim.pts[i-1].y;
+      if (day >= 0 && day < days && amt !== 0) events[day].push({kind:p.kind, amt:amt});
+    });
+    chart = {W:W, padL:padL, iw:iw, days:days, start:cfg.start, daily:sim.daily, events:events, sx:sx, sy:sy};
 
     var s = ['<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="누적 메소 그래프">'];
     for (var t = 0; t <= 4; t++){
@@ -1002,9 +1029,72 @@ if (typeof module === "object" && module.exports) module.exports = MesoCore;
       s.push('<text x="'+sx(dn).toFixed(1)+'" y="'+(padT+ih+18)+'" text-anchor="'+(k === 0 ? "start" : "middle")+
              '" fill="#8880AB" font-size="11.5" font-family="monospace">'+(dn === 0 ? "시작" : dn+"일")+'</text>');
     }
-    s.push('</svg>');
+    s.push('<g id="guide" hidden><line y1="'+padT+'" y2="'+(padT+ih)+'" stroke="#8880AB" stroke-width="1" stroke-dasharray="3 3"/>' +
+           '<circle r="4" fill="#141220" stroke="#EFECF8" stroke-width="1.5"/></g>');
+    s.push('</svg><div class="tip" id="tip" hidden></div>');
     $("chart").innerHTML = s.join("");
   }
+
+  /* ---------- chart hover ----------
+     svg 는 render 마다 다시 만들어지므로 이벤트는 #chart 에 위임한다.
+     터치는 touch-action:pan-y 라서 세로 스크롤은 살리고 가로로 문지르면 날짜를 훑는다. */
+  function labelsFor(kind, date){
+    var iso = toISO(date), out = [];
+    if (kind === "once") once.forEach(function(o){ if (o.date === iso && o.amount && o.label) out.push(o.label); });
+    if (kind === "expense"){
+      var thu = date.getDay() === 4, first = date.getDate() === 1;
+      recur.forEach(function(x){ if (x.amount > 0 && x.label && ((x.every === "m" && first) || (x.every !== "m" && thu))) out.push(x.label); });
+    }
+    return out.join(", ");
+  }
+
+  function showTip(clientX, clientY){
+    var svg = $("chart").querySelector("svg"), tip = $("tip"), guide = $("guide");
+    if (!chart || !svg || !tip || !guide) return;
+    var rect = svg.getBoundingClientRect(), box = $("chart").getBoundingClientRect();
+    var vx = (clientX - rect.left) / rect.width * chart.W;
+    var i = Math.round((vx - chart.padL) / chart.iw * chart.days) - 1;
+    i = Math.max(0, Math.min(chart.days - 1, i));
+    var date = addDays(chart.start, i), bal = chart.daily[i];
+
+    var gx = chart.sx(i + 1), gy = chart.sy(bal);
+    var line = guide.firstChild, dot = guide.lastChild;
+    line.setAttribute("x1", gx.toFixed(1)); line.setAttribute("x2", gx.toFixed(1));
+    dot.setAttribute("cx", gx.toFixed(1)); dot.setAttribute("cy", gy.toFixed(1));
+    guide.removeAttribute("hidden");   // SVG 요소엔 .hidden 프로퍼티가 없음
+
+    var items = chart.events[i];
+    tip.innerHTML = '<b>' + (date.getMonth()+1) + '.' + date.getDate() + ' (' + DOW[date.getDay()] + ')' +
+      '<small>' + (i + 1) + '일째</small></b>' +
+      '<div class="tbal">잔고 ' + fmtEok(bal) + '</div>' +
+      (items.length ? '<ul>' + items.map(function(ev){
+        var lab = labelsFor(ev.kind, date);
+        return '<li><i class="swatch" style="background:' + KIND_COLOR[ev.kind] + '"></i>' + KIND_NAME[ev.kind] +
+               ' ' + (ev.amt > 0 ? '+' : '−') + fmtFine(Math.abs(ev.amt)) + (lab ? ' <em>' + lab + '</em>' : '') + '</li>';
+      }).join("") + '</ul>' : '<div class="none">들어온 항목 없음</div>');
+    tip.hidden = false;
+
+    // 가이드선 왼쪽/오른쪽 중 공간이 있는 쪽에, 세로는 포인터 근처
+    var px = (gx / chart.W) * rect.width + (rect.left - box.left);
+    var tw = tip.offsetWidth, th = tip.offsetHeight;
+    var left = px + 14;
+    if (left + tw > box.width) left = Math.max(0, px - 14 - tw);
+    var top = clientY - box.top + 16;
+    if (top + th > box.height) top = Math.max(0, clientY - box.top - th - 12);
+    tip.style.left = left + "px";
+    tip.style.top = top + "px";
+  }
+
+  function hideTip(){
+    var tip = $("tip"), guide = $("guide");
+    if (tip) tip.hidden = true;
+    if (guide) guide.setAttribute("hidden", "");
+  }
+
+  $("chart").addEventListener("pointermove", function(e){ showTip(e.clientX, e.clientY); });
+  $("chart").addEventListener("pointerdown", function(e){ showTip(e.clientX, e.clientY); });
+  $("chart").addEventListener("pointerleave", hideTip);
+  $("chart").addEventListener("pointercancel", hideTip);
 
   /* ---------- scenarios ---------- */
   function renderScenarios(cfg, baseDays){
