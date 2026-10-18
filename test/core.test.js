@@ -95,6 +95,76 @@ test('simulate: 일회성 항목은 지정한 날에 한 번만, 음수는 지�
   assert.ok(sim.pts.some((p) => p.kind === 'once' && p.y === 50));
 });
 
+test('simulate: skipWeeks 에 든 목요일은 주보가 0, 사냥·월보는 그대로', () => {
+  const cfg = Object.assign(base(), { skipWeeks: { 3: true } }); // 10/15 목
+  const sim = M.simulate(cfg, 14);
+  assert.equal(sim.daily[3], 18, '건너뛴 목요일: 주보 없음, 사냥도 없음(skipThu)');
+  assert.equal(sim.daily[10], 18 + 6 * 6 + 20, '다음 목요일(10/22)은 정상');
+  assert.ok(!sim.pts.some((p) => p.kind === 'weekly' && p.x === 3));
+  assert.ok(sim.pts.some((p) => p.kind === 'weekly' && p.x === 10));
+  // 목요일이 아닌 날을 넣어도 영향 없음
+  const other = Object.assign(base(), { skipWeeks: { 2: true } });
+  assert.deepEqual(M.simulate(other, 7).daily, M.simulate(base(), 7).daily);
+});
+
+test('findGoal: 주보만 있을 때 한 주 건너뛰면 정확히 7일 밀림', () => {
+  const w = Object.assign(base(), { monthly: 0, hours: 0, goal: 55 });
+  assert.equal(M.findGoal(w).days, 18);
+  assert.equal(M.findGoal(Object.assign({}, w, { skipWeeks: { 10: true } })).days, 25);
+  assert.equal(M.findGoal(Object.assign({}, w, { skipWeeks: { 3: true, 10: true } })).days, 32);
+  // 도달 뒤의 목요일을 건너뛰는 건 영향 없음
+  assert.equal(M.findGoal(Object.assign({}, w, { skipWeeks: { 24: true } })).days, 18);
+});
+
+test('nextThursdays / skipOffsets: 시작일 포함 다가오는 목요일, ISO → dayOffset', () => {
+  const t = M.nextThursdays(D(2026, 10, 12), 3).map(M.toISO); // 월
+  assert.deepEqual(t, ['2026-10-15', '2026-10-22', '2026-10-29']);
+  assert.equal(M.toISO(M.nextThursdays(D(2026, 10, 15), 1)[0]), '2026-10-15', '시작일이 목요일이면 당일');
+  assert.equal(M.toISO(M.nextThursdays(D(2026, 10, 16), 1)[0]), '2026-10-22', '금요일 시작이면 다음 주');
+  const start = D(2026, 10, 12);
+  assert.deepEqual(M.skipOffsets(start, ['2026-10-15', '2026-10-29', '2026-10-01', 'bad']), { 3: true, 17: true });
+  assert.equal(M.skipOffsets(start, []), null);
+  assert.equal(M.skipOffsets(start, ['2026-10-08']), null, '시작일 이전만 있으면 null');
+});
+
+test('simulate: 정기 지출은 목요일(매주)·1일(매월)에 빠지고 kind 는 expense', () => {
+  // 2026-10-29 목 시작 → 10/29 목, 11/1 일(1일), 11/5 목
+  const cfg = Object.assign(base(), { weekly: 0, monthly: 0, rate: 0, hours: 0, have: 100, goal: 1e9,
+    start: D(2026, 10, 29), expWeekly: 5, expMonthly: 2 });
+  const sim = M.simulate(cfg, 8);
+  assert.deepEqual(sim.daily, [95, 95, 95, 93, 93, 93, 93, 88]);
+  assert.equal(sim.pts.filter((p) => p.kind === 'expense').length, 3);
+  // skipWeeks 는 지출에 영향 없음 (주보만 건너뜀)
+  const cfg2 = Object.assign({}, cfg, { weekly: 20, skipWeeks: { 0: true } });
+  assert.equal(M.simulate(cfg2, 1).daily[0], 95);
+  assert.equal(M.simulate(Object.assign({}, cfg, { weekly: 20 }), 1).daily[0], 115);
+});
+
+test('findGoal: 지출이 수입보다 크면 도달 불가, 작으면 그만큼 늦어짐', () => {
+  const cfg = base();
+  const d0 = M.findGoal(cfg).days;
+  assert.ok(M.findGoal(Object.assign({}, cfg, { expWeekly: 5 })).days > d0);
+  assert.deepEqual(M.findGoal(Object.assign({}, cfg, { expWeekly: 1000 })), { days: -1 });
+  // 일회성 수입이 있으면 그 전에 도달할 수도 있음
+  assert.deepEqual(M.findGoal(Object.assign({}, cfg, { expWeekly: 1000, once: { 0: 100 } })), { days: 1 });
+});
+
+test('monthIncome: expense 는 주 4.348배 + 월, total 은 차감한 순수익', () => {
+  const inc = M.monthIncome(Object.assign(base(), { expWeekly: 3, expMonthly: 2 }));
+  assert.ok(Math.abs(inc.expense - (3 * M.WEEK_PER_MONTH + 2)) < 1e-9);
+  assert.ok(Math.abs(inc.total - (inc.weekly + inc.monthly + inc.hunt - inc.expense)) < 1e-9);
+  assert.equal(M.monthIncome(base()).expense, 0);
+});
+
+test('recurTotals: 주기별 합계, 음수·빈 값은 무시', () => {
+  assert.deepEqual(M.recurTotals([
+    { label: '재획비', amount: 3, every: 'w' }, { label: '큐브', amount: '2.5', every: 'm' },
+    { label: '', amount: -1, every: 'w' }, { label: 'x', amount: '', every: 'm' }, { label: 'y', amount: 1 },
+  ]), { weekly: 4, monthly: 2.5 });
+  assert.deepEqual(M.recurTotals([]), { weekly: 0, monthly: 0 });
+  assert.deepEqual(M.recurTotals(null), { weekly: 0, monthly: 0 });
+});
+
 test('simulate(light): 도달하면 바로 끊고 hitIndex 반환', () => {
   const cfg = Object.assign(base(), { goal: 30 });
   const light = M.simulate(cfg, 365, true);

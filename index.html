@@ -29,6 +29,8 @@
     --violet:#9C7BF0;
     --rose:#E8639B;
     --mint:#4FD1AA;
+    --sky:#5AB0F2;
+    --orange:#F2784B;
     --text:#EFECF8;
     --muted:#948DB4;
     --muted-2:#8880AB;
@@ -152,6 +154,33 @@
   .orow input.neg{color:var(--rose)}
   .oempty{font-size:var(--fs-md);color:var(--muted-2);padding:2px 0 4px}
   [hidden]{display:none!important}
+
+  /* recurring expenses */
+  .xhead,.xrow{display:grid;grid-template-columns:1fr 78px 112px 26px;gap:8px;align-items:center}
+  .xhead{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;color:var(--muted-2);
+         text-transform:uppercase;padding-bottom:9px;border-bottom:1px solid var(--line-soft);margin-bottom:11px}
+  .xhead span:nth-child(2){text-align:right}
+  .xrow{margin-bottom:8px}
+  .xrow input[type=text]{width:100%;font-family:var(--sans);font-size:var(--fs-md);text-align:left;padding:7px 9px}
+  .xrow input[type=number]{width:100%;font-size:var(--fs-md);padding:7px 8px;color:var(--orange)}
+  select{background:var(--surface);border:1px solid var(--line);border-radius:8px;color:var(--text);
+         font-family:var(--sans);font-size:var(--fs-md);padding:7px 8px;width:100%;cursor:pointer;
+         transition:border-color .14s,box-shadow .14s}
+  select:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(233,185,73,.14)}
+
+  /* skipped weeks */
+  .skiph{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;color:var(--muted-2);
+         text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;gap:10px;
+         margin-top:16px;padding-top:14px;border-top:1px solid var(--line-soft)}
+  .skiph em{font-style:normal;letter-spacing:0;text-transform:none;color:var(--gold);font-variant-numeric:tabular-nums}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .chip{background:transparent;border:1px solid var(--line);border-radius:999px;color:var(--muted);
+        font-family:var(--mono);font-size:var(--fs-sm);font-variant-numeric:tabular-nums;padding:4px 10px;
+        cursor:pointer;transition:border-color .14s,color .14s,background .14s}
+  .chip:hover{border-color:var(--gold-dim);color:var(--gold)}
+  .chip:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  .chip[aria-pressed=true]{border-color:var(--gold);color:var(--gold);background:rgba(233,185,73,.1);text-decoration:line-through}
+  .skipnote{font-size:var(--fs-sm);color:var(--muted-2);margin-top:9px;line-height:1.5}
   .btn{flex:1;background:transparent;border:1px dashed var(--line);border-radius:9px;color:var(--muted);
        font-family:var(--sans);font-size:var(--fs-md);padding:11px;cursor:pointer;transition:border-color .14s,color .14s}
   .btn:hover{border-color:var(--gold-dim);color:var(--gold)}
@@ -230,6 +259,7 @@
     .scen .inc{display:none}
     .rhead,.rrow{grid-template-columns:1fr 76px 76px 24px;gap:6px}
     .ohead,.orow{grid-template-columns:118px 1fr 72px 24px;gap:6px}
+    .xhead,.xrow{grid-template-columns:1fr 68px 104px 24px;gap:6px}
     .tor-row{grid-template-columns:92px 1fr 88px;gap:10px}
     .panel{padding:18px 16px}
     input[type=number]{width:100px}
@@ -281,6 +311,9 @@
         </div>
         <textarea id="paste" aria-label="maplescouter 캐릭터 목록 붙여넣기" placeholder="maplescouter 보스 정산 페이지의 캐릭터 목록을 통째로 드래그해서 붙여넣으면 이름·주간·월간이 자동으로 잡힘.&#10;&#10;#1제네시스 2차 해방&#10;베라&#10;호야시치&#10;Lv.289 소마&#10;주간수익&#10;2,131,700,000&#10;월간수익&#10;665,000,000"></textarea>
         <div class="parsemsg" id="parsemsg"></div>
+        <div class="skiph"><span>주보 건너뛸 주</span><em id="skip-sum">—</em></div>
+        <div class="chips" id="skip-chips" role="group" aria-label="주간보스를 건너뛸 목요일"></div>
+        <div class="skipnote">못 도는 주의 목요일을 누르면 그 주 주간보스 수입이 0이 됨. 도달 날짜가 얼마나 밀리는지는 위 결과에 표시됨.</div>
       </section>
 
       <section class="panel">
@@ -331,6 +364,16 @@
         </div>
         <div class="subh" style="margin:12px 0 0">이벤트 보상이나 아이템 판매처럼 특정 날짜에 한 번 들어오는 돈. 큐브·스타포스 같은 지출은 음수로 넣으면 그날 잔고에서 빠짐.</div>
       </section>
+
+      <section class="panel">
+        <h2>정기 지출 <em id="recur-sum">—</em></h2>
+        <div class="xhead"><span>내용</span><span>억</span><span>주기</span><span></span></div>
+        <div id="recur"></div>
+        <div class="btnrow">
+          <button class="btn" id="btn-recur-add">지출 추가</button>
+        </div>
+        <div class="subh" style="margin:12px 0 0">재획비·큐브처럼 주기적으로 나가는 돈. 매주는 목요일에, 매월은 1일에 잔고에서 빠지고 월 평균 수익에서도 차감됨.</div>
+      </section>
     </div>
 
     <div>
@@ -342,7 +385,8 @@
           <span><i class="swatch" style="background:var(--rose)"></i>월간보스 (1일)</span>
           <span><i class="swatch" style="background:var(--violet)"></i>사냥</span>
           <span><i class="swatch" style="background:var(--mint)"></i>목표선</span>
-          <span id="legend-once" hidden><i class="swatch" style="background:#5AB0F2"></i>일회성</span>
+          <span id="legend-once" hidden><i class="swatch" style="background:var(--sky)"></i>일회성</span>
+          <span id="legend-expense" hidden><i class="swatch" style="background:var(--orange)"></i>지출</span>
         </div>
       </section>
 
@@ -514,19 +558,60 @@ var MesoCore = (function(){
            String(d.getDate()).padStart(2,"0");
   }
   function addDays(d,n){ var x = new Date(d.getTime()); x.setDate(x.getDate()+n); return x; }
+  function dayOffset(start, d){ return Math.round((d - start) / 86400000); }
 
-  /* ---------- simulation ---------- */
+  // 시작일 이후(당일 포함) 다가오는 목요일 n개
+  function nextThursdays(start, n){
+    var out = [], d = new Date(start.getTime());
+    d.setDate(d.getDate() + ((4 - d.getDay()) + 7) % 7);
+    for (var i = 0; i < n; i++){ out.push(d); d = addDays(d, 7); }
+    return out;
+  }
+  // 건너뛸 주(ISO 날짜 배열)를 simulate 가 쓰는 {dayOffset:true} 집합으로. 시작일 이전은 버림
+  function skipOffsets(start, isoList){
+    var map = null;
+    (isoList || []).forEach(function(iso){
+      var d = parseDate(iso); if (!d) return;
+      var off = dayOffset(start, d);
+      if (off < 0 || off >= MAX_DAYS) return;
+      if (!map) map = {};
+      map[off] = true;
+    });
+    return map;
+  }
+
+  // 정기 지출 [{label, amount(억), every:"w"|"m"}] 을 주기별 합계로
+  function recurTotals(list){
+    var w = 0, m = 0;
+    (list || []).forEach(function(r){
+      var a = parseFloat(r.amount);
+      if (!isFinite(a) || a <= 0) return;
+      if (r.every === "m") m += a; else w += a;
+    });
+    return {weekly:w, monthly:m};
+  }
+
+  /* ---------- simulation ----------
+     cfg: weekly, monthly, rate, hours, skipThu, have, goal, start
+          once       {dayOffset: 억}    일회성 (음수 = 지출)
+          skipWeeks  {dayOffset: true}  그 목요일의 주보를 0으로 (skipThu 와 별개)
+          expWeekly  억                 매주 목요일 나가는 정기 지출
+          expMonthly 억                 매월 1일 나가는 정기 지출                  */
   // light = 그래프용 배열을 안 만들고 도달 시점에서 바로 끊음 (시나리오 표에서 8번 돌아서)
   function simulate(cfg, days, light){
     var pts = light ? null : [{x:0, y:cfg.have, kind:"start"}];
     var daily = [], run = cfg.have, hit = -1;
+    var expW = cfg.expWeekly || 0, expM = cfg.expMonthly || 0;
     var d = new Date(cfg.start.getTime());
     for (var i = 0; i < days; i++){
       var isThu = d.getDay() === 4, isFirst = d.getDate() === 1;
-      if (isThu && cfg.weekly !== 0){ run += cfg.weekly; if (pts) pts.push({x:i,y:run,kind:"weekly"}); }
+      var skipped = isThu && cfg.skipWeeks && cfg.skipWeeks[i];
+      if (isThu && cfg.weekly !== 0 && !skipped){ run += cfg.weekly; if (pts) pts.push({x:i,y:run,kind:"weekly"}); }
       if (isFirst && cfg.monthly !== 0){ run += cfg.monthly; if (pts) pts.push({x:i,y:run,kind:"monthly"}); }
       // 일회성 항목: 시작일 기준 i일째에 들어오는(또는 나가는) 돈. cfg.once = {dayOffset: 억}
       if (cfg.once && cfg.once[i]){ run += cfg.once[i]; if (pts) pts.push({x:i,y:run,kind:"once"}); }
+      var exp = (isThu ? expW : 0) + (isFirst ? expM : 0);
+      if (exp){ run -= exp; if (pts) pts.push({x:i,y:run,kind:"expense"}); }
       run += (isThu && cfg.skipThu) ? 0 : cfg.rate * cfg.hours;
       if (pts) pts.push({x:i+1, y:run, kind:"hunt"});
       if (!light) daily.push(run);
@@ -541,7 +626,8 @@ var MesoCore = (function(){
 
   function findGoal(cfg){
     var perDay = cfg.weekly/7 + cfg.monthly/DAYS_PER_MONTH +
-                 cfg.rate*cfg.hours*(cfg.skipThu ? 6/7 : 1);
+                 cfg.rate*cfg.hours*(cfg.skipThu ? 6/7 : 1) -
+                 (cfg.expWeekly || 0)/7 - (cfg.expMonthly || 0)/DAYS_PER_MONTH;
     if (cfg.have >= cfg.goal) return {days:0};
     var hasOnce = false;
     if (cfg.once) for (var k in cfg.once) if (cfg.once[k] > 0){ hasOnce = true; break; }
@@ -553,12 +639,16 @@ var MesoCore = (function(){
     return sim.hitIndex < 0 ? {days:-1} : {days:sim.hitIndex + 1};
   }
 
+  // expense 는 양수(나가는 크기), total 은 그걸 뺀 순수익
   function monthIncome(cfg){
-    return {
+    var inc = {
       weekly:  cfg.weekly * WEEK_PER_MONTH,
       monthly: cfg.monthly,
-      hunt:    cfg.rate * cfg.hours * DAYS_PER_MONTH * (cfg.skipThu ? 6/7 : 1)
+      hunt:    cfg.rate * cfg.hours * DAYS_PER_MONTH * (cfg.skipThu ? 6/7 : 1),
+      expense: (cfg.expWeekly || 0) * WEEK_PER_MONTH + (cfg.expMonthly || 0)
     };
+    inc.total = inc.weekly + inc.monthly + inc.hunt - inc.expense;
+    return inc;
   }
 
   // cfg 복사본에서 키 하나만 바꾼다 (once 같은 부가 필드도 그대로 따라감)
@@ -608,7 +698,8 @@ var MesoCore = (function(){
     WEEK_PER_MONTH: WEEK_PER_MONTH, DAYS_PER_MONTH: DAYS_PER_MONTH, MAX_DAYS: MAX_DAYS,
     parseMeso: parseMeso, parsePaste: parsePaste,
     fmtEok: fmtEok, fmtShort: fmtShort, fmtFine: fmtFine,
-    DOW: DOW, parseDate: parseDate, toISO: toISO, addDays: addDays,
+    DOW: DOW, parseDate: parseDate, toISO: toISO, addDays: addDays, dayOffset: dayOffset,
+    nextThursdays: nextThursdays, skipOffsets: skipOffsets, recurTotals: recurTotals,
     simulate: simulate, findGoal: findGoal, monthIncome: monthIncome,
     withCfg: withCfg, costFor1Day: costFor1Day,
     b64e: b64e, b64d: b64d
@@ -626,8 +717,11 @@ if (typeof module === "object" && module.exports) module.exports = MesoCore;
   var parseDate = MesoCore.parseDate, toISO = MesoCore.toISO, addDays = MesoCore.addDays;
   var simulate = MesoCore.simulate, findGoal = MesoCore.findGoal, monthIncome = MesoCore.monthIncome;
   var withCfg = MesoCore.withCfg, costFor1Day = MesoCore.costFor1Day, b64e = MesoCore.b64e, b64d = MesoCore.b64d;
+  var dayOffset = MesoCore.dayOffset, nextThursdays = MesoCore.nextThursdays, skipOffsets = MesoCore.skipOffsets;
+  var recurTotals = MesoCore.recurTotals;
 
   var STORE_KEY = "meso-calc-v1";
+  var SKIP_CHIPS = 8;
   var $ = function(id){ return document.getElementById(id); };
 
   var roster = [
@@ -638,6 +732,84 @@ if (typeof module === "object" && module.exports) module.exports = MesoCore;
 
   // 일회성 항목: {date:"YYYY-MM-DD", label, amount(억, 음수면 지출)}
   var once = [];
+  // 정기 지출: {label, amount(억, 양수), every:"w"(매주 목요일)|"m"(매월 1일)}
+  var recur = [];
+  // 주보를 건너뛸 주: 그 주 목요일의 ISO 날짜 배열
+  var skipWeeks = [];
+
+  /* ---------- recurring expenses ---------- */
+  function renderRecur(){
+    var box = $("recur");
+    box.innerHTML = "";
+    if (!recur.length){
+      box.innerHTML = '<div class="oempty">없음</div>';
+      return;
+    }
+    recur.forEach(function(x, idx){
+      var r = document.createElement("div");
+      r.className = "xrow";
+      r.innerHTML =
+        '<input type="text" data-xf="label" data-xi="'+idx+'" placeholder="내용" aria-label="내용">' +
+        '<input type="number" step="0.01" min="0" data-xf="amount" data-xi="'+idx+'" aria-label="금액 (억)">' +
+        '<select data-xf="every" data-xi="'+idx+'" aria-label="주기">' +
+          '<option value="w">매주 목요일</option><option value="m">매월 1일</option></select>' +
+        '<button class="del" data-xdel="'+idx+'" title="삭제" aria-label="지출 삭제">&times;</button>';
+      r.querySelector('[data-xf=label]').value = x.label;
+      r.querySelector('[data-xf=amount]').value = x.amount;
+      r.querySelector('[data-xf=every]').value = x.every;
+      box.appendChild(r);
+    });
+  }
+
+  $("recur").addEventListener("input", function(e){
+    var t = e.target;
+    if (t.dataset.xf === undefined) return;
+    var i = +t.dataset.xi, f = t.dataset.xf;
+    if (f === "amount") recur[i].amount = Math.max(0, parseFloat(t.value) || 0);
+    else recur[i][f] = t.value;
+    render();
+  });
+  $("recur").addEventListener("change", function(e){
+    if (e.target.dataset.xf === "every") render();
+  });
+
+  $("recur").addEventListener("click", function(e){
+    var d = e.target.closest("[data-xdel]");
+    if (!d) return;
+    recur.splice(+d.dataset.xdel, 1);
+    renderRecur(); render();
+  });
+
+  $("btn-recur-add").addEventListener("click", function(){
+    recur.push({label: "", amount: 0, every: "w"});
+    renderRecur(); render();
+    var last = $("recur").querySelector(".xrow:last-child [data-xf=label]");
+    if (last) last.focus();
+  });
+
+  /* ---------- skipped weeks ---------- */
+  // 시작일 이후 목요일 8개를 칩으로. 그 밖의 날짜는 상태에서도 지운다 (보이는 것만 적용되게)
+  function renderSkipChips(start){
+    var thus = nextThursdays(start, SKIP_CHIPS).map(toISO);
+    skipWeeks = skipWeeks.filter(function(iso){ return thus.indexOf(iso) >= 0; });
+    $("skip-chips").innerHTML = thus.map(function(iso){
+      var on = skipWeeks.indexOf(iso) >= 0, p = iso.split("-");
+      return '<button class="chip" type="button" data-skip="'+iso+'" aria-pressed="'+(on ? "true" : "false")+
+             '" title="'+iso+' 주간보스 '+(on ? "건너뜀" : "포함")+'">'+(+p[1])+'/'+(+p[2])+'</button>';
+    }).join("");
+    $("skip-sum").textContent = skipWeeks.length ? skipWeeks.length + "주 건너뜀" : "—";
+  }
+
+  $("skip-chips").addEventListener("click", function(e){
+    var b = e.target.closest("[data-skip]");
+    if (!b) return;
+    var iso = b.dataset.skip, i = skipWeeks.indexOf(iso);
+    if (i >= 0) skipWeeks.splice(i, 1); else skipWeeks.push(iso);
+    skipWeeks.sort();
+    render();
+    var nb = $("skip-chips").querySelector('[data-skip="'+iso+'"]');
+    if (nb) nb.focus();
+  });
 
   /* ---------- roster ---------- */
   function renderRoster(){
@@ -744,7 +916,7 @@ if (typeof module === "object" && module.exports) module.exports = MesoCore;
     once.forEach(function(o){
       var d = parseDate(o.date);
       if (!d || !o.amount) return;
-      var off = Math.round((d - start) / 86400000);
+      var off = dayOffset(start, d);
       if (off < 0 || off >= MAX_DAYS) return;
       map[off] = (map[off] || 0) + o.amount;
       any = true;
@@ -813,7 +985,7 @@ if (typeof module === "object" && module.exports) module.exports = MesoCore;
       var x1 = sx(a.x), y1 = sy(a.y), x2 = sx(b.x), y2 = sy(b.y);
       area += " L " + x2.toFixed(1) + " " + y2.toFixed(1);
       var col = b.kind === "weekly" ? "#E9B949" : b.kind === "monthly" ? "#E8639B"
-              : b.kind === "once" ? "#5AB0F2" : "#9C7BF0";
+              : b.kind === "once" ? "#5AB0F2" : b.kind === "expense" ? "#F2784B" : "#9C7BF0";
       segs.push('<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y2.toFixed(1)+'" stroke="'+col+'" stroke-width="'+(b.kind==="hunt"?1.5:2.2)+'" stroke-linecap="round"/>');
     }
     s.push('<defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#9C7BF0" stop-opacity=".26"/><stop offset="100%" stop-color="#9C7BF0" stop-opacity="0"/></linearGradient></defs>');
@@ -845,8 +1017,7 @@ if (typeof module === "object" && module.exports) module.exports = MesoCore;
     var prev = null;
     $("scen").innerHTML = hours.map(function(h){
       var c = withCfg(cfg, "hours", h);
-      var inc = monthIncome(c);
-      var mTot = inc.weekly + inc.monthly + inc.hunt;
+      var mTot = monthIncome(c).total;
       var g = cfg.goal > 0 ? findGoal(c) : {days:-1};
 
       var days = "—", delta = "", eff = "—";
@@ -988,6 +1159,8 @@ if (typeof module === "object" && module.exports) module.exports = MesoCore;
     var s = {v:1, skip:$("in-skip").checked ? 1 : 0,
              r:roster.map(function(c){ return [c.name, c.weekly, c.monthly]; })};
     if (once.length) s.o = once.map(function(o){ return [o.date, o.label, o.amount]; });
+    if (recur.length) s.e = recur.map(function(x){ return [x.label, x.amount, x.every]; });
+    if (skipWeeks.length) s.k = skipWeeks.slice();
     FIELDS.forEach(function(id){ s[id.slice(3)] = $(id).value; });
     return s;
   }
@@ -1005,6 +1178,15 @@ if (typeof module === "object" && module.exports) module.exports = MesoCore;
       once = s.o.filter(function(o){ return Array.isArray(o); }).map(function(o){
         return {date: String(o[0] || ""), label: String(o[1] != null ? o[1] : ""), amount: parseFloat(o[2]) || 0};
       });
+    }
+    if (Array.isArray(s.e)){
+      recur = s.e.filter(function(x){ return Array.isArray(x); }).map(function(x){
+        return {label: String(x[0] != null ? x[0] : ""), amount: Math.max(0, parseFloat(x[1]) || 0),
+                every: x[2] === "m" ? "m" : "w"};
+      });
+    }
+    if (Array.isArray(s.k)){
+      skipWeeks = s.k.filter(function(k){ return typeof k === "string" && parseDate(k); }).sort();
     }
     FIELDS.forEach(function(id){
       var k = id.slice(3);
@@ -1071,13 +1253,17 @@ if (typeof module === "object" && module.exports) module.exports = MesoCore;
     // 입력 확인용이라 반올림하지 않는다 (19.95 를 20억으로 보여주면 안 됨)
     $("roster-sum").textContent = "주 " + fmtFine(tot.weekly) + " · 월 " + fmtFine(tot.monthly);
 
+    renderSkipChips(start);
+    var exp = recurTotals(recur);
     var cfg = {
       weekly: tot.weekly, monthly: tot.monthly,
       rate: num("in-rate"),
       hours: Math.max(0, Math.min(24, num("in-hours"))),
       skipThu: $("in-skip").checked,
       have: num("in-have"), goal: num("in-goal"), start: start,
-      once: onceByDay(start)
+      once: onceByDay(start),
+      skipWeeks: skipOffsets(start, skipWeeks),
+      expWeekly: exp.weekly, expMonthly: exp.monthly
     };
 
     var oIn = 0, oOut = 0;
@@ -1086,16 +1272,19 @@ if (typeof module === "object" && module.exports) module.exports = MesoCore;
       ? (oIn ? "+" + fmtFine(oIn) : "") + (oIn && oOut ? " · " : "") + (oOut ? "−" + fmtFine(oOut) : "") || "0"
       : "—";
     $("legend-once").hidden = !cfg.once;
+    $("legend-expense").hidden = !(exp.weekly || exp.monthly);
 
     var inc = monthIncome(cfg);
     var mWeekly = inc.weekly, mMonthly = inc.monthly, mHunt = inc.hunt;
-    var mTotal = mWeekly + mMonthly + mHunt;
+    var mGross = mWeekly + mMonthly + mHunt, mTotal = inc.total;
+    $("recur-sum").textContent = recur.length ? (inc.expense ? "월 −" + fmtFine(inc.expense) : "0") : "—";
 
     $("out-month").textContent = fmtEok(mTotal);
-    var pct = function(v){ return mTotal > 0 ? Math.round(v / mTotal * 100) : 0; };
+    var pct = function(v){ return mGross > 0 ? Math.round(v / mGross * 100) : 0; };
     $("out-day").innerHTML = "일 평균 " + fmtEok(mTotal / DAYS_PER_MONTH) +
       '<span class="mix">주보 ' + pct(mWeekly) + '% · 사냥 ' + pct(mHunt) +
-      '% · 월보 ' + pct(mMonthly) + '%</span>';
+      '% · 월보 ' + pct(mMonthly) + '%' +
+      (inc.expense ? ' · 지출 −' + fmtEok(inc.expense) : '') + '</span>';
 
     var g = cfg.goal > 0 ? findGoal(cfg) : {days:-2};
 
@@ -1125,9 +1314,16 @@ if (typeof module === "object" && module.exports) module.exports = MesoCore;
         '<small' + (isThu ? ' class="thu" title="주간보스가 들어오는 날. 그 주에 못 돌면 도달이 일주일 밀림"' : '') +
         '>(' + DOW[hitDate.getDay()] + ')</small>';
 
+      // 건너뛴 주가 있으면 그게 없을 때와 비교해 며칠 밀렸는지
+      var skipNote = "";
+      if (cfg.skipWeeks){
+        var g0 = findGoal(withCfg(cfg, "skipWeeks", null)).days, n = Object.keys(cfg.skipWeeks).length;
+        var pushed = g0 > 0 ? g.days - g0 : 0;
+        skipNote = '<span class="mix">건너뛴 주 ' + n + '개로 ' + (pushed > 0 ? "+" + pushed + "일 밀림" : "날짜 변동 없음") + '</span>';
+      }
       $("out-days").innerHTML = hitDate.getFullYear() + "년 · " + g.days + "일 뒤" +
         '<span class="mix" title="이만큼 덜 벌어도 같은 날 도달함. 뒤집으면 목표를 이만큼 올려도 도달 날짜는 그대로임">' +
-        "목표 +" + fmtEok(over) + " 넘겨서 도달</span>";
+        "목표 +" + fmtEok(over) + " 넘겨서 도달</span>" + skipNote;
     }
 
     if (span > 0){
@@ -1168,6 +1364,7 @@ if (typeof module === "object" && module.exports) module.exports = MesoCore;
 
   renderRoster();
   renderOnce();
+  renderRecur();
   booting = false;
   render();
   if (goalParam && from !== "link") $("in-goal").focus();
