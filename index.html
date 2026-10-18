@@ -351,6 +351,7 @@
     <div class="tools">
       <button class="tool" id="btn-theme" title="라이트/다크 테마 전환" aria-label="테마 전환">◐ 테마</button>
       <button class="tool" id="btn-share" title="현재 설정이 담긴 링크 복사">링크 복사</button>
+      <button class="tool" id="btn-image" title="도달 날짜·월 수익이 담긴 결과 카드를 PNG 로 저장">이미지 저장</button>
       <button class="tool" id="btn-reset" title="저장된 값 지우고 기본값으로">초기화</button>
     </div>
 
@@ -1426,6 +1427,135 @@ if (typeof module === "object" && module.exports) module.exports = MesoCore;
     }
   });
 
+  /* ---------- 결과 카드 이미지 ----------
+     마지막 render 결과를 캔버스에 그려 PNG 로 내보낸다. 테마와 무관하게 다크 카드로 고정 */
+  var last = null;   // render 가 채움: {hitDate, days, goal, inc, skipN, pushed}
+  var CARD = {ink:"#141220", panel:"#1C1930", line:"#332D52", text:"#EFECF8", dim:"#948DB4", faint:"#8880AB",
+              gold:"#E9B949", goldDim:"#8A6E2C", violet:"#9C7BF0", rose:"#E8639B", mint:"#4FD1AA", orange:"#F2784B"};
+  var SANS = '"Pretendard",-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+  var MONO = '"SF Mono",ui-monospace,"JetBrains Mono",Menlo,Consolas,"D2Coding",monospace';
+
+  function roundRect(ctx, x, y, w, h, r){
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+  function fitText(ctx, text, maxW, size, family, weight){
+    var sz = size;
+    do {
+      ctx.font = (weight || "400") + " " + sz + "px " + family;
+      if (ctx.measureText(text).width <= maxW) break;
+      sz -= 2;
+    } while (sz > 18);
+    return sz;
+  }
+
+  function renderCard(r){
+    var W = 1080, H = 760, P = 80;
+    var cv = document.createElement("canvas");
+    cv.width = W; cv.height = H;
+    var ctx = cv.getContext("2d");
+    ctx.fillStyle = CARD.ink; ctx.fillRect(0, 0, W, H);
+    ctx.textBaseline = "alphabetic";
+
+    // eyebrow + 선
+    var eb = "메소 적립 계산기 · 목표 도달";
+    ctx.fillStyle = CARD.gold; ctx.font = "500 24px " + MONO;
+    ctx.fillText(eb, P, P + 22);
+    var ebW = ctx.measureText(eb).width;
+    var g = ctx.createLinearGradient(P + ebW + 20, 0, W - P, 0);
+    g.addColorStop(0, CARD.goldDim); g.addColorStop(1, "rgba(138,110,44,0)");
+    ctx.fillStyle = g; ctx.fillRect(P + ebW + 20, P + 13, W - P * 2 - ebW - 20, 2);
+
+    // 도달 날짜
+    var d = r.hitDate;
+    var dateStr = d.getFullYear() + "." + String(d.getMonth()+1).padStart(2,"0") + "." + String(d.getDate()).padStart(2,"0");
+    ctx.fillStyle = CARD.text;
+    var ds = fitText(ctx, dateStr + " (목)", W - P * 2, 108, MONO, "600");
+    ctx.fillText(dateStr, P, P + 150);
+    var dw = ctx.measureText(dateStr).width;
+    ctx.fillStyle = d.getDay() === 4 ? CARD.gold : CARD.dim;
+    ctx.font = "500 " + Math.round(ds * 0.42) + "px " + MONO;
+    ctx.fillText("(" + DOW[d.getDay()] + ")", P + dw + 14, P + 150);
+
+    var sub = r.days + "일 뒤 · 목표 " + fmtEok(r.goal) +
+              (r.skipN ? " · 건너뛴 주 " + r.skipN + "개로 +" + r.pushed + "일" : "");
+    ctx.fillStyle = CARD.dim;
+    fitText(ctx, sub, W - P * 2, 32, SANS, "400");
+    ctx.fillText(sub, P, P + 206);
+
+    // 월 평균 수익 박스
+    var by = P + 268, bh = 260, bw = W - P * 2;
+    ctx.save(); roundRect(ctx, P, by, bw, bh, 22); ctx.fillStyle = CARD.panel; ctx.fill(); ctx.restore();
+    ctx.fillStyle = CARD.dim; ctx.font = "500 26px " + SANS;
+    ctx.fillText("월 평균 수익", P + 40, by + 58);
+    var inc = r.inc, gross = inc.weekly + inc.monthly + inc.hunt;
+    ctx.fillStyle = CARD.text;
+    var vs = fitText(ctx, fmtEok(inc.total), bw - 80, 76, MONO, "600");
+    ctx.fillText(fmtEok(inc.total), P + 40, by + 140);
+    if (inc.expense){
+      var vw = ctx.measureText(fmtEok(inc.total)).width;
+      ctx.fillStyle = CARD.orange; ctx.font = "400 " + Math.round(vs * 0.36) + "px " + MONO;
+      ctx.fillText("지출 −" + fmtEok(inc.expense) + " 차감", P + 40 + vw + 18, by + 140);
+    }
+    // 구성 막대
+    var barY = by + 176, barH = 14, barW = bw - 80, x = P + 40;
+    var parts = [{v:inc.weekly, c:CARD.gold, n:"주보"}, {v:inc.hunt, c:CARD.violet, n:"사냥"}, {v:inc.monthly, c:CARD.rose, n:"월보"}];
+    ctx.save(); roundRect(ctx, x, barY, barW, barH, 7); ctx.clip();
+    ctx.fillStyle = CARD.line; ctx.fillRect(x, barY, barW, barH);
+    parts.forEach(function(pt){
+      var w = gross > 0 ? barW * pt.v / gross : 0;
+      ctx.fillStyle = pt.c; ctx.fillRect(x, barY, w, barH); x += w;
+    });
+    ctx.restore();
+    var lx = P + 40, ly = barY + 52;
+    ctx.font = "400 24px " + SANS;
+    parts.forEach(function(pt){
+      var pc = gross > 0 ? Math.round(pt.v / gross * 100) : 0;
+      ctx.fillStyle = pt.c; ctx.beginPath(); ctx.arc(lx + 8, ly - 8, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = CARD.dim;
+      var t = pt.n + " " + pc + "% · " + fmtEok(pt.v);
+      ctx.fillText(t, lx + 26, ly);
+      lx += 26 + ctx.measureText(t).width + 34;
+    });
+
+    // 하단 주소
+    ctx.fillStyle = CARD.faint; ctx.font = "400 22px " + MONO;
+    ctx.fillText(r.url, P, H - P + 14);
+    return new Promise(function(res){ cv.toBlob(res, "image/png"); });
+  }
+
+  $("btn-image").addEventListener("click", function(){
+    var btn = this;
+    if (!last){ flash(btn, "도달 날짜가 있어야 함"); return; }
+    renderCard(last).then(function(blob){
+      if (!blob){ flash(btn, "실패"); return; }
+      var name = "meso-" + toISO(last.hitDate) + ".png";
+      var file = null;
+      try{ file = new File([blob], name, {type:"image/png"}); } catch(e){}
+      // 모바일은 공유 시트, 그 외는 다운로드
+      if (file && matchMedia("(pointer:coarse)").matches && navigator.canShare && navigator.canShare({files:[file]})){
+        navigator.share({files:[file]}).then(function(){ flash(btn, "공유됨"); },
+                                             function(err){ if (err && err.name !== "AbortError") download(blob, name, btn); });
+        return;
+      }
+      download(blob, name, btn);
+    });
+  });
+  function download(blob, name, btn){
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+    flash(btn, "저장됨");
+  }
+  // 스모크 테스트에서 카드를 꺼내 보기 위한 훅
+  window.__meso = {renderCard: function(){ return last ? renderCard(last) : Promise.resolve(null); }};
+
   /* ---------- theme ---------- */
   function currentTheme(){
     var t = document.documentElement.dataset.theme;
@@ -1507,6 +1637,7 @@ if (typeof module === "object" && module.exports) module.exports = MesoCore;
     /* 도달은 "며칠"보다 "언제"가 고정값이다. 시작일을 미루면 일수는 줄지만
        끝나는 날짜는 그대로이거나 오히려 늦어진다. 그래서 날짜를 주역으로 둔다. */
     var over = 0;
+    last = null;
     if (g.days === -2){
       $("out-date").textContent = "—";
       $("out-days").textContent = "목표 메소를 입력해줘";
@@ -1527,12 +1658,15 @@ if (typeof module === "object" && module.exports) module.exports = MesoCore;
         '>(' + DOW[hitDate.getDay()] + ')</small>';
 
       // 건너뛴 주가 있으면 그게 없을 때와 비교해 며칠 밀렸는지
-      var skipNote = "";
+      var skipNote = "", pushed = 0;
       if (cfg.skipWeeks){
         var g0 = findGoal(withCfg(cfg, "skipWeeks", null)).days, n = Object.keys(cfg.skipWeeks).length;
-        var pushed = g0 > 0 ? g.days - g0 : 0;
+        pushed = g0 > 0 ? g.days - g0 : 0;
         skipNote = '<span class="mix">건너뛴 주 ' + n + '개로 ' + (pushed > 0 ? "+" + pushed + "일 밀림" : "날짜 변동 없음") + '</span>';
       }
+      last = {hitDate:hitDate, days:g.days, goal:cfg.goal, inc:inc,
+              skipN: cfg.skipWeeks ? Object.keys(cfg.skipWeeks).length : 0, pushed: pushed || 0,
+              url: location.host ? location.host + location.pathname.replace(/index\.html$/, "") : "yh-yeop.github.io/meso_calcul/"};
       $("out-days").innerHTML = hitDate.getFullYear() + "년 · " + g.days + "일 뒤" +
         '<span class="mix" title="이만큼 덜 벌어도 같은 날 도달함. 뒤집으면 목표를 이만큼 올려도 도달 날짜는 그대로임">' +
         "목표 +" + fmtEok(over) + " 넘겨서 도달</span>" + skipNote;
