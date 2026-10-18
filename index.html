@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>메소 적립 계산기</title>
 <meta name="description" content="메이플스토리 메소 적립 계산기. 주간보스·월간보스·재획 시급을 넣으면 목표 메소 도달일, 사냥 시간별 시나리오, 수익 구성을 하루 단위 달력 기준으로 계산함.">
-<meta name="color-scheme" content="dark">
+<meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#141220">
 <meta property="og:type" content="website">
 <meta property="og:title" content="메소 적립 계산기">
@@ -17,8 +17,13 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="메소계산기">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<script>
+  // 저장된 테마를 첫 그리기 전에 적용 (깜빡임 방지). 없으면 시스템 설정을 따름
+  try{ var t = localStorage.getItem("meso-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch(e){}
+</script>
 <style>
   :root{
+    color-scheme:dark;
     --ink:#141220;
     --ink-2:#1C1930;
     --surface:#211D38;
@@ -34,6 +39,11 @@
     --text:#EFECF8;
     --muted:#948DB4;
     --muted-2:#8880AB;
+    --glow-1:#2C2450;
+    --glow-2:#23203C;
+    --shadow:0 6px 20px rgba(0,0,0,.28);
+    --focus:rgba(233,185,73,.14);
+    --chip-on:rgba(233,185,73,.1);
     /* 타입 스케일 — 크기는 이 여섯 개 밖으로 나가지 않는다 */
     --fs-micro:11px;    /* 표 헤더, eyebrow, 그래프 축 */
     --fs-sm:12px;       /* 각주, 범례, 입력 힌트 */
@@ -44,11 +54,60 @@
     --mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,Consolas,"D2Coding",monospace;
     --sans:"Pretendard",-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
   }
+  /* 라이트 팔레트 — 본문 색은 흰 패널 기준 대비 4.5:1 이상. 시스템이 라이트면 자동, 버튼으로 고정 가능 */
+  @media (prefers-color-scheme:light){
+    :root:not([data-theme="dark"]){
+    color-scheme:light;
+    --ink:#F4F2FA;
+    --ink-2:#FFFFFF;
+    --surface:#F0EDF8;
+    --line:#D6D1E8;
+    --line-soft:#E7E3F3;
+    --gold:#8E6300;
+    --gold-dim:#B8933A;
+    --violet:#6240D4;
+    --rose:#C2206A;
+    --mint:#0F7A5A;
+    --sky:#1868B8;
+    --orange:#B5400E;
+    --text:#1D1A2E;
+    --muted:#585275;
+    --muted-2:#6B6590;
+    --glow-1:#E6E0F7;
+    --glow-2:#EDE8F6;
+    --shadow:0 6px 20px rgba(40,30,80,.14);
+    --focus:rgba(142,99,0,.16);
+    --chip-on:rgba(142,99,0,.08);
+    }
+  }
+  :root[data-theme="light"]{
+    color-scheme:light;
+    --ink:#F4F2FA;
+    --ink-2:#FFFFFF;
+    --surface:#F0EDF8;
+    --line:#D6D1E8;
+    --line-soft:#E7E3F3;
+    --gold:#8E6300;
+    --gold-dim:#B8933A;
+    --violet:#6240D4;
+    --rose:#C2206A;
+    --mint:#0F7A5A;
+    --sky:#1868B8;
+    --orange:#B5400E;
+    --text:#1D1A2E;
+    --muted:#585275;
+    --muted-2:#6B6590;
+    --glow-1:#E6E0F7;
+    --glow-2:#EDE8F6;
+    --shadow:0 6px 20px rgba(40,30,80,.14);
+    --focus:rgba(142,99,0,.16);
+    --chip-on:rgba(142,99,0,.08);
+  }
   *{box-sizing:border-box;margin:0;padding:0}
   body{
     background:
-      radial-gradient(1100px 620px at 82% -12%, #2C2450 0%, transparent 62%),
-      radial-gradient(760px 480px at -8% 108%, #23203C 0%, transparent 58%),
+      radial-gradient(1100px 620px at 82% -12%, var(--glow-1) 0%, transparent 62%),
+      radial-gradient(760px 480px at -8% 108%, var(--glow-2) 0%, transparent 58%),
       var(--ink);
     background-attachment:fixed;
     color:var(--text);font-family:var(--sans);font-size:var(--fs-base);line-height:1.6;
@@ -116,7 +175,7 @@
   }
   input[type=number]{width:114px;text-align:right}
   input[type=date]{width:156px}
-  input:focus,textarea:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(233,185,73,.14)}
+  input:focus,textarea:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px var(--focus)}
   input::-webkit-calendar-picker-indicator{opacity:.7;cursor:pointer}
   input::-webkit-calendar-picker-indicator:hover{opacity:1}
 
@@ -166,7 +225,7 @@
   select{background:var(--surface);border:1px solid var(--line);border-radius:8px;color:var(--text);
          font-family:var(--sans);font-size:var(--fs-md);padding:7px 8px;width:100%;cursor:pointer;
          transition:border-color .14s,box-shadow .14s}
-  select:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(233,185,73,.14)}
+  select:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px var(--focus)}
 
   /* skipped weeks */
   .skiph{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;color:var(--muted-2);
@@ -179,7 +238,7 @@
         cursor:pointer;transition:border-color .14s,color .14s,background .14s}
   .chip:hover{border-color:var(--gold-dim);color:var(--gold)}
   .chip:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-  .chip[aria-pressed=true]{border-color:var(--gold);color:var(--gold);background:rgba(233,185,73,.1);text-decoration:line-through}
+  .chip[aria-pressed=true]{border-color:var(--gold);color:var(--gold);background:var(--chip-on);text-decoration:line-through}
   .skipnote{font-size:var(--fs-sm);color:var(--muted-2);margin-top:9px;line-height:1.5}
   .btn{flex:1;background:transparent;border:1px dashed var(--line);border-radius:9px;color:var(--muted);
        font-family:var(--sans);font-size:var(--fs-md);padding:11px;cursor:pointer;transition:border-color .14s,color .14s}
@@ -202,7 +261,7 @@
   svg{display:block;width:100%;height:auto;overflow:visible;touch-action:pan-y;cursor:crosshair}
   .tip{position:absolute;z-index:2;pointer-events:none;min-width:150px;max-width:240px;
        background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:9px 11px;
-       font-size:var(--fs-sm);color:var(--muted);line-height:1.5;box-shadow:0 6px 20px rgba(0,0,0,.28)}
+       font-size:var(--fs-sm);color:var(--muted);line-height:1.5;box-shadow:var(--shadow)}
   .tip b{display:block;font-family:var(--mono);font-size:var(--fs-md);color:var(--text);font-weight:600;
          font-variant-numeric:tabular-nums}
   .tip b small{font-weight:400;color:var(--muted-2);margin-left:6px;font-size:var(--fs-micro)}
@@ -290,6 +349,7 @@
     <h1>메소 적립 계산기</h1>
     <p>주간보스는 목요일, 월간보스는 매월 1일에 한 번에 들어옴. 사냥만 매일 쌓임. 그래서 잔고는 매끄럽게 늘지 않고 계단으로 올라감.</p>
     <div class="tools">
+      <button class="tool" id="btn-theme" title="라이트/다크 테마 전환" aria-label="테마 전환">◐ 테마</button>
       <button class="tool" id="btn-share" title="현재 설정이 담긴 링크 복사">링크 복사</button>
       <button class="tool" id="btn-reset" title="저장된 값 지우고 기본값으로">초기화</button>
     </div>
@@ -1042,12 +1102,12 @@ if (typeof module === "object" && module.exports) module.exports = MesoCore;
     var s = ['<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="누적 메소 그래프">'];
     for (var t = 0; t <= 4; t++){
       var val = maxY*t/4, y = sy(val);
-      s.push('<line x1="'+padL+'" y1="'+y.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+y.toFixed(1)+'" stroke="#2A2543" stroke-width="1"/>');
-      s.push('<text x="'+(padL-10)+'" y="'+(y+4).toFixed(1)+'" text-anchor="end" fill="#8880AB" font-size="11.5" font-family="monospace">'+fmtShort(val)+'</text>');
+      s.push('<line x1="'+padL+'" y1="'+y.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+y.toFixed(1)+'" style="stroke:var(--line-soft)" stroke-width="1"/>');
+      s.push('<text x="'+(padL-10)+'" y="'+(y+4).toFixed(1)+'" text-anchor="end" style="fill:var(--muted-2)" font-size="11.5" font-family="monospace">'+fmtShort(val)+'</text>');
     }
     if (cfg.goal > 0 && cfg.goal <= maxY){
       var gy = sy(cfg.goal);
-      s.push('<line x1="'+padL+'" y1="'+gy.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+gy.toFixed(1)+'" stroke="#4FD1AA" stroke-width="1.2" stroke-dasharray="5 4" opacity=".8"/>');
+      s.push('<line x1="'+padL+'" y1="'+gy.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+gy.toFixed(1)+'" style="stroke:var(--mint)" stroke-width="1.2" stroke-dasharray="5 4" opacity=".8"/>');
     }
     var pts = sim.pts;
     var area = "M " + sx(pts[0].x).toFixed(1) + " " + sy(pts[0].y).toFixed(1), segs = [];
@@ -1055,26 +1115,25 @@ if (typeof module === "object" && module.exports) module.exports = MesoCore;
       var a = pts[i-1], b = pts[i];
       var x1 = sx(a.x), y1 = sy(a.y), x2 = sx(b.x), y2 = sy(b.y);
       area += " L " + x2.toFixed(1) + " " + y2.toFixed(1);
-      var col = b.kind === "weekly" ? "#E9B949" : b.kind === "monthly" ? "#E8639B"
-              : b.kind === "once" ? "#5AB0F2" : b.kind === "expense" ? "#F2784B" : "#9C7BF0";
-      segs.push('<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y2.toFixed(1)+'" stroke="'+col+'" stroke-width="'+(b.kind==="hunt"?1.5:2.2)+'" stroke-linecap="round"/>');
+      var col = KIND_COLOR[b.kind] || KIND_COLOR.hunt;
+      segs.push('<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y2.toFixed(1)+'" style="stroke:'+col+'" stroke-width="'+(b.kind==="hunt"?1.5:2.2)+'" stroke-linecap="round"/>');
     }
-    s.push('<defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#9C7BF0" stop-opacity=".26"/><stop offset="100%" stop-color="#9C7BF0" stop-opacity="0"/></linearGradient></defs>');
+    s.push('<defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" style="stop-color:var(--violet)" stop-opacity=".26"/><stop offset="100%" style="stop-color:var(--violet)" stop-opacity="0"/></linearGradient></defs>');
     s.push('<path d="'+area+' L '+sx(pts[pts.length-1].x).toFixed(1)+' '+sy(0).toFixed(1)+' L '+sx(0).toFixed(1)+' '+sy(0).toFixed(1)+' Z" fill="url(#ag)"/>');
     s.push(segs.join(""));
     if (goalIdx >= 0 && goalIdx < days){
       var mx = sx(goalIdx+1);
-      s.push('<line x1="'+mx.toFixed(1)+'" y1="'+padT+'" x2="'+mx.toFixed(1)+'" y2="'+(padT+ih)+'" stroke="#4FD1AA" stroke-width="1" opacity=".45"/>');
-      s.push('<circle cx="'+mx.toFixed(1)+'" cy="'+sy(sim.daily[goalIdx]).toFixed(1)+'" r="4.5" fill="#141220" stroke="#4FD1AA" stroke-width="2"/>');
+      s.push('<line x1="'+mx.toFixed(1)+'" y1="'+padT+'" x2="'+mx.toFixed(1)+'" y2="'+(padT+ih)+'" style="stroke:var(--mint)" stroke-width="1" opacity=".45"/>');
+      s.push('<circle cx="'+mx.toFixed(1)+'" cy="'+sy(sim.daily[goalIdx]).toFixed(1)+'" r="4.5" style="fill:var(--ink-2);stroke:var(--mint)" stroke-width="2"/>');
     }
-    s.push('<line x1="'+padL+'" y1="'+(padT+ih)+'" x2="'+(W-padR)+'" y2="'+(padT+ih)+'" stroke="#332D52" stroke-width="1"/>');
+    s.push('<line x1="'+padL+'" y1="'+(padT+ih)+'" x2="'+(W-padR)+'" y2="'+(padT+ih)+'" style="stroke:var(--line)" stroke-width="1"/>');
     for (var k = 0; k <= 5; k++){
       var dn = Math.round(days*k/5);
       s.push('<text x="'+sx(dn).toFixed(1)+'" y="'+(padT+ih+18)+'" text-anchor="'+(k === 0 ? "start" : "middle")+
-             '" fill="#8880AB" font-size="11.5" font-family="monospace">'+(dn === 0 ? "시작" : dn+"일")+'</text>');
+             '" style="fill:var(--muted-2)" font-size="11.5" font-family="monospace">'+(dn === 0 ? "시작" : dn+"일")+'</text>');
     }
-    s.push('<g id="guide" hidden><line y1="'+padT+'" y2="'+(padT+ih)+'" stroke="#8880AB" stroke-width="1" stroke-dasharray="3 3"/>' +
-           '<circle r="4" fill="#141220" stroke="#EFECF8" stroke-width="1.5"/></g>');
+    s.push('<g id="guide" hidden><line y1="'+padT+'" y2="'+(padT+ih)+'" style="stroke:var(--muted-2)" stroke-width="1" stroke-dasharray="3 3"/>' +
+           '<circle r="4" style="fill:var(--ink-2);stroke:var(--text)" stroke-width="1.5"/></g>');
     s.push('</svg><div class="tip" id="tip" hidden></div>');
     $("chart").innerHTML = s.join("");
   }
@@ -1366,6 +1425,25 @@ if (typeof module === "object" && module.exports) module.exports = MesoCore;
       flash(btn, "주소창 확인");
     }
   });
+
+  /* ---------- theme ---------- */
+  function currentTheme(){
+    var t = document.documentElement.dataset.theme;
+    if (t === "light" || t === "dark") return t;
+    return matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+  }
+  function syncThemeColor(){
+    var m = document.querySelector('meta[name="theme-color"]');
+    if (m) m.setAttribute("content", currentTheme() === "light" ? "#F4F2FA" : "#141220");
+  }
+  $("btn-theme").addEventListener("click", function(){
+    var next = currentTheme() === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    try{ localStorage.setItem("meso-theme", next); } catch(e){}
+    syncThemeColor();
+  });
+  syncThemeColor();
+  if (window.matchMedia) matchMedia("(prefers-color-scheme: light)").addEventListener("change", syncThemeColor);
 
   $("btn-reset").addEventListener("click", function(){
     try{ localStorage.removeItem(STORE_KEY); } catch(e){}
