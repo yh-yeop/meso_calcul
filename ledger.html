@@ -620,9 +620,21 @@
     });
     var w = 0, m = 0;
     roster.forEach(function(c){ w += c.weekly; m += c.monthly; });
+    // 계산기의 일회성(o) · 정기 지출(e) · 건너뛸 주(k). 날짜 키로 바꿔 둠
+    var onceBy = {}, expW = 0, expM = 0, skipW = {};
+    (Array.isArray(s.o) ? s.o : []).forEach(function(o){
+      var a = Array.isArray(o) ? parseFloat(o[2]) : NaN;
+      if (parseDate(o[0]) && a) onceBy[o[0]] = (onceBy[o[0]] || 0) + a;
+    });
+    (Array.isArray(s.e) ? s.e : []).forEach(function(x){
+      var a = Array.isArray(x) ? Math.max(0, parseFloat(x[1]) || 0) : 0;
+      if (x[2] === "m") expM += a; else expW += a;
+    });
+    (Array.isArray(s.k) ? s.k : []).forEach(function(k){ if (typeof k === "string" && parseDate(k)) skipW[k] = true; });
     return {raw:s, roster:roster, weekly:w, monthly:m, rate:f("rate"),
             hours:Math.max(0, Math.min(24, f("hours"))), have:f("have"), goal:f("goal"),
-            start:parseDate(s.start), skip: s.skip === undefined ? true : !!s.skip};
+            start:parseDate(s.start), skip: s.skip === undefined ? true : !!s.skip,
+            onceBy:onceBy, expW:expW, expM:expM, skipW:skipW};
   }
 
   /* ---------- 계산 ---------- */
@@ -697,14 +709,20 @@
             netDay: (s.inc - s.out) / days};
   }
 
-  // 계산기와 같은 규칙: 목요일 주보, 1일 월보, 매일 사냥 (목요일 쉬기 옵션)
+  /* 계산기 하루치. index.html 의 MesoCore.simulate 와 같은 규칙 · 같은 순서여야 함:
+     목요일 주보(건너뛸 주 제외) → 1일 월보 → 일회성 → 정기 지출(목 · 1일) → 사냥(목요일 쉬기 옵션) */
+  function planDay(c, d, run){
+    var iso = toISO(d), isThu = d.getDay() === 4, isFirst = d.getDate() === 1;
+    if (isThu && !c.skipW[iso]) run += c.weekly;
+    if (isFirst) run += c.monthly;
+    if (c.onceBy[iso]) run += c.onceBy[iso];
+    run -= (isThu ? c.expW : 0) + (isFirst ? c.expM : 0);
+    return run + ((isThu && c.skip) ? 0 : c.rate * c.hours);
+  }
   function planSeries(calc, to){
     var out = {}, run = calc.have, d = new Date(calc.start.getTime()), n = 0;
     while (d <= to && n++ < 4000){
-      var isThu = d.getDay() === 4;
-      if (isThu) run += calc.weekly;
-      if (d.getDate() === 1) run += calc.monthly;
-      run += (isThu && calc.skip) ? 0 : calc.rate * calc.hours;
+      run = planDay(calc, d, run);
       out[toISO(d)] = run;
       d = addDays(d, 1);
     }
@@ -715,18 +733,16 @@
     if (calc.have >= calc.goal) return calc.start;
     var run = calc.have, d = new Date(calc.start.getTime());
     for (var i = 0; i < 3650; i++){
-      var isThu = d.getDay() === 4;
-      if (isThu) run += calc.weekly;
-      if (d.getDate() === 1) run += calc.monthly;
-      run += (isThu && calc.skip) ? 0 : calc.rate * calc.hours;
+      run = planDay(calc, d, run);
       if (run >= calc.goal) return d;
       d = addDays(d, 1);
     }
     return null;
   }
+  function calcMonthExpense(c){ return c.expW * WEEK_PER_MONTH + c.expM; }
   function calcMonthIncome(c){
     return c.weekly * WEEK_PER_MONTH + c.monthly +
-           c.rate * c.hours * DAYS_PER_MONTH * (c.skip ? 6/7 : 1);
+           c.rate * c.hours * DAYS_PER_MONTH * (c.skip ? 6/7 : 1) - calcMonthExpense(c);
   }
 
   /* ---------- 입력 폼 ---------- */
@@ -1025,8 +1041,9 @@
                c ? c.hours + "h" : "—"]);
     rows.push(["주간보스", '<span class="' + cls(aWeekly, c && c.weekly, true) + '">' + cell(aWeekly, function(v){ return fmtEok(v) + "/주"; }) + "</span>",
                c ? fmtEok(c.weekly) + "/주" : "—"]);
-    rows.push(["지출", '<span class="' + (aOut > 0 ? "n" : "") + '">' + cell(aOut, function(v){ return fmtEok(v) + "/월"; }) + "</span>",
-               c ? '<span class="z">반영 안 됨</span>' : "—"]);
+    var cOut = c ? calcMonthExpense(c) : null;
+    rows.push(["지출", '<span class="' + cls(cOut, aOut, true) + '">' + cell(aOut, function(v){ return fmtEok(v) + "/월"; }) + "</span>",
+               c ? (cOut > 0 ? fmtEok(cOut) + "/월" : '<span class="z">정기 지출 없음</span>') : "—"]);
     rows.push(["순수익", '<span class="' + cls(aNet, cNet, true) + '">' + cell(aNet, function(v){ return fmtEok(v) + "/월"; }) + "</span>",
                c ? fmtEok(cNet) + "/월" : "—"]);
 
@@ -1035,7 +1052,8 @@
     }).join("");
     $("cmp-sub").textContent = ws ? "최근 " + ws.days + "일 기록" : "기록 없음";
 
-    /* 계산기는 지출을 모름. 실제 지출 페이스가 목표를 얼마나 미루는지 따로 보여준다. */
+    /* 계산기의 정기 지출은 사용자가 예상한 값이고, 이건 실제 기록 기준.
+       실제 지출 페이스가 목표를 얼마나 미루는지 따로 보여준다. */
     var hint = $("cmp-hint");
     if (c && c.goal > 0 && ws && ws.outDay > 0 && L.bal < c.goal && ws.incDay > 0){
       var left = c.goal - L.bal;
@@ -1736,6 +1754,11 @@
   if (!st.entries.length) ui.t = "bal";
   buildBudget();
   renderAll();
+
+  // 오프라인 캐시 (계산기와 같은 sw.js). file:// 에선 안 됨
+  if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
+    window.addEventListener("load", function(){ navigator.serviceWorker.register("./sw.js").catch(function(){}); });
+  }
 })();
 </script>
 </body>
