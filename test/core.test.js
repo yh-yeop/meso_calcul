@@ -259,6 +259,10 @@ test('포맷: fmtEok / fmtShort / fmtFine', () => {
   assert.equal(M.fmtEok(12345), '1조 2,345억');
   assert.equal(M.fmtEok(-3), '-3억');
   assert.equal(M.fmtEok(NaN), '—');
+  assert.equal(M.fmtEok(99999.7), '10조', '반올림 올림은 조로 넘김');
+  assert.equal(M.fmtEok(19999.6), '2조');
+  assert.equal(M.fmtEok(10000), '1조');
+  assert.equal(M.fmtEok(-19999.6), '-2조');
   assert.equal(M.fmtShort(12345), '1.2조');
   assert.equal(M.fmtFine(0.05), '500만');
   assert.equal(M.fmtFine(1.234), '1.23억');

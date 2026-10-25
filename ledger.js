@@ -18,7 +18,7 @@ Meso.ledger = (function(M){
   var CATS = {
     "in": [
       {k:"weekly",  n:"주간보스", c:"var(--gold)"},
-      {k:"monthly", n:"월간보스", c:"var(--rose)"},
+      {k:"monthly", n:"월간보스", c:"var(--gold-dim)"},
       {k:"hunt",    n:"사냥",     c:"var(--violet)"},
       {k:"sell",    n:"판매",     c:"var(--mint)"},
       {k:"etc",     n:"기타",     c:"var(--faint)"}
@@ -34,45 +34,88 @@ Meso.ledger = (function(M){
   function cat(t, k){
     var list = CATS[t] || [];
     for (var i = 0; i < list.length; i++) if (list[i].k === k) return list[i];
-    return {k:k, n:k || "기타", c:"var(--faint)"};
+    // 모르는 키를 이름으로 내보내지 않음 — 화면에 그대로 HTML 로 들어가는 자리라서
+    return {k:"etc", n:"기타", c:"var(--faint)"};
   }
+  function validCat(t, k){ return (CATS[t] || []).some(function(x){ return x.k === k; }); }
   function isApi(e){ return !!e.src && e.src.indexOf("api:") === 0; }
 
   var st = {v:1, seq:0, entries:[], budget:{total:0, cats:{}}, api:{last:{}, skip:{}, run:null}};
-  var ui = {sub:"log", t:"in", c:{"in":"hunt", "out":"sf"}, edit:null, month:null, period:"month",
-            filter:"all", fresh:null, lastChar:"", budEdit:false};
+  // lastT: 마지막으로 쓴 수입/지출 모드 (+ 버튼은 잔고 확인이 아니라 이걸로 열림). unit: 금액 칸 단위 억|만
+  var ui = {sub:"log", t:"in", lastT:"in", c:{"in":"hunt", "out":"sf"}, edit:null, month:null, period:"month",
+            filter:"all", fresh:null, lastChar:"", budEdit:false, unit:"억"};
+  var UNIT_KEY = "meso-amt-unit";
 
   /* ---------- 저장 ---------- */
   function load(){
     var s = M.read(M.KEYS.ledger);
     if (s && Array.isArray(s.entries)) adopt(s);
   }
-  function adopt(s){
-    var maxId = 0;
-    st.entries = s.entries.filter(function(e){
-      return e && /^\d{4}-\d{2}-\d{2}$/.test(e.d) && (e.t === "in" || e.t === "out" || e.t === "bal") && isFinite(e.a);
-    }).map(function(e, i){
-      var x = {id: +e.id > 0 ? +e.id : i + 1, d:e.d, t:e.t, a:+e.a};
-      if (e.c) x.c = String(e.c);
-      if (+e.h > 0) x.h = +e.h;
-      if (e.ch) x.ch = String(e.ch);
-      if (e.m) x.m = String(e.m);
-      if (e.src) x.src = String(e.src);
+  /* 저장값 · 백업 · 어디서 왔든 같은 검사를 거쳐 새 상태를 만듦 (원본은 안 건드림).
+     남이 준 백업 파일이 들어올 수 있어서 형식 · 범위 · 화면에 나갈 값을 전부 걸러냄 */
+  function num(v, lo, hi){ v = +v; return isFinite(v) && v >= lo && v <= hi ? v : null; }
+  function cleanX(x){
+    if (!x || typeof x !== "object") return null;
+    var o = {};
+    if (Array.isArray(x.items)){
+      var items = x.items.filter(Array.isArray).slice(0, 20).map(function(it){
+        return [String(it[0]).slice(0, 60), num(it[1], 0, 1e6) || 0, num(it[2], 0, 1e7) || 0];
+      });
+      if (items.length) o.items = items;      // 빈 배열은 남기지 않음 — 빈 근거 모양이 화면 · 홈 로직을 헷갈리게 함
+    }
+    if (Array.isArray(x.b)){
+      var b = x.b.filter(function(r){ return Array.isArray(r) && typeof r[0] === "string"; }).slice(0, 30).map(function(r){
+        return [r[0], String(r[1]), Math.max(1, Math.min(6, parseInt(r[2], 10) || 1)), num(r[3], 0, 1e7) || 0];
+      });
+      if (b.length) o.b = b;                  // 걸러서 비면 b:[] 로 두지 않음 (홈 보스 체크는 b 가 있으면 보스별 기록으로 읽음)
+    }
+    if (num(x.n, 0, 1e7) !== null) o.n = +x.n;
+    if (num(x.unk, 0, 1e7) !== null) o.unk = +x.unk;
+    if (x.rules) o.rules = String(x.rules).slice(0, 20);
+    return Object.keys(o).length ? o : null;
+  }
+  function sanitize(s){
+    var out = {v:1, seq:0, entries:[], budget:{total:0, cats:{}}, api:{last:{}, skip:{}, run:null}};
+    (Array.isArray(s && s.entries) ? s.entries : []).forEach(function(e){
+      if (!e || typeof e !== "object" || !(e.t === "in" || e.t === "out" || e.t === "bal")) return;
+      if (typeof e.d !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(e.d) || !parseDate(e.d)) return;   // 2026-02-30 같은 날짜도 버림
+      var a = num(e.a, -1e7, 1e7);
+      if (a === null) return;
+      var x = {id: Math.floor(num(e.id, 1, 1e9) || 0), d:e.d, t:e.t, a:a};
+      if (e.t !== "bal") x.c = validCat(e.t, e.c) ? e.c : "etc";
+      if (num(e.h, 0.01, 24) !== null) x.h = +e.h;
+      if (e.ch) x.ch = String(e.ch).slice(0, 40);
+      if (e.m) x.m = String(e.m).slice(0, 200);
+      if (e.src) x.src = String(e.src).slice(0, 120);
       if (e.est) x.est = true;
       if (e.lock) x.lock = true;
-      if (e.x && typeof e.x === "object") x.x = e.x;
-      maxId = Math.max(maxId, x.id);
-      return x;
+      var xx = cleanX(e.x);
+      if (xx) x.x = xx;
+      out.entries.push(x);
     });
-    st.seq = Math.max(maxId, +s.seq || 0);
-    var b = s.budget || {};
-    st.budget = {total: +b.total > 0 ? +b.total : 0, cats:{}};
-    if (b.cats) Object.keys(b.cats).forEach(function(k){ if (+b.cats[k] > 0) st.budget.cats[k] = +b.cats[k]; });
-    var a = s.api || {};
-    st.api = {last: a.last && typeof a.last === "object" ? a.last : {},
-              skip: a.skip && typeof a.skip === "object" ? a.skip : {},
-              run: a.run || null};
+    // id 가 없거나 겹치면 새로 매김 — 삭제 · 수정이 엉뚱한 기록까지 건드리지 않게
+    var seen = {}, maxId = 0;
+    out.entries.forEach(function(x){ if (!x.id || seen[x.id]) x.id = 0; else { seen[x.id] = 1; maxId = Math.max(maxId, x.id); } });
+    out.entries.forEach(function(x){ if (!x.id) x.id = ++maxId; });
+    out.seq = Math.max(maxId, Math.floor(num(s && s.seq, 0, 1e9) || 0));
+    var b = s && s.budget || {};
+    out.budget.total = num(b.total, 0, 1e7) || 0;
+    if (b.cats && typeof b.cats === "object") CATS.out.forEach(function(x){
+      var v = num(b.cats[x.k], 0, 1e7);
+      if (v > 0) out.budget.cats[x.k] = v;
+    });
+    var a2 = s && s.api || {};
+    if (a2.last && typeof a2.last.pot === "string" && parseDate(a2.last.pot)) out.api.last.pot = a2.last.pot;
+    if (a2.skip && typeof a2.skip === "object") Object.keys(a2.skip).forEach(function(k){ if (k.indexOf("api:") === 0) out.api.skip[k] = 1; });
+    if (typeof a2.run === "string" && !isNaN(Date.parse(a2.run))) out.api.run = a2.run;
+    return out;
   }
+  // 복원 전에 몇 건이 버려지는지 알려주기용. 기록은 합쳐지지 않고 버려지기만 하므로 개수 차이가 곧 버린 수
+  function inspect(s){
+    var state = sanitize(s), n = Array.isArray(s && s.entries) ? s.entries.length : 0;
+    return {state: state, dropped: n - state.entries.length};
+  }
+  function adopt(s){ st = sanitize(s); }
   function save(){ M.write(M.KEYS.ledger, st); }
   function changed(){ save(); M.emit("change", "ledger"); }
 
@@ -204,7 +247,7 @@ Meso.ledger = (function(M){
     if (e.ch) sub.push(esc(e.ch));
     if (e.h > 0) sub.push(e.h + "시간 · 시급 " + fmtFine(e.a / e.h));
     if (e.m) sub.push(esc(e.m));
-    var badge = isApi(e) ? '<span class="badge' + (e.lock ? ' lock' : '') + '">' + (e.lock ? "API·고정" : "API") + '</span>' : "";
+    var badge = isApi(e) ? '<span class="badge' + (e.lock ? ' lock' : '') + '">' + (e.lock ? "직접 고침" : "API") + '</span>' : "";
     var tip = isApi(e) && e.x && e.x.items ? e.x.items.map(function(it){
       return it[0] + "  " + it[1] + "회  " + fmtEok(it[2]);
     }).join("\n") : "";
@@ -230,6 +273,10 @@ Meso.ledger = (function(M){
     Array.prototype.forEach.call($("filters").children, function(b){
       b.setAttribute("aria-pressed", b.dataset.f === ui.filter ? "true" : "false");
     });
+    // 이번 달이 아니면 "이번 달" 로 돌아오는 버튼, 이번 달이면 다음 달(미래)로는 못 감
+    var curM = toISO(today()).slice(0, 7);
+    if ($("m-today")) $("m-today").hidden = ui.month === curM;
+    $("m-next").disabled = ui.month >= curM;
     var monthRows = L.rows.filter(function(r){ return r.e.d.slice(0, 7) === ui.month; });
     var ms = sumRange({rows:monthRows});
     $("m-sum").innerHTML = monthRows.length
@@ -238,14 +285,15 @@ Meso.ledger = (function(M){
 
     var box = $("list");
     if (!st.entries.length){
-      box.innerHTML = '<div class="card empty" style="margin-top:16px"><h4>지금 잔고부터 넣어 봐</h4>' +
+      box.innerHTML = '<div class="card empty" style="margin-top:16px"><h4>잔고 확인부터 해 봐</h4>' +
         '인벤토리 + 창고 메소를 한 번 넣으면 그다음부터는 벌고 쓴 것만 적으면 됨.' +
-        '<div><button class="btn primary" data-open="bal">지금 잔고 넣기</button></div></div>';
+        '<div><button class="btn primary" data-open="bal">잔고 확인하기</button></div></div>';
       return;
     }
     var rows = monthRows.filter(function(r){ return ui.filter === "all" || r.e.t === ui.filter; });
     if (!rows.length){
-      box.innerHTML = '<div class="empty">' + (monthRows.length ? "이 조건의 기록 없음" : "이 달 기록 없음") + '</div>';
+      box.innerHTML = '<div class="empty">' + (monthRows.length ? "이 조건의 기록 없음" : "이 달 기록 없음") +
+        (monthRows.length ? '<div><button class="btn sm" data-all>전체 보기</button></div>' : '') + '</div>';
       return;
     }
     var days = {}, order = [];
@@ -292,7 +340,7 @@ Meso.ledger = (function(M){
       '<div class="kpi"><small>지출</small><b class="neg">' + fmtEok(s.out) + '</b></div>' +
       '<div class="kpi"><small>순익</small><b class="' + signCls(net) + '">' + fmtSigned(net) + '</b></div>';
     $("kpi-note").innerHTML = Math.abs(s.adj) >= 1e-4
-      ? "잔고 확인으로 맞춘 <b>미기록 " + fmtSigned(s.adj) + "</b>은 위 숫자에 안 들어감 — 빠뜨린 기록이 이만큼 있다는 뜻." : "";
+      ? "위 숫자엔 <b>미기록 " + fmtSigned(s.adj) + "</b> 빠짐." : "";
     $("b-in").innerHTML = bars(s.byIn, "in", s.inc || 1);
     $("b-out").innerHTML = bars(s.byOut, "out", s.out || 1);
     $("b-char").innerHTML = Object.keys(s.byChar).length ? bars(s.byChar, null, s.inc || 1)
@@ -319,7 +367,7 @@ Meso.ledger = (function(M){
     else {
       var diff = g.diff === undefined ? "" : g.diff === 0 ? " · 계획과 같음"
                : g.diff > 0 ? ' · <b class="neg">' + g.diff + "일 늦음</b>" : ' · <b class="pos">' + (-g.diff) + "일 빠름</b>";
-      h = '<div class="goal-big">' + mdLong(g.eta) + '<small>' + g.days + '일 뒤</small></div>' +
+      h = '<div class="goal-big">' + mdLong(g.eta) + '<small>' + M.daysText(g.days) + '</small></div>' +
           '<div class="goal-lines">남은 <b>' + fmtEok(g.left) + '</b> · 최근 ' + ws.days + '일 순수익 페이스 기준<br>' + planTxt + diff + '</div>';
     }
     /* 계산기의 정기 지출은 예상치고, 이건 실제 기록 기준. 실제 지출 페이스가 목표를 얼마나 미루는지 따로 보여준다. */
@@ -369,6 +417,14 @@ Meso.ledger = (function(M){
     $("cmp-sub").textContent = ws ? "최근 " + ws.days + "일" : "기록 없음";
   }
 
+  // 폰에선 수입·지출 열이 숨어서 주 이름 칸 아래 한 줄로 (넓은 화면에선 ph-only 로 숨김)
+  function weekSub(s){
+    var p = [];
+    if (s.inc) p.push("수입 " + fmtEok(s.inc));
+    if (s.out) p.push("지출 " + fmtEok(s.out));
+    return p.length ? '<span class="cell-sub ph-only">' + p.join(" · ") + '</span>' : "";
+  }
+
   function renderWeeks(L){
     var body = $("weeks");
     if (!L.first){ body.innerHTML = '<tr><td colspan="5" class="dim">기록이 생기면 나옴</td></tr>'; return; }
@@ -378,7 +434,7 @@ Meso.ledger = (function(M){
       if (ws < first) break;
       var we = addDays(ws, 6), s = sumRange(L, toISO(ws), toISO(we)), net = s.inc - s.out;
       var endBal = balAt(L, toISO(we > t ? t : we));
-      out.push('<tr' + (w === 0 ? ' class="now"' : '') + '><td>' + md(ws) + ' ~ ' + md(we) + (w === 0 ? ' · 이번 주' : '') + '</td>' +
+      out.push('<tr' + (w === 0 ? ' class="now"' : '') + '><td>' + md(ws) + ' ~ ' + md(we) + (w === 0 ? ' · 이번 주' : '') + weekSub(s) + '</td>' +
                '<td class="wide">' + (s.inc ? fmtEok(s.inc) : '<span class="dim">—</span>') + '</td>' +
                '<td class="wide">' + (s.out ? fmtEok(s.out) : '<span class="dim">—</span>') + '</td>' +
                '<td class="' + signCls(net) + '">' + (s.inc || s.out ? fmtSigned(net) : "—") + '</td>' +
@@ -429,6 +485,12 @@ Meso.ledger = (function(M){
     lo = lo >= 0 ? Math.max(0, lo - pad) : lo - pad;
     hi += pad;
 
+    // 축 단위: 조 단위면 전부 조, 아니면 억 — 자리가 좁아서 "억" 은 맨 위 눈금에만
+    var inJo = hi >= 10000;
+    function axisLbl(v, top){
+      if (inJo) return (v / 10000).toFixed(1) + (top ? "조" : "");
+      return Math.round(v).toLocaleString("ko-KR") + (top ? "억" : "");
+    }
     var padL = 46, padR = 8, padT = 10, padB = 26, iw = W - padL - padR, ih = H - padT - padB;
     function sx(i){ return padL + (i / (days - 1)) * iw; }
     function sy(v){ return padT + ih - ((v - lo) / (hi - lo)) * ih; }
@@ -436,7 +498,7 @@ Meso.ledger = (function(M){
     for (var k = 0; k <= 3; k++){
       var val = lo + (hi - lo) * k / 3, y = sy(val);
       s.push('<line class="ch-grid" x1="' + padL + '" y1="' + y.toFixed(1) + '" x2="' + (W - padR) + '" y2="' + y.toFixed(1) + '"/>');
-      s.push('<text class="ch-lbl" x="' + (padL - 8) + '" y="' + (y + 4).toFixed(1) + '" text-anchor="end">' + fmtShort(val) + '</text>');
+      s.push('<text class="ch-lbl" x="' + (padL - 8) + '" y="' + (y + 4).toFixed(1) + '" text-anchor="end">' + axisLbl(val, k === 3) + '</text>');
     }
     if (hasPlan){
       var pp = [];
@@ -517,11 +579,11 @@ Meso.ledger = (function(M){
       fill.className = "fl" + (r > 1 ? " over" : m.out > should ? " warn" : "");
       $("bud-pace").style.left = (pace * 100).toFixed(1) + "%";
       if (m.out > tot) status = '예산을 <b class="neg">' + fmtEok(m.out - tot) + '</b> 넘김.';
-      else if (m.out > should) status = '오늘까지 쓸 만큼보다 <b class="neg">' + fmtEok(m.out - should) + '</b> 빠름. 이대로면 월말 <b>' +
-                                        fmtEok(m.out / pace) + '</b> 예상.';
-      else status = '페이스 안쪽. 이번 달 <b>' + fmtEok(tot - m.out) + '</b> 더 쓸 수 있음.';
+      else if (m.out > should) status = '오늘 기준보다 <b class="neg">' + fmtEok(m.out - should) + '</b> 더 씀. 이대로면 월말 <b>' +
+                                        fmtEok(m.out / pace) + '</b>.';
+      else status = '예산 안. 이번 달 <b>' + fmtEok(tot - m.out) + '</b> 더 쓸 수 있음.';
     } else {
-      status = m.out > 0 ? "예산을 정하면 이 속도로 월말에 얼마가 될지 알려줌. 이대로면 월말 <b>" + fmtEok(m.out / pace) + "</b>."
+      status = m.out > 0 ? "이대로면 월말 <b>" + fmtEok(m.out / pace) + "</b>. 예산을 정하면 비교해 줌."
                          : "아직 이번 달 지출 없음.";
     }
     $("bud-status").innerHTML = status;
@@ -634,12 +696,18 @@ Meso.ledger = (function(M){
 
     var api = editing && isApi(editing);
     $("api-note").hidden = !api;
-    if (api) $("api-note").textContent = editing.lock
-      ? "Open API에서 가져온 기록 · 직접 고쳐서 동기화가 덮어쓰지 않음"
-      : "Open API에서 가져온 기록 · 고치면 고정되어 다음 동기화가 덮어쓰지 않음";
+    if (api){
+      // ≈ 근거(항목 · 횟수 · 금액)를 툴팁 말고 눈에 보이게 — 터치에선 툴팁이 안 뜸
+      var ev = editing.x && editing.x.items ? editing.x.items.map(function(it){
+        return esc(it[0]) + " " + it[1] + "회 " + fmtEok(it[2]);
+      }).join("<br>") : "";
+      $("api-note").innerHTML = (editing.lock ? "API 기록 · 직접 고쳐서 동기화가 안 덮어씀"
+                                              : "API 기록 · 고치면 동기화가 안 덮어씀") +
+                                (ev ? "<br>" + ev : "");
+    }
     $("f-del").hidden = !editing;
     $("f-more").hidden = !!editing;
-    $("f-submit").textContent = editing ? "수정" : isBal ? "잔고 맞추기" : "저장";
+    $("f-submit").textContent = editing ? "수정" : isBal ? "잔고 확인" : "저장";
     preview();
   }
 
@@ -650,24 +718,52 @@ Meso.ledger = (function(M){
     });
   }
 
+  /* 금액 칸 읽기. 만 단위 모드에선 단위 없는 100만 미만 숫자를 만으로 봄 (3500 → 3,500만).
+     단위를 직접 쓴 값(억 · 만 · 조)과 100만 이상 메소 원본값은 모드와 상관없이 그대로 */
+  var PLAIN = /^([\d,]+(?:\.\d+)?)$/;
+  function plainNum(raw){
+    var m = String(raw).replace(/메소|원/g, "").trim().match(PLAIN);
+    return m ? parseFloat(m[1].replace(/,/g, "")) : null;
+  }
+  function readAmt(raw){
+    var n = plainNum(raw);
+    if (ui.unit === "만" && n !== null && isFinite(n) && n < 1e6) return n / 1e4;
+    return M.parseAmount(raw);
+  }
+  // 억(a) → 금액 칸에 넣을 글자. 만 모드에서 100만 이상이 되면 메소 원본값으로 읽히니 억을 붙여 씀
+  function amtText(a){
+    if (ui.unit === "만" && a * 1e4 < 1e6) return String(round(a * 1e4, 2));
+    return round(a, 4) + (ui.unit === "만" ? "억" : "");
+  }
+  function syncUnit(){
+    var b = $("amt-unit");
+    if (b) b.textContent = ui.unit;
+    $("f-amt").placeholder = ui.unit === "만" ? "3500" : "0.35";
+  }
+
   function preview(){
-    var raw = $("f-amt").value, v = M.parseAmount(raw), el = $("amt-prev");
+    var raw = $("f-amt").value, v = readAmt(raw), el = $("amt-prev");
     el.className = "amt-prev";
     if (!raw.trim()){
-      el.textContent = ui.t === "bal" ? "" : "21.5 · 21억 3170만 · 게임 숫자 그대로";
+      el.textContent = ui.t === "bal" ? "" : ui.unit === "만" ? "3500 = 3,500만 · 0.35억도 됨" : "0.35 = 3,500만 · 3500만도 됨";
     } else if (v === null){
-      el.textContent = "못 읽음 — 숫자와 조 · 억 · 만만";
+      el.textContent = "못 읽음 — 숫자와 조 · 억 · 만 단위만 쓸 수 있음";
       el.className = "amt-prev bad";
     } else {
-      var txt = "= " + fmtMan(v);
+      var txt = "= " + fmtMan(v), warn = "";
       if (ui.t === "bal"){
         var prev = balBefore($("f-date").value, ui.edit);
         if (prev !== null){
           var d = v - prev;
-          if (Math.abs(d) < 1e-4){ txt += " · 장부와 일치"; el.className = "amt-prev good"; }
-          else txt += " · 장부보다 " + fmtSigned(d) + " (빠뜨린 기록)";
+          if (Math.abs(d) < 1e-4){ txt += " · 기록과 일치"; el.className = "amt-prev good"; }
+          else txt += " · 기록에 없는 " + (d > 0 ? "수입 +" + fmtMan(d) : "지출 " + fmtMan(-d));
         }
       }
+      // 자릿수 실수(3500 을 억으로 읽음 등) 방지: 잔고의 10배가 넘거나, 억 모드에서 단위 없는 1000 이상
+      var bal = compute().bal, pn = plainNum(raw);
+      if (bal > 0 && v > bal * 10) warn = " · 잔고의 10배 넘음";
+      else if (ui.unit === "억" && pn !== null && pn >= 1000 && pn < 1e6) warn = " · 억 맞아?";
+      if (warn){ txt += warn; el.className = "amt-prev warn"; }
       el.textContent = txt;
     }
     var h = parseFloat($("f-hours").value);
@@ -677,6 +773,7 @@ Meso.ledger = (function(M){
   function openSheet(opts){
     opts = opts || {};
     ui.edit = null;
+    delete $("sheet").dataset.dirty;
     $("f-amt").value = ""; $("f-hours").value = ""; $("f-memo").value = "";
     if (opts.id){
       var e = findEntry(opts.id);
@@ -685,16 +782,18 @@ Meso.ledger = (function(M){
       ui.t = e.t;
       if (e.c && e.t !== "bal") ui.c[e.t] = e.c;
       $("f-date").value = e.d;
-      $("f-amt").value = round(e.a, 4);
+      $("f-amt").value = amtText(e.a);
       $("f-hours").value = e.h || "";
       $("f-char").value = e.ch || "";
       $("f-memo").value = e.m || "";
     } else {
+      // 열 때마다 마지막 수입/지출 모드로 — 잔고 확인은 기록이 하나도 없을 때만 기본
       if (opts.t) ui.t = opts.t;
-      else if (!st.entries.length) ui.t = "bal";
+      else ui.t = st.entries.length ? ui.lastT : "bal";
       $("f-date").value = toISO(today());
       $("f-char").value = opts.ch !== undefined ? opts.ch : ui.lastChar;
     }
+    syncUnit();
     renderSheet();
     if (!$("sheet").open) $("sheet").showModal();
     // 폰에선 바로 키보드를 올리면 항목 칸을 가려서, 데스크톱에서만 금액에 포커스
@@ -704,10 +803,14 @@ Meso.ledger = (function(M){
   function saveSheet(keep){
     var d = $("f-date").value;
     if (!parseDate(d)){ $("f-date").focus(); return; }
-    var a = M.parseAmount($("f-amt").value);
+    var a = readAmt($("f-amt").value);
     if (a === null || a < 0 || (ui.t !== "bal" && a <= 0)){
-      $("amt-prev").textContent = "금액을 넣어줘";
-      $("amt-prev").className = "amt-prev bad";
+      // 못 읽은 이유("못 읽음 …")는 그대로 두고, 빈칸이거나 0 일 때만 안내
+      if ($("f-amt").value.trim() && a === null) preview();
+      else {
+        $("amt-prev").textContent = $("f-amt").value.trim() ? "0보다 크게 넣어줘" : "금액을 넣어줘";
+        $("amt-prev").className = "amt-prev bad";
+      }
       $("f-amt").focus();
       return;
     }
@@ -744,8 +847,11 @@ Meso.ledger = (function(M){
       undo = function(){ st.entries = st.entries.filter(function(x){ return x.id !== e.id; }); changed(); };
       label += " 기록함";
     }
+    // 마지막 모드는 수입/지출만 기억 (잔고 확인이 + 버튼 기본이 되면 안 됨)
+    if (e.t !== "bal") ui.lastT = e.t;
     // 시작 잔고를 넣고 나면 다음 기록은 수입부터
-    if (st.entries.length === 1 && e.t === "bal") ui.t = "in";
+    if (st.entries.length === 1 && e.t === "bal") ui.t = ui.lastT;
+    delete $("sheet").dataset.dirty;
     ui.month = d.slice(0, 7);
     ui.fresh = e.id;
     if (keep && !ui.edit){
@@ -806,7 +912,8 @@ Meso.ledger = (function(M){
       if (!old) return function(){};
       st.entries = st.entries.filter(function(x){ return x.id !== old.id; });
     } else if (old){
-      old.d = e.d; old.a = round(e.a, 6); old.m = e.m; old.x = e.x;
+      // 날짜는 그 주(달) 처음 체크한 날 그대로 — 매번 오늘로 바꾸면 월말 · 월초에 걸친 주의 수입이 다음 달로 넘어감
+      old.a = round(e.a, 6); old.m = e.m; old.x = e.x;
       ui.fresh = old.id;
     } else {
       var n = {id: ++st.seq, d:e.d, t:e.t, a:round(e.a, 6), c:e.c, ch:e.ch, src:src};
@@ -994,6 +1101,7 @@ Meso.ledger = (function(M){
   $("list").addEventListener("click", function(e){
     var open = e.target.closest("[data-open]");
     if (open){ openSheet({t:open.dataset.open}); return; }
+    if (e.target.closest("[data-all]")){ ui.filter = "all"; renderLog(compute()); return; }
     var row = e.target.closest("[data-id]");
     if (row) openSheet({id:+row.dataset.id});
   });
@@ -1010,6 +1118,10 @@ Meso.ledger = (function(M){
   }
   $("m-prev").addEventListener("click", function(){ shiftMonth(-1); });
   $("m-next").addEventListener("click", function(){ shiftMonth(1); });
+  if ($("m-today")) $("m-today").addEventListener("click", function(){
+    ui.month = toISO(today()).slice(0, 7);
+    renderLog(compute());
+  });
   $("speriod").addEventListener("click", function(e){
     var b = e.target.closest("[data-p]");
     if (!b) return;
@@ -1035,7 +1147,7 @@ Meso.ledger = (function(M){
     var b = e.target.closest("[data-pid]"), p = b && findEntry(+b.dataset.pid);
     if (!p) return;
     ui.c[p.t] = p.c;
-    $("f-amt").value = round(p.a, 4);
+    $("f-amt").value = amtText(p.a);
     $("f-char").value = p.ch || "";
     $("f-hours").value = p.h || "";
     renderSheet();
@@ -1044,7 +1156,7 @@ Meso.ledger = (function(M){
   $("quick").addEventListener("click", function(e){
     var b = e.target.closest("[data-v]");
     if (!b) return;
-    $("f-amt").value = b.dataset.v;
+    $("f-amt").value = amtText(+b.dataset.v);
     if (b.dataset.ch !== undefined) $("f-char").value = b.dataset.ch;
     if (b.dataset.h) $("f-hours").value = b.dataset.h;
     renderSheet();
@@ -1074,7 +1186,23 @@ Meso.ledger = (function(M){
   $("form").addEventListener("submit", function(ev){ ev.preventDefault(); saveSheet(false); });
   $("f-more").addEventListener("click", function(){ saveSheet(true); });
   $("f-del").addEventListener("click", function(){ if (ui.edit) removeEntry(ui.edit); });
-  $("sheet").addEventListener("close", function(){ ui.edit = null; });
+  $("sheet").addEventListener("close", function(){ ui.edit = null; delete $("sheet").dataset.dirty; });
+
+  // 입력이 바뀐 시트는 배경 탭으로 안 닫히게 표시 (app.js 가 dataset.dirty 를 봄). 칩으로 채운 것도 입력으로 침
+  function markDirty(){ $("sheet").dataset.dirty = "1"; }
+  $("sheet").addEventListener("input", markDirty);
+  $("sheet").addEventListener("change", markDirty);
+  $("sheet").addEventListener("click", function(e){ if (e.target.closest("#presets, #quick, #charchips")) markDirty(); });
+
+  // 단위 억 ↔ 만. 칸에 단위 없는 숫자가 있으면 같은 금액이 되게 바꿔 써 줌
+  if ($("amt-unit")) $("amt-unit").addEventListener("click", function(ev){
+    ev.preventDefault();
+    // 친 숫자는 그대로 두고 새 단위로 읽음 — "3500" 을 치고 "억 맞아?" 를 본 사람이 단위를 바꾸는 게 주된 쓰임
+    ui.unit = ui.unit === "만" ? "억" : "만";
+    try{ localStorage.setItem(UNIT_KEY, ui.unit); } catch(e){}
+    syncUnit();
+    preview();
+  });
 
   // 예산
   $("bud-edit").addEventListener("click", function(){
@@ -1106,6 +1234,7 @@ Meso.ledger = (function(M){
     setSyncUI();
   });
   $("api-forget").addEventListener("click", function(){
+    if (!confirm("저장된 API 키를 지울까?")) return;
     M.api.setKey("");
     apiLog("키 지움. 가져온 기록은 그대로 남음.");
     setSyncUI();
@@ -1117,6 +1246,7 @@ Meso.ledger = (function(M){
 
   /* ---------- init ---------- */
   load();
+  try{ if (localStorage.getItem(UNIT_KEY) === "만") ui.unit = "만"; } catch(e){}
   ui.month = toISO(today()).slice(0, 7);
   $("api-from").value = toISO(addDays(today(), -6));
   buildBudget();
@@ -1131,6 +1261,8 @@ Meso.ledger = (function(M){
     entries:function(){ return st.entries; },
     getState:function(){ return JSON.parse(JSON.stringify(st)); },
     setState:function(s){ adopt(s); save(); buildBudget(); setSyncUI(); M.emit("change", "ledger"); },
+    // 백업 복원 전에 미리 검사해 보기용 (원본 안 건드림)
+    sanitize:sanitize, inspect:inspect,
     reload:function(){ load(); buildBudget(); setSyncUI(); },
     // 테스트 · 디버그용
     _potEntries:potEntries, _upsert:upsert

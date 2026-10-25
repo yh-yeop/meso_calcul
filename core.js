@@ -142,6 +142,7 @@ var MesoCore = (function(){
     var neg = v < 0; v = Math.abs(v); var out;
     if (v >= 10000){
       var jo = Math.floor(v/10000), rest = Math.round(v - jo*10000);
+      if (rest >= 10000){ jo += 1; rest -= 10000; }   // 9999.6억 이 반올림되면 "9조 10,000억" 이 되므로 올림
       out = jo + "조" + (rest > 0 ? " " + rest.toLocaleString("ko-KR") + "억" : "");
     } else {
       out = v.toLocaleString("ko-KR", {maximumFractionDigits: v < 100 ? 1 : 0}) + "억";

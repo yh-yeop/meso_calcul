@@ -56,14 +56,14 @@
       <div class="pills" id="h-pills"></div>
     </section>
 
-    <section class="card" id="h-goal-card">
-      <h3>목표 <a href="#calc">계산기 →</a></h3>
-      <div id="h-goal"></div>
-    </section>
-
     <section class="card" id="h-boss-card">
       <h3>이번 주 보스 <small id="h-boss-sub"></small></h3>
       <div class="list" id="h-boss"></div>
+    </section>
+
+    <section class="card" id="h-goal-card">
+      <h3>목표 <a href="#calc">계산기 →</a></h3>
+      <div id="h-goal"></div>
     </section>
 
     <section class="card">
@@ -85,6 +85,7 @@
         <button class="icon-btn" id="m-prev" aria-label="이전 달"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
         <strong id="m-label">—</strong>
         <button class="icon-btn" id="m-next" aria-label="다음 달"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button class="btn sm" id="m-today" hidden>이번 달</button>
       </div>
       <div class="msum" id="m-sum"></div>
       <div class="chips filters" id="filters" role="group" aria-label="보기">
@@ -167,7 +168,7 @@
       <div class="sub" id="out-days"></div>
       <div class="split">
         <div><small>목표 날짜 예상 잔고</small><b id="out-bal">—</b><span id="out-bal-sub"></span></div>
-        <div><small>월 평균 순수익</small><b id="out-month">—</b><span id="out-day"></span></div>
+        <div><small>월 순수익</small><b id="out-month">—</b><span id="out-day"></span></div>
       </div>
     </section>
 
@@ -227,9 +228,10 @@
     <section class="card">
       <h3>누적 잔고</h3>
       <div class="chart calc-chart" id="c-chart"></div>
+      <div class="note" id="chart-sum"></div>
       <div class="legend">
         <span><i class="sw" style="background:var(--gold)"></i>주간보스 (목)</span>
-        <span><i class="sw" style="background:var(--rose)"></i>월간보스 (1일)</span>
+        <span><i class="sw" style="background:var(--gold-dim)"></i>월간보스 (1일)</span>
         <span><i class="sw" style="background:var(--violet)"></i>사냥</span>
         <span id="legend-once" hidden><i class="sw" style="background:var(--sky)"></i>일회성</span>
         <span id="legend-expense" hidden><i class="sw" style="background:var(--orange)"></i>지출</span>
@@ -240,14 +242,15 @@
     <section class="card">
       <h3>사냥 시간별 시나리오 <small id="scen-goal"></small></h3>
       <table class="tbl scen">
-        <thead><tr><th>하루 사냥</th><th class="wide">월수익</th><th>도달</th><th>지금 대비</th><th title="사냥 1시간을 더 늘릴 때 당겨지는 일수">1h당</th></tr></thead>
+        <thead><tr><th>하루 사냥</th><th>월 순수익</th><th>도달</th><th>지금 대비</th><th class="wide" title="사냥 1시간을 더 늘릴 때 당겨지는 일수">1h당</th></tr></thead>
         <tbody id="scen"></tbody>
       </table>
     </section>
 
     <section class="card">
       <h3>민감도 <small id="sens-base"></small></h3>
-      <div class="subh">수입원을 ±10% 흔들면 도달일이 얼마나 움직이나 (마지막 줄만 켜고 끔)</div>
+      <div class="subh">수입원을 ±10% 흔들면 도달일이 얼마나 움직이나 (목요일은 켜고 끔)</div>
+      <div class="tor-legend"><span>← 당겨짐 · 밀림 →</span></div>
       <div id="tor"></div>
       <div class="callout" id="tor-hint" hidden></div>
       <div class="subh mt">도달을 하루 당기려면 각각 얼마가 필요한가</div>
@@ -259,7 +262,7 @@
 
     <div class="btns stretch">
       <button class="btn" id="btn-share" title="계산기 설정과 캐릭터가 담긴 링크">링크 복사</button>
-      <button class="btn" id="btn-image" title="도달 날짜·월 수익이 담긴 결과 카드">이미지 저장</button>
+      <button class="btn" id="btn-image" title="도달 날짜·월 순수익이 담긴 결과 카드">이미지 저장</button>
     </div>
   </main>
 
@@ -274,7 +277,7 @@
       <button class="btn" id="ch-add">+ 캐릭터 추가</button>
       <button class="btn" id="ch-api-btn">Open API로 불러오기</button>
     </div>
-    <p class="note">캐릭터를 눌러 <b>보스 설정</b>에서 도는 보스 · 난이도 · 파티 인원을 고르면 주간 · 월간 보스 수익이 결정석 가격으로 계산됨. 계산기와 장부의 보스 수입 · 홈의 보스 체크가 전부 이 값을 씀. 가격은 ⚙ 설정에서 고칠 수 있음.</p>
+    <p class="note">캐릭터를 눌러 <b>보스 설정</b>에서 도는 보스를 고르면 주 · 월 수익이 자동 계산됨. 가격은 ⚙ 설정에서 고침.</p>
   </main>
 
   <!-- ===================== 설정 ===================== -->
@@ -295,7 +298,7 @@
       <p class="note">키를 넣으면 <b>잠재능력 · 에디셔널 재설정</b> 지출이 날짜 · 캐릭터별로 장부에 자동 기록되고, 캐릭터 탭에서 계정 캐릭터를 불러올 수 있음. 재설정 금액은 비용표 추정치(≈)라 강화 전후로 잔고 확인을 해 두면 오차가 미기록으로 드러남.</p>
       <div class="field" style="margin-top:8px">
         <label for="api-key">API 키<small>이 기기에만 저장 · 백업에 안 실림</small></label>
-        <div class="ctl"><input type="password" id="api-key" autocomplete="off" spellcheck="false" placeholder="test_…"></div>
+        <div class="ctl"><input type="password" id="api-key" autocomplete="off" spellcheck="false" placeholder="발급받은 키 붙여넣기"></div>
       </div>
       <div class="field" id="r-api-from">
         <label for="api-from">처음 가져올 날짜<small>첫 동기화만 · 2024-01-25부터</small></label>
@@ -311,7 +314,7 @@
 
     <section class="card">
       <h3>데이터</h3>
-      <p class="note">전부 이 브라우저에만 저장됨. 기기를 바꾸거나 캐시를 지우기 전에 백업해 둘 것. 백업 한 파일에 장부 · 계산기 · 캐릭터가 다 들어감.</p>
+      <p class="note">전부 이 브라우저에만 저장됨. 기기를 바꾸거나 캐시를 지우기 전에 백업해 둘 것. 백업 한 파일에 장부 · 계산기 · 캐릭터 · 결정석 가격 포함.</p>
       <div class="btns" style="margin-top:12px">
         <button class="btn" id="btn-backup">백업 (JSON)</button>
         <button class="btn" id="btn-restore">백업 불러오기</button>
@@ -359,7 +362,7 @@
     </div>
     <div id="r-presets">
       <div class="sh-lbl">최근 기록 다시 넣기</div>
-      <div class="presets" id="presets"></div>
+      <div class="presets" id="presets" role="group" aria-label="최근 기록"></div>
     </div>
     <div id="r-cats">
       <div class="sh-lbl">어디서</div>
@@ -367,8 +370,8 @@
     </div>
     <div>
       <div class="sh-lbl" id="amt-label">얼마</div>
-      <label class="amt-box"><input type="text" id="f-amt" inputmode="decimal" placeholder="0" enterkeyhint="done" aria-labelledby="amt-label"><span>억</span></label>
-      <div class="amt-prev" id="amt-prev"></div>
+      <label class="amt-box"><input type="text" id="f-amt" inputmode="decimal" placeholder="0" enterkeyhint="done" aria-labelledby="amt-label"><button type="button" id="amt-unit" class="unit-tg" aria-label="단위 바꾸기">억</button></label>
+      <div class="amt-prev" id="amt-prev" aria-live="polite"></div>
       <div class="quick" id="quick"></div>
     </div>
     <div class="frow" id="r-hours">
@@ -388,7 +391,7 @@
     <div class="frow" id="r-char">
       <span class="sh-lbl">캐릭터</span>
       <div class="charrow grow">
-        <div class="chips" id="charchips"></div>
+        <div class="chips" id="charchips" role="group" aria-label="캐릭터"></div>
         <input type="text" id="f-char" placeholder="이름 (선택)" aria-label="캐릭터">
       </div>
     </div>
@@ -416,12 +419,14 @@
     <div id="ch-stats"></div>
     <div>
       <div class="field"><label for="ch-name">이름</label><div class="ctl"><input type="text" id="ch-name" required></div></div>
-      <button type="button" class="btn primary" id="ch-boss-btn" style="width:100%;margin:6px 0 8px">보스 설정</button>
+      <div class="field-err" id="ch-err" aria-live="polite" hidden></div>
+      <button type="button" class="btn" id="ch-boss-btn" style="width:100%;margin:6px 0 8px">보스 설정</button>
       <div class="field"><label for="ch-weekly">주간보스 수익<small>한 주 합계</small></label><div class="ctl"><input type="number" id="ch-weekly" step="0.0001" min="0" inputmode="decimal"><span class="unit">억</span></div></div>
       <div class="field"><label for="ch-monthly">월간보스 수익</label><div class="ctl"><input type="number" id="ch-monthly" step="0.0001" min="0" inputmode="decimal"><span class="unit">억</span></div></div>
       <div class="note" id="ch-income-note"></div>
       <label class="check" style="border-top:0"><input type="checkbox" id="ch-main">본캐</label>
       <div class="note" id="ch-meta"></div>
+      <div class="ch-order" id="ch-order"><button type="button" class="btn sm" id="ch-up">위로</button><button type="button" class="btn sm" id="ch-down">아래로</button></div>
     </div>
     <div class="sh-foot">
       <button type="button" class="btn danger" id="ch-del">삭제</button>
@@ -439,6 +444,7 @@
       <button type="button" class="icon-btn" data-close aria-label="닫기"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <div class="note" id="boss-sum" style="font-size:14px"></div>
+    <div class="seg sm" id="boss-view" role="tablist"><button type="button" data-v="mine">고른 보스</button><button type="button" data-v="all">전체</button></div>
     <div class="frow" id="boss-copy-row">
       <select id="boss-copy" class="grow" aria-label="루틴 복사할 캐릭터"></select>
       <button type="button" class="btn sm" id="boss-copy-btn">복사</button>
@@ -473,7 +479,7 @@
   </form>
 </dialog>
 
-<div class="toast" id="toast" hidden role="status"><span id="toast-msg"></span><button id="toast-undo">되돌리기</button></div>
+<div class="toast" id="toast" popover="manual" hidden role="status"><span id="toast-msg"></span><button id="toast-undo">되돌리기</button></div>
 
 <script src="rules.js"></script>
 <script src="bosses.js"></script>

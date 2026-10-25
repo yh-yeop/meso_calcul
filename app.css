@@ -15,7 +15,7 @@
   --orange:#F2784B;
   --text:#F1EEFA;
   --muted:#A49DC4;
-  --faint:#7E77A2;
+  --faint:#958EB8;
   --on-gold:#1A1406;
   --scrim:rgba(8,6,16,.62);
   --shadow:0 10px 30px rgba(0,0,0,.35);
@@ -93,7 +93,7 @@ a{color:inherit}
 .card{background:var(--ink-2);border:1px solid var(--line-soft);border-radius:var(--radius);padding:18px}
 .card h3{font-size:16px;font-weight:650;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
 .card h3 small{font-size:13px;font-weight:400;color:var(--muted);text-align:right}
-.card h3 a{font-size:13px;font-weight:500;color:var(--muted);text-decoration:none}
+.card h3 a{font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;padding:8px 0 8px 12px;margin:-8px 0}
 .card h3 a:hover{color:var(--gold)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .grid2 > .card{margin-top:0}
@@ -134,18 +134,22 @@ textarea{height:auto;min-height:120px;padding:10px 12px;font-size:13px;line-heig
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px var(--focus)}
 input::placeholder,textarea::placeholder{color:var(--faint)}
 input[type=number]{text-align:right}
+/* 잠긴 칸(루틴이 계산해 주는 값 등)은 채움 없이 점선 + 흐린 글자 — 입력 가능한 칸과 한눈에 구분 */
+input[type=text]:disabled,input[type=number]:disabled,input[type=date]:disabled,input[type=password]:disabled{
+  background:transparent;border-style:dashed;color:var(--muted);-webkit-text-fill-color:var(--muted);opacity:1;cursor:not-allowed}
 select{cursor:pointer}
 
 .seg{display:flex;background:var(--surface);border-radius:12px;padding:3px;gap:3px}
 .seg button,.seg a{flex:1;height:38px;border:0;border-radius:10px;background:transparent;color:var(--muted);font-size:15px;
                    text-decoration:none;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s}
 .seg [aria-pressed="true"],.seg [aria-current="page"]{background:var(--ink-2);color:var(--text);font-weight:650;box-shadow:0 1px 3px rgba(0,0,0,.18)}
-.seg.sm button{height:32px;font-size:13px;flex:none;padding:0 11px;white-space:nowrap}
+.seg.sm button{height:36px;font-size:13px;flex:none;padding:0 11px;white-space:nowrap}
 
 .chips{display:flex;gap:6px;flex-wrap:wrap}
-.chip{height:34px;padding:0 13px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--muted);
+.chip{height:38px;padding:0 13px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--muted);
       font-size:14px;white-space:nowrap;transition:border-color .15s,color .15s,background .15s}
-.chip:hover{color:var(--text)}
+.chip:hover:not(:disabled){color:var(--text)}
+.chip:disabled{opacity:.4;cursor:not-allowed}
 .chip[aria-pressed="true"]{border-color:var(--gold);color:var(--gold);background:var(--focus)}
 .chip.strike[aria-pressed="true"]{text-decoration:line-through}
 
@@ -171,6 +175,7 @@ select{cursor:pointer}
 .mnav{display:flex;align-items:center;gap:4px}
 .mnav strong{font-size:18px;font-weight:700;min-width:116px;text-align:center}
 .mnav .icon-btn{width:36px;height:36px;border:0}
+.mnav #m-today{margin-left:auto}
 .msum{font-size:14px;color:var(--muted);margin-top:4px}
 .msum b{font-weight:650}
 .filters{margin-top:14px}
@@ -194,6 +199,7 @@ select{cursor:pointer}
 .badge{font-size:11px;font-weight:600;letter-spacing:.02em;color:var(--violet);border:1px solid currentColor;border-radius:5px;padding:0 5px;line-height:16px;white-space:nowrap}
 .badge.lock{color:var(--gold)}
 .badge.main{color:var(--gold)}
+.crow .badge{flex:none}   /* 배지 클래스 main 이 .crow .main(flex:1)에 걸려 늘어나지 않게 */
 
 /* ---------- 통계 ---------- */
 .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
@@ -222,6 +228,10 @@ select{cursor:pointer}
 .tbl tr:last-child td{border-bottom:0}
 .tbl tr.now td{font-weight:650}
 .tbl .wrap{white-space:normal}
+.cell-sub{display:block;font-size:12px;color:var(--muted);font-weight:400}
+/* 폰에서 숨는 .wide 칸 대신 보이는 보조 줄 — 넓은 화면에선 칸이 있으니 숨김 */
+@media (min-width:521px){ .tbl .cell-sub.ph-only{display:none} }
+.icon-btn:disabled{opacity:.3;cursor:default}
 @media (max-width:520px){ .tbl .wide{display:none} }
 .goal-big{font-size:26px;font-weight:750;letter-spacing:-.02em;color:var(--mint)}
 .goal-big small{font-size:15px;font-weight:500;color:var(--muted);margin-left:4px}
@@ -258,15 +268,24 @@ select{cursor:pointer}
 .thu{color:var(--gold);border-bottom:1px dotted var(--gold-dim);cursor:help}
 .income{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .income b{font-size:18px;font-weight:700}
-.irow{display:grid;grid-template-columns:132px 1fr 84px 32px;gap:8px;align-items:center;margin-top:8px}
-.irow.x{grid-template-columns:1fr 84px 112px 32px}
+.irow{display:grid;grid-template-columns:132px 1fr 84px 36px;gap:8px;align-items:center;margin-top:8px}
+.irow.x{grid-template-columns:1fr 84px 112px 36px}
 .irow input,.irow select{height:40px;font-size:14px;width:100%}
 .irow input.neg{color:var(--rose)}
 .irow.x input[type=number]{color:var(--orange)}
-@media (max-width:520px){ .irow{grid-template-columns:118px 1fr 72px 28px;gap:6px} .irow.x{grid-template-columns:1fr 70px 100px 28px;gap:6px} }
-.del{background:transparent;border:0;color:var(--faint);font-size:20px;line-height:1;padding:4px;border-radius:6px}
+@media (max-width:520px){ .irow{grid-template-columns:118px 1fr 72px 36px;gap:6px} .irow.x{grid-template-columns:1fr 70px 100px 36px;gap:6px} }
+.irow-once{grid-template-columns:132px 1fr 96px 36px}
+/* 폰: 날짜 + 금액 한 줄, 내용은 다음 줄 전체 폭 */
+@media (max-width:520px){
+  .irow-once{grid-template-columns:1fr 96px 36px;grid-template-areas:"d a x" "l l l"}
+  .irow-once>[data-of=date]{grid-area:d} .irow-once>.irow-amt{grid-area:a}
+  .irow-once>[data-of=label]{grid-area:l} .irow-once>.del{grid-area:x}
+}
+.del{background:transparent;border:0;color:var(--faint);font-size:20px;line-height:1;padding:4px;border-radius:6px;min-width:36px;min-height:36px;display:grid;place-items:center}
 .del:hover{color:var(--rose)}
 .calc-chart{touch-action:pan-y;cursor:crosshair}
+#chart-sum{margin-top:8px}
+#chart-sum:empty{display:none}
 .tip{position:absolute;z-index:2;pointer-events:none;min-width:150px;max-width:240px;background:var(--surface);
      border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:13px;color:var(--muted);line-height:1.5;box-shadow:var(--shadow)}
 .tip b{display:block;font-size:14px;color:var(--text);font-weight:650}
@@ -279,6 +298,9 @@ select{cursor:pointer}
 .scen tr.now td{color:var(--gold)}
 .scen tr.cheap td{color:var(--mint)}
 .d-up{color:var(--mint)} .d-dn{color:var(--rose)} .d-0{color:var(--faint)}
+/* 범례는 막대 칸(가운데 열) 위에 — 기준선 왼쪽이 당겨짐, 오른쪽이 밀림 */
+.tor-legend{display:grid;grid-template-columns:96px 1fr 92px;gap:12px;margin-bottom:6px}
+.tor-legend span{grid-column:2;justify-self:center;white-space:nowrap;font-size:12px;color:var(--muted)}
 .tor-row{display:grid;grid-template-columns:96px 1fr 92px;gap:12px;align-items:center;margin-bottom:13px}
 .tor-row:last-child{margin-bottom:0}
 .tor-name{font-size:14px;line-height:1.3}
@@ -298,14 +320,9 @@ select{cursor:pointer}
 .crow .open{flex:1;min-width:0;display:flex;align-items:center;gap:12px;background:none;border:0;text-align:left;padding:0}
 .crow .main{flex:1;min-width:0}
 .crow .t1{font-size:16px;font-weight:650;display:flex;align-items:center;gap:6px}
-.crow .t2{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crow .t2{display:block;font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .crow .vals{text-align:right;font-size:14px;white-space:nowrap}
 .crow .vals small{display:block;font-size:12px;color:var(--muted)}
-.crow .ord{display:flex;flex-direction:column;gap:2px}
-.crow .ord button{width:28px;height:22px;border:0;background:transparent;color:var(--faint);border-radius:6px;display:grid;place-items:center}
-.crow .ord button:hover:not(:disabled){color:var(--text);background:var(--surface)}
-.crow .ord button:disabled{opacity:.25;cursor:default}
-.crow .ord svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .avatar{width:38px;height:38px;border-radius:12px;background:var(--surface);display:grid;place-items:center;font-weight:700;color:var(--muted);flex:none;font-size:15px}
 .avatar.is-main{background:var(--focus);color:var(--gold)}
 .parsemsg{font-size:14px;margin-top:10px;color:var(--mint)}
@@ -328,10 +345,13 @@ select{cursor:pointer}
 .bsrow.on .hd b{color:var(--text)}
 .bsrow .hd span{font-size:12px;font-weight:650;white-space:nowrap}
 .bsrow .ctl{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.bsrow .chip{height:30px;padding:0 10px;font-size:13px}
-.bs-p{height:28px;font-size:12px;padding:0 6px;width:76px;margin-top:4px;border-radius:8px}
+.bsrow .chip{height:36px;padding:0 10px;font-size:13px}
+.bs-p{height:36px;font-size:12px;padding:0 6px;width:76px;margin-top:4px;border-radius:8px}
 
 /* ⚙ 결정석 가격 */
+.prow-h{font-size:13px;color:var(--muted);padding:14px 0 4px}
+.prow-h:first-child{padding-top:0}
+.prow-h + .prow{border-top:0}
 .prow{display:grid;grid-template-columns:1fr 120px;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--line-soft)}
 .prow label{font-size:14px}
 .prow label small{display:block;font-size:12px;color:var(--muted)}
@@ -352,7 +372,7 @@ select{cursor:pointer}
 .brow2{display:flex;align-items:stretch}
 .boss{display:flex;align-items:center;gap:12px;width:100%;padding:12px 16px;border:0;background:transparent;text-align:left;flex:1;min-width:0}
 .boss:hover:not(:disabled){background:var(--surface)}
-.boss:disabled{cursor:default}
+.boss:disabled{cursor:default;opacity:.6}
 .boss.sm{padding:9px 16px 9px 52px}
 .boss.sm .t1{font-size:14px;font-weight:500}
 .boss.sm .amt{font-size:14px;font-weight:600}
@@ -397,11 +417,11 @@ select{cursor:pointer}
 
 /* ---------- 시트 ---------- */
 dialog.sheet{border:0;padding:0;background:var(--ink-2);color:var(--text);width:100%;max-width:100%;
-             margin:auto 0 0;border-radius:22px 22px 0 0;max-height:94vh;box-shadow:var(--shadow);overflow:auto;overscroll-behavior:contain}
+             margin:auto 0 0;border-radius:22px 22px 0 0;max-height:94vh;max-height:94dvh;box-shadow:var(--shadow);overflow:auto;overscroll-behavior:contain}
 dialog.sheet::backdrop{background:var(--scrim)}
 dialog.sheet[open]{animation:up .22s ease}
 @keyframes up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
-@media (min-width:720px){ dialog.sheet{margin:auto;width:500px;border-radius:22px;max-height:88vh} }
+@media (min-width:720px){ dialog.sheet{margin:auto;width:500px;border-radius:22px;max-height:88vh;max-height:88dvh} }
 .sh{padding:8px 18px calc(16px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px}
 .sh-grip{width:40px;height:4px;border-radius:2px;background:var(--line);margin:4px auto 0}
 @media (min-width:720px){ .sh-grip{display:none} .sh{padding-top:18px} }
@@ -425,9 +445,13 @@ dialog.sheet[open]{animation:up .22s ease}
 .amt-box input{flex:1;min-width:0;border:0;background:transparent;font-size:34px;font-weight:700;letter-spacing:-.02em;
                padding:0;height:auto;box-shadow:none;text-align:left}
 .amt-box input:focus{box-shadow:none}
-.amt-box span{font-size:20px;color:var(--muted);font-weight:600}
+/* 단위 "억 ▾" — 눌러서 억↔만 전환. 글자만이면 눌러지는 줄 모르므로 테두리 */
+.unit-tg{font-size:20px;font-weight:600;color:var(--muted);background:transparent;border:1px solid var(--line);border-radius:10px;
+         min-width:36px;min-height:36px;padding:0 9px;line-height:1;white-space:nowrap;align-self:center}
+.unit-tg::after{content:"▾";font-size:11px;margin-left:3px}
+.unit-tg:hover{color:var(--text);border-color:var(--faint)}
 .amt-prev{font-size:14px;color:var(--muted);margin-top:6px;min-height:22px}
-.amt-prev.bad{color:var(--rose)} .amt-prev.good{color:var(--mint)}
+.amt-prev.bad{color:var(--rose)} .amt-prev.good{color:var(--mint)} .amt-prev.warn{color:var(--orange)}
 .quick{display:flex;gap:6px;flex-wrap:wrap}
 .quick .chip{border-style:dashed}
 .frow{display:flex;align-items:center;gap:10px}
@@ -445,11 +469,23 @@ dialog.sheet[open]{animation:up .22s ease}
          border-top:1px solid var(--line-soft)}
 .sh-foot .primary{flex:1}
 .sh .field{border-top:0;padding:4px 0}
+.field-err{font-size:13px;color:var(--rose);line-height:1.5;margin-top:-2px}
+.ch-order{display:flex;gap:8px}
+#boss-view{align-self:flex-start}
 
-.toast{position:fixed;z-index:30;left:0;right:0;margin:0 auto;width:max-content;max-width:calc(100% - 32px);
+/* popover="manual" 이라 UA 가 inset:0 · 테두리 · 패딩 · overflow:auto 를 깔아 둠 — 예전 모양 그대로 되돌림 */
+.toast{position:fixed;z-index:30;top:auto;left:0;right:0;margin:0 auto;width:max-content;height:auto;max-width:calc(100% - 32px);
+       border:0;overflow:visible;pointer-events:none;
        bottom:calc(var(--tabh) + 84px + env(safe-area-inset-bottom));
        background:var(--text);color:var(--ink);border-radius:14px;padding:11px 10px 11px 16px;display:flex;gap:12px;align-items:center;
        font-size:14px;box-shadow:var(--shadow)}
-.toast button{border:0;background:transparent;color:var(--ink);font-weight:700;padding:4px 8px;text-decoration:underline;white-space:nowrap}
+.toast button{pointer-events:auto;border:0;background:transparent;color:var(--ink);font-weight:700;padding:8px 12px;min-height:40px;text-decoration:underline;white-space:nowrap}
 @media (min-width:720px){ .toast{bottom:100px} }
 @media (prefers-reduced-motion:reduce){ *{transition:none!important;animation:none!important} }
+
+/* iOS 는 16px 미만 입력칸에 포커스하면 화면을 확대해버림 — 폰 폭에서만 올림 */
+@media (max-width:719px){
+  input[type=text],input[type=number],input[type=date],input[type=password],select,textarea,
+  .irow input,.irow select,.prow input,.bs-p{font-size:16px}
+  .amt-box input{font-size:34px}
+}

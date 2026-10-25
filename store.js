@@ -11,7 +11,17 @@ var Meso = (function(){
   var parseDate = C.parseDate, toISO = C.toISO, addDays = C.addDays;
   function dayDiff(a, b){ return Math.round((b - a) / 864e5); }
   function md(d){ return (d.getMonth()+1) + "." + d.getDate(); }
-  function mdLong(d){ return (d.getMonth()+1) + "월 " + d.getDate() + "일 (" + DOW[d.getDay()] + ")"; }
+  // 올해가 아니면 연도를 붙임 — 연도 없이 "8월 17일"만 보이면 곧 닿는 것처럼 읽힘
+  function mdLong(d){
+    return (d.getFullYear() !== new Date().getFullYear() ? d.getFullYear() + "년 " : "") +
+      (d.getMonth()+1) + "월 " + d.getDate() + "일 (" + DOW[d.getDay()] + ")";
+  }
+  // "N일 뒤" — 천 단위 쉼표, 1년 넘으면 "약 N년 M개월 뒤"
+  function daysText(n){
+    if (n <= 365) return n.toLocaleString("ko-KR") + "일 뒤";
+    var mo = Math.round(n / 30.4375), y = Math.floor(mo / 12), r = mo % 12;
+    return "약 " + y + "년 " + (r ? r + "개월 " : "") + "뒤";
+  }
   // 메이플 주간 리셋은 목요일 0시
   function weekStart(d){ return addDays(d, -((d.getDay() - 4 + 7) % 7)); }
   function today(){ var n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); }
@@ -28,6 +38,8 @@ var Meso = (function(){
     var neg = v < 0; v = Math.abs(v); var out;
     if (v >= 10000){
       var jo = Math.floor(v/10000), rest = Math.round(v - jo*10000);
+      // 반올림으로 1조가 되면 올림 (99999.7 → 10조, "9조 10,000억" 방지)
+      if (rest >= 10000){ jo += 1; rest -= 10000; }
       out = jo + "조" + (rest > 0 ? " " + rest.toLocaleString("ko-KR") + "억" : "");
     } else {
       out = v.toLocaleString("ko-KR", {maximumFractionDigits: v < 100 ? 1 : 0}) + "억";
@@ -80,7 +92,13 @@ var Meso = (function(){
   var KEYS = {chars:"meso-chars-v1", calc:"meso-calc-v1", ledger:"meso-ledger-v1", apiKey:"meso-ledger-key", theme:"meso-theme",
               prices:"meso-boss-prices"};
   function read(key){ try{ return JSON.parse(localStorage.getItem(key)); } catch(e){ return null; } }
-  function write(key, v){ try{ localStorage.setItem(key, JSON.stringify(v)); } catch(e){} }
+  // 저장 실패(용량 초과 · 사생활 보호 모드)를 호출한 쪽이 알 수 있게 true/false 로 돌려주고 "storage-error" 알림도 냄
+  function write(key, v){
+    var ok = true;
+    try{ localStorage.setItem(key, JSON.stringify(v)); } catch(e){ ok = false; }
+    if (!ok) emit("storage-error", key);
+    return ok;
+  }
 
   /* ---------- 변경 알림 ---------- */
   var subs = {};
@@ -91,7 +109,21 @@ var Meso = (function(){
      가격표는 bosses.js, 사용자가 ⚙에서 덮어쓴 값은 meso-boss-prices {"lucid:hard": 메소}.
      kind 는 "w"(주간) | "m"(월간) */
   var BOSSES = window.MESO_BOSSES || {weekly:[], monthly:[], diffs:{}, weeklyLimit:12, worldLimit:90};
-  var priceOver = read(KEYS.prices) || {};
+  var priceOver = cleanPrices(read(KEYS.prices));
+  function hasOwn(o, k){ return Object.prototype.hasOwnProperty.call(o, k); }
+  // 백업 · 저장값은 믿지 않음: 있는 보스 · 난이도의 유한한 양수만 남김
+  function cleanPrices(o){
+    var out = {};
+    if (!o || typeof o !== "object" || Array.isArray(o)) return out;
+    Object.keys(o).forEach(function(k){
+      var i = k.indexOf(":"), v = o[k];
+      if (i < 1 || typeof v !== "number" || !isFinite(v) || !(v > 0) || v >= 1e13) return;
+      var id = k.slice(0, i), d = k.slice(i + 1);
+      var ok = ["w", "m"].some(function(kind){ var b = bossInfo(kind, id); return b && hasOwn(b.p, d); });
+      if (ok) out[k] = Math.round(v);
+    });
+    return out;
+  }
   function bossList(kind){ return kind === "m" ? BOSSES.monthly : BOSSES.weekly; }
   function bossInfo(kind, id){
     var list = bossList(kind);
@@ -100,7 +132,7 @@ var Meso = (function(){
   }
   function bossPrice(kind, id, d){
     var b = bossInfo(kind, id);
-    if (!b || !(d in b.p)) return 0;
+    if (!b || !hasOwn(b.p, d)) return 0;
     var k = id + ":" + d;
     return priceOver[k] > 0 ? priceOver[k] : b.p[d];
   }
@@ -116,7 +148,7 @@ var Meso = (function(){
     var seen = {}, out = [];
     (Array.isArray(list) ? list : []).forEach(function(r){
       var b = r && bossInfo(kind, r.id);
-      if (!b || !(r.d in b.p) || seen[r.id]) return;
+      if (!b || !hasOwn(b.p, r.d) || seen[r.id]) return;
       seen[r.id] = 1;
       out.push({id:r.id, d:r.d, p:Math.max(1, Math.min(6, parseInt(r.p, 10) || 1))});
     });
@@ -140,25 +172,58 @@ var Meso = (function(){
      예전엔 계산기 저장값의 r([이름, 주보, 월보])에만 있었음. 처음 열 때 거기서 옮겨 옴. */
   var chars = [];
   function newId(){ return "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  // id 는 HTML 속성에 그대로 들어가는 곳이 있어서 안전한 글자만 허용
   function cleanChar(c){
-    var x = {id: c.id || newId(), name: String(c.name || "").trim() || "이름 없음",
-             weekly: Math.max(0, parseFloat(c.weekly) || 0), monthly: Math.max(0, parseFloat(c.monthly) || 0),
-             main: !!c.main};
-    if (c.world) x.world = String(c.world);
-    if (c.cls) x.cls = String(c.cls);
-    if (+c.level > 0) x.level = +c.level;
-    if (c.ocid) x.ocid = String(c.ocid);
+    if (!c || typeof c !== "object") c = {};
+    var num = function(v){ v = parseFloat(v); return isFinite(v) && v >= 0 && v <= 1e6 ? v : 0; };
+    var x = {id: typeof c.id === "string" && /^[A-Za-z0-9_-]{1,40}$/.test(c.id) ? c.id : newId(),
+             name: String(c.name == null ? "" : c.name).trim().slice(0, 40) || "이름 없음",
+             weekly: num(c.weekly), monthly: num(c.monthly), main: !!c.main};
+    if (c.world) x.world = String(c.world).slice(0, 30);
+    if (c.cls) x.cls = String(c.cls).slice(0, 30);
+    var lv = Math.floor(+c.level);
+    if (lv >= 1 && lv <= 400) x.level = lv;
+    if (c.ocid) x.ocid = String(c.ocid).slice(0, 80);
     var wb = cleanRoutine("w", c.bosses), mb = cleanRoutine("m", c.mbosses);
     if (wb.length) x.bosses = wb;
     if (mb.length) x.mbosses = mb;
     return x;
   }
+  // 이름은 겹치면 안 됨 (장부가 이름으로 캐릭터를 찾음). 나중 것을 "이름 (2)", "이름 (3)"…
+  function dupName(name, taken){
+    for (var n = 2; ; n++){
+      var suffix = " (" + n + ")", cand = name.slice(0, 40 - suffix.length) + suffix;
+      if (!taken[cand]) return cand;
+    }
+  }
+  function uniqueNames(list){
+    var taken = Object.create(null), dups = [];
+    list.forEach(function(c){ if (taken[c.name]) dups.push(c); else taken[c.name] = 1; });
+    dups.forEach(function(c){ c.name = dupName(c.name, taken); taken[c.name] = 1; });
+    return list;
+  }
+  function uniqueName(name){
+    var taken = Object.create(null);
+    chars.forEach(function(c){ taken[c.name] = 1; });
+    return taken[name] ? dupName(name, taken) : name;
+  }
+  // 객체만 받아 정리하고 id · 이름 중복 제거
+  function cleanList(list){
+    var ids = Object.create(null);
+    var out = (Array.isArray(list) ? list : []).filter(function(c){ return c && typeof c === "object"; }).map(function(c){
+      var x = cleanChar(c);
+      while (ids[x.id]) x.id = newId();
+      ids[x.id] = 1;
+      return x;
+    });
+    return uniqueNames(out);
+  }
   function charWeekly(c){ return c.bosses && c.bosses.length ? routineSum("w", c.bosses) : c.weekly; }
   function charMonthly(c){ return c.mbosses && c.mbosses.length ? routineSum("m", c.mbosses) : c.monthly; }
   function fromRoster(r){
-    return (Array.isArray(r) ? r : []).filter(Array.isArray).map(function(c, i){
-      return cleanChar({name: c[0] != null ? c[0] : "캐릭 " + (i + 1), weekly: c[1], monthly: c[2], main: i === 0});
-    });
+    return cleanList((Array.isArray(r) ? r : []).filter(Array.isArray).map(function(c, i){
+      return {name: c[0] != null ? c[0] : "캐릭 " + (i + 1), weekly: c[1], monthly: c[2], main: i === 0};
+    }));
   }
   // 본캐는 하나만. 없으면 맨 앞
   function fixMain(){
@@ -169,7 +234,7 @@ var Meso = (function(){
   function loadChars(){
     var s = read(KEYS.chars);
     if (s && Array.isArray(s.list)){
-      chars = s.list.map(cleanChar);
+      chars = cleanList(s.list);
     } else {
       var calc = read(KEYS.calc);
       chars = fromRoster(calc && calc.r);
@@ -179,8 +244,9 @@ var Meso = (function(){
   }
   function saveChars(quiet){
     fixMain();
-    write(KEYS.chars, {v:1, list:chars});
+    var ok = write(KEYS.chars, {v:1, list:chars});
     if (!quiet) emit("change", "chars");
+    return ok;
   }
   function charTotals(){
     var w = 0, m = 0;
@@ -191,7 +257,12 @@ var Meso = (function(){
     for (var i = 0; i < chars.length; i++) if (chars[i].id === id) return chars[i];
     return null;
   }
+  function findCharByOcid(ocid){
+    for (var i = 0; i < chars.length; i++) if (chars[i].ocid && chars[i].ocid === ocid) return chars[i];
+    return null;
+  }
   function findCharByName(name){
+    name = String(name == null ? "" : name).trim();
     for (var i = 0; i < chars.length; i++) if (chars[i].name === name) return chars[i];
     return null;
   }
@@ -201,7 +272,7 @@ var Meso = (function(){
     get: findChar,
     byName: findCharByName,
     totals: charTotals,
-    add: function(c){ var x = cleanChar(c); chars.push(x); saveChars(); return x; },
+    add: function(c){ var x = cleanChar(c); x.name = uniqueName(x.name); chars.push(x); saveChars(); return x; },
     // 이름이 바뀌면 장부 기록의 캐릭터 이름도 같이 바꾸도록 알림
     update: function(id, patch){
       var c = findChar(id);
@@ -221,7 +292,11 @@ var Meso = (function(){
       saveChars();
       return {c:c, i:i};
     },
-    restore: function(c, i){ chars.splice(Math.min(i, chars.length), 0, c); saveChars(); },
+    restore: function(c, i){
+      // 지운 본캐를 되돌리면 그대로 본캐 (fixMain 은 목록 앞쪽 본캐를 남김)
+      if (c.main) chars.forEach(function(o){ o.main = false; });
+      c.name = uniqueName(c.name);
+      chars.splice(Math.min(i, chars.length), 0, c); saveChars(); },
     move: function(id, dir){
       var c = findChar(id), i = chars.indexOf(c), j = i + dir;
       if (!c || j < 0 || j >= chars.length) return;
@@ -234,28 +309,49 @@ var Meso = (function(){
       found.forEach(function(f, i){
         var name = String(f.name || "").trim(), c = name && findCharByName(name);
         if (c){ c.weekly = f.weekly; c.monthly = f.monthly; updated++; }
-        else { chars.push(cleanChar({name: name || "캐릭 " + (chars.length + 1), weekly:f.weekly, monthly:f.monthly})); added++; }
+        else {
+          var x = cleanChar({name: name || "캐릭 " + (chars.length + 1), weekly:f.weekly, monthly:f.monthly});
+          x.name = uniqueName(x.name); chars.push(x); added++;
+        }
       });
       saveChars();
       return {added:added, updated:updated};
     },
-    // Open API 캐릭터 목록: 이름이 같으면 월드·직업·레벨·ocid만 채움
+    // Open API 캐릭터 목록: ocid 가 같으면(게임 안에서 이름을 바꿨어도) 같은 캐릭터, 아니면 이름으로 맞춤.
+    // 월드·직업·레벨·ocid만 채움
     mergeApi: function(list){
       var added = 0, updated = 0;
-      list.forEach(function(a){
-        var c = findCharByName(a.character_name);
+      (Array.isArray(list) ? list : []).forEach(function(a){
+        var name = a && a.character_name != null ? String(a.character_name).trim() : "";
+        if (!name) return;
         var meta = {world:a.world_name, cls:a.character_class, level:a.character_level, ocid:a.ocid};
+        // 응답에 빠진 칸은 기존 값을 지우지 않게 아예 뺌
+        Object.keys(meta).forEach(function(k){ if (meta[k] == null || meta[k] === "") delete meta[k]; });
+        var c = a.ocid ? findCharByOcid(String(a.ocid).slice(0, 80)) : null;
+        if (c && c.name !== name){
+          var other = findCharByName(name);
+          // 새 이름을 다른 캐릭터가 쓰고 있으면 옛 이름 유지 (장부가 이름으로 찾으므로 겹치면 안 됨)
+          // update 를 거쳐야 char-rename 이 나가 장부 기록의 이름이 따라 바뀜
+          if (!other){ charsApi.update(c.id, Object.assign({name:name}, meta)); updated++; return; }
+        }
+        if (!c) c = findCharByName(name);
         if (c){ Object.assign(c, cleanChar(Object.assign({}, c, meta))); updated++; }
-        else { chars.push(cleanChar(Object.assign({name:a.character_name}, meta))); added++; }
+        else { chars.push(cleanChar(Object.assign({name:name}, meta))); added++; }
       });
       saveChars();
       return {added:added, updated:updated};
     },
-    // 계산기 공유 링크에 담겨 온 로스터 — 링크를 연 쪽의 캐릭터를 링크 것으로 바꿈 (예전 동작과 같음)
+    // 계산기 공유 링크에 담겨 온 로스터 — 링크를 연 쪽의 캐릭터를 링크 것으로 바꿈.
+    // 이름이 같은 캐릭터는 id · 루틴 · 본캐 · 월드 등을 그대로 두고 주보 · 월보만 링크 값으로
+    // (id 가 바뀌면 이번 주 체크 기록이 고아가 됨). 링크에 없는 캐릭터는 버림
     replaceFromRoster: function(r){
       var list = fromRoster(r);
       if (!list.length) return false;
-      chars = list;
+      chars = list.map(function(n){
+        var old = findCharByName(n.name);
+        if (!old) return Object.assign(n, {main:false});
+        return Object.assign({}, old, {weekly:n.weekly, monthly:n.monthly});
+      });
       saveChars();
       return true;
     },
@@ -271,7 +367,10 @@ var Meso = (function(){
     copyRoutine: function(fromId, toId){
       var f = findChar(fromId), t = findChar(toId);
       if (!f || !t) return null;
-      return charsApi.setRoutine(toId, "w", f.bosses || []) && charsApi.setRoutine(toId, "m", f.mbosses || []);
+      // 월간은 원본에 있을 때만 — 없는데 덮어쓰면 대상의 월간 루틴이 지워짐
+      var r = charsApi.setRoutine(toId, "w", f.bosses || []);
+      if (f.mbosses && f.mbosses.length) r = charsApi.setRoutine(toId, "m", f.mbosses);
+      return r;
     },
     weekly: charWeekly,
     monthly: charMonthly,
@@ -285,23 +384,53 @@ var Meso = (function(){
     toRoster: function(){ return chars.map(function(c){ return [c.name, charWeekly(c), charMonthly(c)]; }); },
     all: function(){ return chars; },
     load: loadChars,
-    setAll: function(list){ chars = (Array.isArray(list) ? list : []).map(cleanChar); saveChars(); }
+    setAll: function(list){ chars = cleanList(list); saveChars(); }
   };
 
   /* ---------- 토스트 · 되돌리기 ---------- */
-  var toastTimer = null, undoFn = null;
+  var toastTimer = null, undoFn = null, toastBound = false;
+  function hideToast(){
+    var el = $("toast");
+    clearTimeout(toastTimer);
+    el.hidden = true;
+    undoFn = null;
+    // 팝오버는 top layer 에 남지 않게 같이 닫음
+    if (el.hidePopover) try{ el.hidePopover(); } catch(e){}
+  }
+  // 마우스를 올리거나 포커스가 있는 동안은 안 사라지게 멈추고, 벗어나면 3초 뒤 닫음
+  function holdToast(){ clearTimeout(toastTimer); }
+  function releaseToast(){
+    if ($("toast").hidden) return;   // 닫히면서 생긴 focusout 이 새 타이머를 만들지 않게
+    clearTimeout(toastTimer); toastTimer = setTimeout(hideToast, 3000);
+  }
   function toast(msg, onUndo){
+    var el = $("toast");
     $("toast-msg").textContent = msg;
     undoFn = onUndo || null;
     $("toast-undo").hidden = !undoFn;
-    $("toast").hidden = false;
+    el.hidden = false;
+    // 모달 시트가 열려 있으면 바깥은 전부 inert 라 보여도 못 누름 → 시트 안으로 옮겨 둠
+    var modal = document.querySelector("dialog[open]"), home = modal || document.body;
+    if (el.parentNode !== home) home.appendChild(el);
+    // 열린 모달 시트(top layer) 위에 보이게 매번 다시 띄움 — 나중에 띄운 게 위에 쌓임
+    if (el.showPopover){
+      try{ el.hidePopover(); } catch(e){}
+      try{ el.showPopover(); } catch(e){}
+    }
+    if (!toastBound){
+      toastBound = true;
+      el.addEventListener("mouseenter", holdToast);
+      el.addEventListener("focusin", holdToast);
+      el.addEventListener("mouseleave", releaseToast);
+      el.addEventListener("focusout", releaseToast);
+    }
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function(){ $("toast").hidden = true; undoFn = null; }, 5000);
+    // 되돌리기는 누를 시간을 더 줌
+    toastTimer = setTimeout(hideToast, undoFn ? 8000 : 5000);
   }
   function runUndo(){
     var f = undoFn;
-    undoFn = null;
-    $("toast").hidden = true;
+    hideToast();
     if (f) f();
   }
 
@@ -325,17 +454,18 @@ var Meso = (function(){
   var bossApi = {
     data: BOSSES, list: bossList, info: bossInfo, price: bossPrice, share: bossShare, sum: routineSum,
     label: bossLabel, short: bossShort,
-    defaultPrice: function(kind, id, d){ var b = bossInfo(kind, id); return b && d in b.p ? b.p[d] : 0; },
+    defaultPrice: function(kind, id, d){ var b = bossInfo(kind, id); return b && hasOwn(b.p, d) ? b.p[d] : 0; },
     overrides: function(){ return Object.assign({}, priceOver); },
     // 메소 단위. 0 이나 기본값과 같으면 덮어쓰기 해제
     setPrice: function(kind, id, d, meso){
       var k = id + ":" + d, def = bossApi.defaultPrice(kind, id, d);
+      if (!def || meso >= 1e13) return;   // 없는 보스 · 난이도거나 말도 안 되는 값
       if (!(meso > 0) || Math.round(meso) === def) delete priceOver[k]; else priceOver[k] = Math.round(meso);
       write(KEYS.prices, priceOver);
       emit("change", "prices");
     },
-    setOverrides: function(o){ priceOver = o && typeof o === "object" ? o : {}; write(KEYS.prices, priceOver); emit("change", "prices"); },
-    reloadPrices: function(){ priceOver = read(KEYS.prices) || {}; }
+    setOverrides: function(o){ priceOver = cleanPrices(o); write(KEYS.prices, priceOver); emit("change", "prices"); },
+    reloadPrices: function(){ priceOver = cleanPrices(read(KEYS.prices)); }
   };
 
   // 계산기 · 장부 모듈이 뜨기 전에 캐릭터부터 (예전 계산기 로스터에서 옮기는 것도 여기서)
@@ -343,7 +473,7 @@ var Meso = (function(){
 
   return {
     $:$, core:C, KEYS:KEYS, read:read, write:write, on:on, emit:emit,
-    DOW:DOW, parseDate:parseDate, toISO:toISO, addDays:addDays, dayDiff:dayDiff, md:md, mdLong:mdLong,
+    DOW:DOW, parseDate:parseDate, toISO:toISO, addDays:addDays, dayDiff:dayDiff, md:md, mdLong:mdLong, daysText:daysText,
     weekStart:weekStart, today:today, coarse:coarse,
     esc:esc, fmtEok:fmtEok, fmtSigned:fmtSigned, fmtMan:fmtMan, fmtFine:fmtFine, fmtShort:fmtShort,
     round:round, signCls:signCls, parseAmount:parseAmount,
