@@ -56,6 +56,7 @@
     Array.prototype.forEach.call($("theme-seg").children, function(b){
       b.setAttribute("aria-pressed", b.dataset.theme === pref ? "true" : "false");
     });
+    renderPrices();
   }
   $("theme-seg").addEventListener("click", function(e){
     var b = e.target.closest("[data-theme]");
@@ -77,7 +78,7 @@
   // 백업 한 파일에 장부 · 계산기 · 캐릭터. API 키는 안 넣음
   $("btn-backup").addEventListener("click", function(){
     var b = {app:"meso", v:1, saved:new Date().toISOString(),
-             ledger:M.ledger.getState(), calc:M.calc.getState(), chars:M.chars.all()};
+             ledger:M.ledger.getState(), calc:M.calc.getState(), chars:M.chars.all(), prices:M.bosses.overrides()};
     download("meso-backup-" + stamp() + ".json", JSON.stringify(b, null, 1), "application/json");
   });
   $("btn-restore").addEventListener("click", function(){ $("file").click(); });
@@ -98,6 +99,7 @@
       if (full){
         if (Array.isArray(s.chars)) M.chars.setAll(s.chars);
         if (s.calc) M.calc.setState(s.calc);
+        if (s.prices) M.bosses.setOverrides(s.prices);
       }
       M.toast("복원함 — " + what);
     };
@@ -118,6 +120,48 @@
     });
     // 엑셀이 한글을 깨뜨리지 않게 BOM
     download("meso-ledger-" + stamp() + ".csv", "﻿" + lines.join("\r\n"), "text/csv");
+  });
+
+  /* 결정석 가격 — 기본값은 bosses.js, 고친 값은 meso-boss-prices. 억/만/게임 숫자 다 받음 */
+  function renderPrices(){
+    var B = M.bosses, over = B.overrides(), n = Object.keys(over).length;
+    $("price-sub").textContent = B.data.version + " 기준" + (n ? " · " + n + "개 고침" : "");
+    $("price-reset").hidden = !n;
+    if ($("price-list").hidden) return;
+    var rows = [];
+    [["w", "주간"], ["m", "월간"]].forEach(function(k){
+      B.list(k[0]).forEach(function(b){
+        Object.keys(b.p).forEach(function(d){
+          var key = b.id + ":" + d, cur = B.price(k[0], b.id, d), def = b.p[d], isOver = key in over;
+          rows.push('<div class="prow' + (isOver ? ' over' : '') + '"><label for="pr-' + key + '">' + M.esc(b.n) + ' ' + B.data.diffs[d] +
+            '<small>' + k[1] + (isOver ? ' · 기본 ' + M.fmtMan(def / 1e8) : '') + '</small></label>' +
+            '<input type="text" inputmode="decimal" id="pr-' + key + '" data-k="' + k[0] + '" data-b="' + b.id + '" data-d="' + d + '"' +
+            ' value="' + M.fmtMan(cur / 1e8) + '" aria-label="' + M.esc(b.n) + ' ' + B.data.diffs[d] + ' 가격"></div>');
+        });
+      });
+    });
+    $("price-list").innerHTML = rows.join("");
+  }
+  $("price-toggle").addEventListener("click", function(){
+    var open = $("price-list").hidden;
+    $("price-list").hidden = !open;
+    this.setAttribute("aria-expanded", open ? "true" : "false");
+    this.textContent = open ? "닫기" : "가격 보기 · 수정";
+    renderPrices();
+  });
+  $("price-list").addEventListener("change", function(e){
+    var i = e.target.closest("input[data-b]");
+    if (!i) return;
+    var v = i.value.trim() ? M.parseAmount(i.value) : 0;
+    if (v === null){ M.toast("가격을 못 읽음 — 예: 5970만, 0.597억, 59,700,000"); return; }
+    M.bosses.setPrice(i.dataset.k, i.dataset.b, i.dataset.d, v * 1e8);
+    renderPrices();
+  });
+  $("price-reset").addEventListener("click", function(){
+    var before = M.bosses.overrides();
+    M.bosses.setOverrides({});
+    renderPrices();
+    M.toast("결정석 가격을 기본값으로", function(){ M.bosses.setOverrides(before); renderPrices(); });
   });
 
   $("btn-calc-reset").addEventListener("click", function(){
@@ -145,6 +189,7 @@
   window.addEventListener("storage", function(e){
     if (e.key === M.KEYS.ledger){ M.ledger.reload(); render(); }
     if (e.key === M.KEYS.chars){ M.chars.load(); render(); }
+    if (e.key === M.KEYS.prices){ M.bosses.reloadPrices(); render(); }
     if (e.key === M.KEYS.theme){ M.applyTheme(); if (cur === "settings") renderSettings(); }
   });
   if (window.matchMedia) matchMedia("(prefers-color-scheme: light)").addEventListener("change", M.applyTheme);

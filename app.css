@@ -319,6 +319,26 @@ select{cursor:pointer}
 .pick b{font-weight:650}
 .pick small{display:block;font-size:13px;color:var(--muted)}
 
+/* 보스 설정 시트 */
+/* 이름 · 금액 왼쪽, 난이도 칩 오른쪽 — 24종을 한 화면에 최대한 */
+.bsrow{display:grid;grid-template-columns:104px 1fr;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line-soft)}
+.bsrow:first-child{border-top:0}
+.bsrow .hd{display:flex;flex-direction:column;font-size:14px;line-height:1.3;min-width:0}
+.bsrow .hd b{font-weight:600;color:var(--muted)}
+.bsrow.on .hd b{color:var(--text)}
+.bsrow .hd span{font-size:12px;font-weight:650;white-space:nowrap}
+.bsrow .ctl{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.bsrow .chip{height:30px;padding:0 10px;font-size:13px}
+.bs-p{height:28px;font-size:12px;padding:0 6px;width:76px;margin-top:4px;border-radius:8px}
+
+/* ⚙ 결정석 가격 */
+.prow{display:grid;grid-template-columns:1fr 120px;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--line-soft)}
+.prow label{font-size:14px}
+.prow label small{display:block;font-size:12px;color:var(--muted)}
+.prow input{height:38px;font-size:14px;text-align:right;width:100%}
+.prow.over input{color:var(--gold);border-color:var(--gold-dim)}
+#price-list{margin-top:12px}
+
 /* ---------- 홈 ---------- */
 .pills{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px;margin-top:16px}
 .pill{min-width:0;display:flex;flex-direction:column;gap:2px;padding:11px 14px;border-radius:14px;background:var(--surface);
@@ -327,14 +347,26 @@ select{cursor:pointer}
 .pill small{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pill b{font-size:16px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media (max-width:420px){ .pill{padding:10px 11px} .pill b{font-size:15px} }
-.boss{display:flex;align-items:center;gap:12px;width:100%;padding:12px 16px;border:0;border-top:1px solid var(--line-soft);background:transparent;text-align:left}
-.boss:first-child{border-top:0}
+.bgrp{border-top:1px solid var(--line-soft)}
+.bgrp:first-child{border-top:0}
+.brow2{display:flex;align-items:stretch}
+.boss{display:flex;align-items:center;gap:12px;width:100%;padding:12px 16px;border:0;background:transparent;text-align:left;flex:1;min-width:0}
 .boss:hover:not(:disabled){background:var(--surface)}
 .boss:disabled{cursor:default}
+.boss.sm{padding:9px 16px 9px 52px}
+.boss.sm .t1{font-size:14px;font-weight:500}
+.boss.sm .amt{font-size:14px;font-weight:600}
+.bsub{border-top:1px dashed var(--line-soft);background:color-mix(in srgb,var(--surface) 35%,transparent)}
+.exp{width:44px;flex:none;border:0;border-left:1px solid var(--line-soft);background:transparent;color:var(--faint);display:grid;place-items:center}
+.exp:hover{color:var(--text);background:var(--surface)}
+.exp svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .15s}
+.exp[aria-expanded="true"] svg{transform:rotate(90deg)}
 .box{width:24px;height:24px;border-radius:8px;border:2px solid var(--line);display:grid;place-items:center;flex:none;transition:background .15s,border-color .15s}
-.box svg{width:15px;height:15px;stroke:var(--on-gold);stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round;opacity:0}
-.boss[aria-checked="true"] .box{background:var(--gold);border-color:var(--gold)}
-.boss[aria-checked="true"] .box svg{opacity:1}
+.boss.sm .box{width:20px;height:20px;border-radius:6px}
+.box svg{width:15px;height:15px;stroke:var(--on-gold);stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.box .ck,.box .mx{opacity:0}
+.boss[aria-checked="true"] .box,.boss[aria-checked="mixed"] .box{background:var(--gold);border-color:var(--gold)}
+.boss[aria-checked="true"] .box .ck,.boss[aria-checked="mixed"] .box .mx{opacity:1}
 .boss[aria-checked="true"] .t1{color:var(--muted)}
 .boss .main{display:block;flex:1;min-width:0}
 .boss .t1{display:block;font-size:15px;font-weight:600}

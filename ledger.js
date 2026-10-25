@@ -608,8 +608,9 @@ Meso.ledger = (function(M){
     var q = [], calc = M.calc && M.calc.cfg();
     if (ui.t === "in"){
       if (c === "weekly" || c === "monthly"){
-        var withV = M.chars.all().filter(function(r){ return r[c] > 0; });
-        withV.forEach(function(r){ q.push({label:r.name + " " + fmtFine(r[c]), v:r[c], ch:r.name}); });
+        var val = c === "weekly" ? M.chars.weekly : M.chars.monthly;
+        var withV = M.chars.all().filter(function(r){ return val(r) > 0; });
+        withV.forEach(function(r){ q.push({label:r.name + " " + fmtFine(val(r)), v:val(r), ch:r.name}); });
         if (withV.length > 1) q.push({label:"전체 " + fmtFine(M.chars.totals()[c]), v:M.chars.totals()[c], ch:""});
       } else if (c === "hunt" && calc && calc.rate > 0 && calc.hours > 0){
         q.push({label:calc.hours + "시간 × " + fmtFine(calc.rate), v:calc.rate * calc.hours, h:calc.hours});
@@ -728,10 +729,10 @@ Meso.ledger = (function(M){
       var old = findEntry(ui.edit);
       if (old && old.src){
         e.src = old.src;
+        if (old.x) e.x = old.x;      // 보스 체크 기록이면 어떤 보스였는지 유지
         // API 기록을 손으로 고치면 고정 — 다음 동기화가 규칙표 값으로 되돌리지 않음
         if (isApi(old)){
           e.lock = true;
-          if (old.x) e.x = old.x;
           if (old.est && Math.abs(old.a - e.a) < 1e-9) e.est = true;
         }
       }
@@ -795,6 +796,31 @@ Meso.ledger = (function(M){
     ui.fresh = e.id;
     changed();
     return function(){ st.entries = st.entries.filter(function(y){ return y.id !== e.id; }); changed(); };
+  }
+
+  /* 보스 체크 기록 (캐릭터 × 주 = 1건). e 가 null 이면 지움, 있으면 같은 src 기록을 갱신하거나 새로 넣음.
+     되돌리기 함수를 돌려줌 */
+  function setCheck(src, e){
+    var old = findBySrc(src), before = old ? JSON.parse(JSON.stringify(old)) : null;
+    if (!e){
+      if (!old) return function(){};
+      st.entries = st.entries.filter(function(x){ return x.id !== old.id; });
+    } else if (old){
+      old.d = e.d; old.a = round(e.a, 6); old.m = e.m; old.x = e.x;
+      ui.fresh = old.id;
+    } else {
+      var n = {id: ++st.seq, d:e.d, t:e.t, a:round(e.a, 6), c:e.c, ch:e.ch, src:src};
+      if (e.m) n.m = e.m;
+      if (e.x) n.x = e.x;
+      st.entries.push(n);
+      ui.fresh = n.id;
+    }
+    changed();
+    return function(){
+      st.entries = st.entries.filter(function(x){ return x.src !== src; });
+      if (before) st.entries.push(before);
+      changed();
+    };
   }
 
   function renameChar(from, to){
@@ -1100,6 +1126,7 @@ Meso.ledger = (function(M){
     CATS:CATS, cat:cat, render:render, openSheet:openSheet, compute:compute, windowStats:windowStats,
     sumRange:sumRange, goalInfo:goalInfo, goalHtml:goalHtml, budgetTotal:budgetTotal, monthSum:monthSum,
     entryRow:entryRow, recentRows:recentRows, findBySrc:findBySrc, addEntry:addEntry, removeEntry:removeEntry,
+    setCheck:setCheck,
     count:function(){ return st.entries.length; },
     entries:function(){ return st.entries; },
     getState:function(){ return JSON.parse(JSON.stringify(st)); },

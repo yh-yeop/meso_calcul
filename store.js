@@ -77,7 +77,8 @@ var Meso = (function(){
   }
 
   /* ---------- 저장소 ---------- */
-  var KEYS = {chars:"meso-chars-v1", calc:"meso-calc-v1", ledger:"meso-ledger-v1", apiKey:"meso-ledger-key", theme:"meso-theme"};
+  var KEYS = {chars:"meso-chars-v1", calc:"meso-calc-v1", ledger:"meso-ledger-v1", apiKey:"meso-ledger-key", theme:"meso-theme",
+              prices:"meso-boss-prices"};
   function read(key){ try{ return JSON.parse(localStorage.getItem(key)); } catch(e){ return null; } }
   function write(key, v){ try{ localStorage.setItem(key, JSON.stringify(v)); } catch(e){} }
 
@@ -86,8 +87,56 @@ var Meso = (function(){
   function on(name, fn){ (subs[name] = subs[name] || []).push(fn); }
   function emit(name, data){ (subs[name] || []).forEach(function(fn){ fn(data); }); }
 
+  /* ---------- 보스 결정석 ----------
+     가격표는 bosses.js, 사용자가 ⚙에서 덮어쓴 값은 meso-boss-prices {"lucid:hard": 메소}.
+     kind 는 "w"(주간) | "m"(월간) */
+  var BOSSES = window.MESO_BOSSES || {weekly:[], monthly:[], diffs:{}, weeklyLimit:12, worldLimit:90};
+  var priceOver = read(KEYS.prices) || {};
+  function bossList(kind){ return kind === "m" ? BOSSES.monthly : BOSSES.weekly; }
+  function bossInfo(kind, id){
+    var list = bossList(kind);
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+    return null;
+  }
+  function bossPrice(kind, id, d){
+    var b = bossInfo(kind, id);
+    if (!b || !(d in b.p)) return 0;
+    var k = id + ":" + d;
+    return priceOver[k] > 0 ? priceOver[k] : b.p[d];
+  }
+  // 파티면 인원으로 나누고 소수점 버림 (게임 규칙). 결과는 억
+  function bossShare(kind, r){ return Math.floor(bossPrice(kind, r.id, r.d) / (r.p || 1)) / 1e8; }
+  function routineSum(kind, list){
+    var s = 0;
+    (list || []).forEach(function(r){ s += bossShare(kind, r); });
+    return s;
+  }
+  // 보스 하나에 난이도 하나, 인원 1~6, 표에 없는 보스 · 난이도는 버림
+  function cleanRoutine(kind, list){
+    var seen = {}, out = [];
+    (Array.isArray(list) ? list : []).forEach(function(r){
+      var b = r && bossInfo(kind, r.id);
+      if (!b || !(r.d in b.p) || seen[r.id]) return;
+      seen[r.id] = 1;
+      out.push({id:r.id, d:r.d, p:Math.max(1, Math.min(6, parseInt(r.p, 10) || 1))});
+    });
+    // 진행 순서로 정렬
+    var order = bossList(kind).map(function(b){ return b.id; });
+    return out.sort(function(a, b){ return order.indexOf(a.id) - order.indexOf(b.id); });
+  }
+  function bossLabel(kind, r){
+    var b = bossInfo(kind, r.id);
+    return (b ? b.n : r.id) + " " + (BOSSES.diffs[r.d] || r.d);
+  }
+  function bossShort(kind, r){
+    var b = bossInfo(kind, r.id);
+    return (b ? b.n : r.id) + "(" + String(BOSSES.diffs[r.d] || r.d).charAt(0) + ")";
+  }
+
   /* ---------- 캐릭터 ----------
-     {id, name, weekly(억/주), monthly(억/월), main, world?, cls?, level?, ocid?} — 배열 순서가 곧 표시 순서.
+     {id, name, weekly(억/주), monthly(억/월), main, world?, cls?, level?, ocid?,
+      bosses?:[{id, d, p}] 주간 루틴, mbosses?:[{id, d, p}] 월간 루틴} — 배열 순서가 곧 표시 순서.
+     루틴이 있으면 주보 · 월보는 루틴 합계, 없으면 직접 넣은 weekly · monthly.
      예전엔 계산기 저장값의 r([이름, 주보, 월보])에만 있었음. 처음 열 때 거기서 옮겨 옴. */
   var chars = [];
   function newId(){ return "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
@@ -99,8 +148,13 @@ var Meso = (function(){
     if (c.cls) x.cls = String(c.cls);
     if (+c.level > 0) x.level = +c.level;
     if (c.ocid) x.ocid = String(c.ocid);
+    var wb = cleanRoutine("w", c.bosses), mb = cleanRoutine("m", c.mbosses);
+    if (wb.length) x.bosses = wb;
+    if (mb.length) x.mbosses = mb;
     return x;
   }
+  function charWeekly(c){ return c.bosses && c.bosses.length ? routineSum("w", c.bosses) : c.weekly; }
+  function charMonthly(c){ return c.mbosses && c.mbosses.length ? routineSum("m", c.mbosses) : c.monthly; }
   function fromRoster(r){
     return (Array.isArray(r) ? r : []).filter(Array.isArray).map(function(c, i){
       return cleanChar({name: c[0] != null ? c[0] : "캐릭 " + (i + 1), weekly: c[1], monthly: c[2], main: i === 0});
@@ -130,7 +184,7 @@ var Meso = (function(){
   }
   function charTotals(){
     var w = 0, m = 0;
-    chars.forEach(function(c){ w += c.weekly; m += c.monthly; });
+    chars.forEach(function(c){ w += charWeekly(c); m += charMonthly(c); });
     return {weekly:w, monthly:m};
   }
   function findChar(id){
@@ -205,7 +259,30 @@ var Meso = (function(){
       saveChars();
       return true;
     },
-    toRoster: function(){ return chars.map(function(c){ return [c.name, c.weekly, c.monthly]; }); },
+    // 루틴째 바꾸기 (kind "w" | "m")
+    setRoutine: function(id, kind, list){
+      var c = findChar(id);
+      if (!c) return null;
+      var r = cleanRoutine(kind, list), key = kind === "m" ? "mbosses" : "bosses";
+      if (r.length) c[key] = r; else delete c[key];
+      saveChars();
+      return c;
+    },
+    copyRoutine: function(fromId, toId){
+      var f = findChar(fromId), t = findChar(toId);
+      if (!f || !t) return null;
+      return charsApi.setRoutine(toId, "w", f.bosses || []) && charsApi.setRoutine(toId, "m", f.mbosses || []);
+    },
+    weekly: charWeekly,
+    monthly: charMonthly,
+    // 월드마다 주간 루틴 결정석 수 (월드당 주 90개 제한 확인용, 월드를 아는 캐릭터만)
+    worldCounts: function(){
+      var out = {};
+      chars.forEach(function(c){ if (c.world && c.bosses) out[c.world] = (out[c.world] || 0) + c.bosses.length; });
+      return out;
+    },
+    // 공유 링크엔 계산된 주보 · 월보를 실음 (받는 쪽은 직접 입력값으로)
+    toRoster: function(){ return chars.map(function(c){ return [c.name, charWeekly(c), charMonthly(c)]; }); },
     all: function(){ return chars; },
     load: loadChars,
     setAll: function(list){ chars = (Array.isArray(list) ? list : []).map(cleanChar); saveChars(); }
@@ -245,6 +322,22 @@ var Meso = (function(){
     if (meta) meta.content = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim() || "#141220";
   }
 
+  var bossApi = {
+    data: BOSSES, list: bossList, info: bossInfo, price: bossPrice, share: bossShare, sum: routineSum,
+    label: bossLabel, short: bossShort,
+    defaultPrice: function(kind, id, d){ var b = bossInfo(kind, id); return b && d in b.p ? b.p[d] : 0; },
+    overrides: function(){ return Object.assign({}, priceOver); },
+    // 메소 단위. 0 이나 기본값과 같으면 덮어쓰기 해제
+    setPrice: function(kind, id, d, meso){
+      var k = id + ":" + d, def = bossApi.defaultPrice(kind, id, d);
+      if (!(meso > 0) || Math.round(meso) === def) delete priceOver[k]; else priceOver[k] = Math.round(meso);
+      write(KEYS.prices, priceOver);
+      emit("change", "prices");
+    },
+    setOverrides: function(o){ priceOver = o && typeof o === "object" ? o : {}; write(KEYS.prices, priceOver); emit("change", "prices"); },
+    reloadPrices: function(){ priceOver = read(KEYS.prices) || {}; }
+  };
+
   // 계산기 · 장부 모듈이 뜨기 전에 캐릭터부터 (예전 계산기 로스터에서 옮기는 것도 여기서)
   loadChars();
 
@@ -254,7 +347,7 @@ var Meso = (function(){
     weekStart:weekStart, today:today, coarse:coarse,
     esc:esc, fmtEok:fmtEok, fmtSigned:fmtSigned, fmtMan:fmtMan, fmtFine:fmtFine, fmtShort:fmtShort,
     round:round, signCls:signCls, parseAmount:parseAmount,
-    chars:charsApi, toast:toast, runUndo:runUndo,
+    chars:charsApi, bosses:bossApi, toast:toast, runUndo:runUndo,
     themePref:themePref, setTheme:setTheme, applyTheme:applyTheme
   };
 })();

@@ -269,18 +269,12 @@
       <h3>캐릭터 <small id="ch-sum"></small></h3>
       <div class="list" id="ch-list"></div>
     </section>
+    <div class="callout" id="ch-warn" hidden></div>
     <div class="btns stretch">
-      <button class="btn" id="ch-add">+ 직접 추가</button>
-      <button class="btn" id="ch-paste-btn" aria-expanded="false" aria-controls="ch-paste-box">정산표 붙여넣기</button>
+      <button class="btn" id="ch-add">+ 캐릭터 추가</button>
       <button class="btn" id="ch-api-btn">Open API로 불러오기</button>
     </div>
-    <section class="card" id="ch-paste-box" hidden>
-      <h3>maplescouter 정산표 <a href="https://maplescouter.com/ko/boss-income" target="_blank" rel="noopener">열기 ↗</a></h3>
-      <p class="note">보스 정산 페이지의 캐릭터 목록을 통째로 드래그해 붙여넣으면, 같은 이름은 주보·월보만 갱신하고 없는 캐릭터는 추가함.</p>
-      <textarea id="paste" aria-label="maplescouter 캐릭터 목록 붙여넣기" style="margin-top:10px" placeholder="#1제네시스 2차 해방&#10;베라&#10;호야시치&#10;Lv.289 소마&#10;주간수익&#10;2,131,700,000&#10;월간수익&#10;665,000,000"></textarea>
-      <div class="parsemsg" id="parsemsg"></div>
-    </section>
-    <p class="note">주보·월보는 maplescouter 정산값 그대로(한 달 = 4주 환산 전 원본). 계산기와 장부의 보스 수입 · 홈의 보스 체크가 전부 여기 값을 씀.</p>
+    <p class="note">캐릭터를 눌러 <b>보스 설정</b>에서 도는 보스 · 난이도 · 파티 인원을 고르면 주간 · 월간 보스 수익이 결정석 가격으로 계산됨. 계산기와 장부의 보스 수입 · 홈의 보스 체크가 전부 이 값을 씀. 가격은 ⚙ 설정에서 고칠 수 있음.</p>
   </main>
 
   <!-- ===================== 설정 ===================== -->
@@ -324,6 +318,16 @@
         <button class="btn" id="btn-csv">장부 CSV</button>
       </div>
       <input type="file" id="file" accept="application/json,.json" hidden>
+    </section>
+
+    <section class="card">
+      <h3>결정석 가격 <small id="price-sub"></small></h3>
+      <p class="note">보스 수익 계산에 쓰는 결정석 판매가. 패치로 가격이 바뀌면 여기서 고치면 바로 반영됨. 고친 값은 금색, 비우면 기본값.</p>
+      <div class="btns" style="margin-top:12px">
+        <button class="btn" id="price-toggle" aria-expanded="false" aria-controls="price-list">가격 보기 · 수정</button>
+        <button class="btn danger" id="price-reset" hidden>전부 기본값으로</button>
+      </div>
+      <div id="price-list" hidden></div>
     </section>
 
     <section class="card">
@@ -412,14 +416,43 @@
     <div id="ch-stats"></div>
     <div>
       <div class="field"><label for="ch-name">이름</label><div class="ctl"><input type="text" id="ch-name" required></div></div>
+      <button type="button" class="btn primary" id="ch-boss-btn" style="width:100%;margin:6px 0 8px">보스 설정</button>
       <div class="field"><label for="ch-weekly">주간보스 수익<small>한 주 합계</small></label><div class="ctl"><input type="number" id="ch-weekly" step="0.0001" min="0" inputmode="decimal"><span class="unit">억</span></div></div>
       <div class="field"><label for="ch-monthly">월간보스 수익</label><div class="ctl"><input type="number" id="ch-monthly" step="0.0001" min="0" inputmode="decimal"><span class="unit">억</span></div></div>
+      <div class="note" id="ch-income-note"></div>
       <label class="check" style="border-top:0"><input type="checkbox" id="ch-main">본캐</label>
       <div class="note" id="ch-meta"></div>
     </div>
     <div class="sh-foot">
       <button type="button" class="btn danger" id="ch-del">삭제</button>
       <button type="submit" class="btn primary" id="ch-save">저장</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- 보스 설정 -->
+<dialog class="sheet" id="boss-sheet" aria-labelledby="boss-title">
+  <form class="sh" id="boss-form" novalidate>
+    <div class="sh-grip"></div>
+    <div class="sh-head">
+      <h2 id="boss-title">보스</h2>
+      <button type="button" class="icon-btn" data-close aria-label="닫기"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="note" id="boss-sum" style="font-size:14px"></div>
+    <div class="frow" id="boss-copy-row">
+      <select id="boss-copy" class="grow" aria-label="루틴 복사할 캐릭터"></select>
+      <button type="button" class="btn sm" id="boss-copy-btn">복사</button>
+    </div>
+    <div>
+      <div class="sh-lbl">주간 보스 · 목요일 리셋</div>
+      <div id="boss-w"></div>
+    </div>
+    <div>
+      <div class="sh-lbl">월간 보스 · 매월 1일 리셋</div>
+      <div id="boss-m"></div>
+    </div>
+    <div class="sh-foot">
+      <button type="submit" class="btn primary">완료</button>
     </div>
   </form>
 </dialog>
@@ -443,6 +476,7 @@
 <div class="toast" id="toast" hidden role="status"><span id="toast-msg"></span><button id="toast-undo">되돌리기</button></div>
 
 <script src="rules.js"></script>
+<script src="bosses.js"></script>
 <script src="core.js"></script>
 <script src="store.js"></script>
 <script src="api.js"></script>

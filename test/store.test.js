@@ -7,6 +7,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 const SRC = fs.readFileSync(path.join(__dirname, '..', 'store.js'), 'utf8');
+const BOSSES = fs.readFileSync(path.join(__dirname, '..', 'bosses.js'), 'utf8');
 
 // 매 테스트마다 빈(또는 주어진) localStorage 로 새로 띄움
 function boot(storage) {
@@ -23,6 +24,7 @@ function boot(storage) {
   };
   ctx.window = ctx;
   vm.createContext(ctx);
+  vm.runInContext(BOSSES, ctx);
   vm.runInContext(SRC + '\n;this.Meso = Meso;', ctx);
   return { M: ctx.Meso, data, json: k => JSON.parse(data[k]) };
 }
@@ -105,4 +107,61 @@ test('parseAmount: 억 · 만 · 조 · 게임 숫자, 이상한 글자는 거�
   assert.equal(M.parseAmount('1조 2000억'), 12000);
   assert.equal(M.parseAmount('2,131,700,000'), 21.317);
   assert.equal(M.parseAmount('21억 abc'), null);
+});
+
+/* ---------- 보스 루틴 ---------- */
+
+test('보스 루틴 합계 = Σ floor(가격 ÷ 인원) / 1억, 루틴이 직접 입력값보다 우선', () => {
+  const chars = { v: 1, list: [{ id: 'a', name: '본캐', weekly: 99, monthly: 99, main: true,
+    bosses: [{ id: 'lucid', d: 'hard', p: 1 }, { id: 'will', d: 'hard', p: 3 }],
+    mbosses: [{ id: 'blackmage', d: 'hard', p: 6 }] }] };
+  const { M } = boot({ 'meso-chars-v1': JSON.stringify(chars) });
+  const c = M.chars.get('a');
+  const will3 = Math.floor(73200000 / 3);          // 24,400,000
+  assert.equal(M.chars.weekly(c), (59700000 + will3) / 1e8);
+  assert.equal(M.chars.monthly(c), Math.floor(465000000 / 6) / 1e8, '6인 검마는 버림');
+  assert.deepEqual(plain(M.chars.totals()), { weekly: (59700000 + will3) / 1e8, monthly: Math.floor(465000000 / 6) / 1e8 });
+});
+
+test('루틴이 없으면 예전처럼 직접 넣은 주보 · 월보 (기존 캐릭터 데이터 그대로)', () => {
+  const chars = { v: 1, list: [{ id: 'a', name: '부캐', weekly: 14.258, monthly: 6.65 }] };
+  const { M } = boot({ 'meso-chars-v1': JSON.stringify(chars) });
+  const c = M.chars.get('a');
+  assert.equal(M.chars.weekly(c), 14.258);
+  assert.equal(M.chars.monthly(c), 6.65);
+  assert.equal(c.bosses, undefined);
+});
+
+test('루틴 정리: 없는 보스 · 없는 난이도 버림, 보스당 난이도 하나, 인원 1~6, 진행 순서로 정렬', () => {
+  const { M } = boot({});
+  const c = M.chars.add({ name: 'X' });
+  M.chars.setRoutine(c.id, 'w', [
+    { id: 'will', d: 'hard', p: 9 }, { id: 'lucid', d: 'hard', p: 0 }, { id: 'lucid', d: 'easy', p: 1 },
+    { id: 'nope', d: 'hard', p: 1 }, { id: 'zakum', d: 'hard', p: 1 }
+  ]);
+  assert.deepEqual(plain(M.chars.get(c.id).bosses), [{ id: 'lucid', d: 'hard', p: 1 }, { id: 'will', d: 'hard', p: 6 }]);
+  M.chars.setRoutine(c.id, 'w', []);
+  assert.equal(M.chars.get(c.id).bosses, undefined, '빈 루틴이면 필드를 지워 직접 입력값으로 돌아감');
+});
+
+test('결정석 가격 덮어쓰기가 합계에 바로 반영되고, 기본값과 같으면 해제', () => {
+  const chars = { v: 1, list: [{ id: 'a', name: 'A', bosses: [{ id: 'lucid', d: 'hard', p: 1 }] }] };
+  const { M, data } = boot({ 'meso-chars-v1': JSON.stringify(chars) });
+  M.bosses.setPrice('w', 'lucid', 'hard', 60000000);
+  assert.equal(M.chars.weekly(M.chars.get('a')), 0.6);
+  assert.equal(JSON.parse(data['meso-boss-prices'])['lucid:hard'], 60000000);
+  M.bosses.setPrice('w', 'lucid', 'hard', 59700000);
+  assert.deepEqual(plain(M.bosses.overrides()), {});
+  assert.equal(M.chars.weekly(M.chars.get('a')), 0.597);
+});
+
+test('루틴 복사와 월드별 결정석 수', () => {
+  const chars = { v: 1, list: [
+    { id: 'a', name: 'A', world: '베라', bosses: [{ id: 'lucid', d: 'hard', p: 1 }, { id: 'will', d: 'hard', p: 1 }] },
+    { id: 'b', name: 'B', world: '베라' }, { id: 'c', name: 'C', world: '스카니아', bosses: [{ id: 'seren', d: 'hard', p: 1 }] }
+  ] };
+  const { M } = boot({ 'meso-chars-v1': JSON.stringify(chars) });
+  M.chars.copyRoutine('a', 'b');
+  assert.deepEqual(plain(M.chars.get('b').bosses), plain(M.chars.get('a').bosses));
+  assert.deepEqual(plain(M.chars.worldCounts()), { '베라': 4, '스카니아': 1 });
 });

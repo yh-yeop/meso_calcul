@@ -1,74 +1,142 @@
 /* 홈 — 잔고 · 이번 달, 목표 진행도, 이번 주 보스 체크, 최근 기록, 처음 쓰는 사람용 체크리스트.
-   보스 체크는 따로 저장하지 않는다. 체크 = 장부에 src:"chk:…" 기록을 넣는 것이라 장부가 곧 상태. */
+   보스 체크는 따로 저장하지 않는다. 캐릭터 × 주(월)마다 장부 기록 1건(src:"chk:…")이 곧 상태이고,
+   그 기록의 x.b 에 체크한 보스 [id, 난이도, 인원, 금액] 목록이 들어 있음. */
 Meso.home = (function(M){
   "use strict";
 
   var $ = M.$, esc = M.esc, fmtEok = M.fmtEok, fmtFine = M.fmtFine, fmtSigned = M.fmtSigned, fmtMan = M.fmtMan;
   var md = M.md, toISO = M.toISO, addDays = M.addDays, signCls = M.signCls;
-  var CHECK = '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  var CHECK = '<svg viewBox="0 0 24 24"><path class="ck" d="M5 12.5l4.5 4.5L19 7.5"/><path class="mx" d="M6 12h12"/></svg>';
+  var CHEV = '<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>';
+  var opened = {};   // 펼친 캐릭터 "w:id"
 
-  function weekKey(){ return toISO(M.weekStart(M.today())); }
+  function weekFrom(){ return toISO(M.weekStart(M.today())); }
   function monthKey(){ return toISO(M.today()).slice(0, 7); }
-  function srcFor(kind, c){ return "chk:" + kind + ":" + (kind === "w" ? weekKey() : monthKey()) + ":" + c.id; }
+  function srcFor(kind, c){ return "chk:" + kind + ":" + (kind === "w" ? weekFrom() : monthKey()) + ":" + c.id; }
+  function routineOf(kind, c){ return (kind === "w" ? c.bosses : c.mbosses) || []; }
+  function fullOf(kind, c){ return kind === "w" ? M.chars.weekly(c) : M.chars.monthly(c); }
 
-  // 체크로 넣은 기록, 아니면 손으로 넣은 같은 캐릭터 · 같은 기간의 보스 기록
-  function bossState(kind, c){
-    var src = srcFor(kind, c), e = M.ledger.findBySrc(src);
-    if (e) return {on:true, e:e, manual:false};
+  // 장부에 직접 적은 같은 캐릭터 · 같은 기간의 보스 기록 (체크로 만든 게 아닌 것)
+  function manualEntry(kind, c){
     var cat = kind === "w" ? "weekly" : "monthly";
-    var from = kind === "w" ? weekKey() : monthKey() + "-01", to = kind === "w" ? toISO(addDays(M.weekStart(M.today()), 6)) : monthKey() + "-31";
-    var hit = M.ledger.entries().filter(function(x){ return x.t === "in" && x.c === cat && x.ch === c.name && x.d >= from && x.d <= to; })[0];
-    return hit ? {on:true, e:hit, manual:true} : {on:false};
+    var from = kind === "w" ? weekFrom() : monthKey() + "-01";
+    var to = kind === "w" ? toISO(addDays(M.weekStart(M.today()), 6)) : monthKey() + "-31";
+    return M.ledger.entries().filter(function(x){
+      return x.t === "in" && x.c === cat && x.ch === c.name && x.d >= from && x.d <= to && !(x.src && x.src.indexOf("chk:") === 0);
+    })[0] || null;
   }
 
-  function bossRows(kind, list){
+  function bossState(kind, c){
+    var routine = routineOf(kind, c), e = M.ledger.findBySrc(srcFor(kind, c)), done = {};
+    if (!e){
+      var man = manualEntry(kind, c);
+      if (man) return {routine:routine, e:man, manual:true, done:done, n:0};
+    }
+    if (e){
+      // 예전 방식(캐릭터 통째 체크) 기록엔 보스 목록이 없음 — 루틴 전부로 봄
+      if (e.x && Array.isArray(e.x.b)) e.x.b.forEach(function(r){ done[r[0]] = true; });
+      else routine.forEach(function(r){ done[r.id] = true; });
+    }
+    var n = routine.filter(function(r){ return done[r.id]; }).length;
+    return {routine:routine, e:e, manual:false, done:done, n:n};
+  }
+
+  // 체크한 보스 목록으로 장부 기록을 맞춤. 루틴 없는 캐릭터는 all 로 통째
+  function writeCheck(kind, c, done, all){
+    var routine = routineOf(kind, c), src = srcFor(kind, c), cat = kind === "w" ? "weekly" : "monthly";
+    if (!routine.length){
+      return M.ledger.setCheck(src, all ? {d:toISO(M.today()), t:"in", c:cat, ch:c.name, a:fullOf(kind, c)} : null);
+    }
+    var list = routine.filter(function(r){ return done[r.id]; })
+      .map(function(r){ return [r.id, r.d, r.p, M.round(M.bosses.share(kind, r), 6)]; });
+    if (!list.length) return M.ledger.setCheck(src, null);
+    var sum = 0, names = list.map(function(r){ sum += r[3]; return M.bosses.short(kind, {id:r[0], d:r[1]}); });
+    var memo = names.length > 3 ? names.slice(0, 3).join(" · ") + " 외 " + (names.length - 3) : names.join(" · ");
+    return M.ledger.setCheck(src, {d:toISO(M.today()), t:"in", c:cat, ch:c.name, a:sum, m:memo, x:{b:list}});
+  }
+
+  function charRows(kind, list){
     return list.map(function(c){
-      var s = bossState(kind, c), v = kind === "w" ? c.weekly : c.monthly;
-      var amt = s.on ? s.e.a : v;
-      return '<button class="boss" role="checkbox" aria-checked="' + s.on + '" data-kind="' + kind + '" data-cid="' + c.id + '"' +
-             (s.manual ? ' disabled title="장부에 직접 적은 기록이 있음"' : '') + '>' +
-             '<span class="box">' + CHECK + '</span>' +
-             '<span class="main"><span class="t1">' + esc(c.name) + '</span>' +
-             (s.manual ? '<span class="t2">장부에 직접 기록됨</span>' : s.on ? '<span class="t2">' + md(M.parseDate(s.e.d)) + ' 기록</span>' : '') + '</span>' +
-             '<span class="amt ' + (s.on ? 'pos' : 'dim') + '">' + (s.on ? '+' : '') + fmtFine(amt) + '</span></button>';
+      var s = bossState(kind, c), full = fullOf(kind, c), key = kind + ":" + c.id, has = s.routine.length > 0;
+      var got = s.e ? s.e.a : 0;
+      var check = s.manual ? "true" : !s.e ? "false" : has && s.n < s.routine.length ? "mixed" : "true";
+      var sub = s.manual ? "장부에 직접 기록됨"
+              : has ? s.n + "/" + s.routine.length + " · " + (got > 0 ? fmtFine(got) : "0") + " / " + fmtFine(full)
+              : s.e ? md(M.parseDate(s.e.d)) + " 기록" : "";
+      var h = '<div class="bgrp">' +
+        '<div class="brow2"><button class="boss" role="checkbox" aria-checked="' + check + '" data-kind="' + kind + '" data-cid="' + c.id + '"' +
+          (s.manual ? ' disabled title="장부에 직접 적은 기록이 있음"' : '') + '>' +
+          '<span class="box">' + CHECK + '</span>' +
+          '<span class="main"><span class="t1">' + esc(c.name) + '</span>' + (sub ? '<span class="t2">' + sub + '</span>' : '') + '</span>' +
+          '<span class="amt ' + (s.e ? 'pos' : 'dim') + '">' + (s.e ? '+' + fmtFine(got) : fmtFine(full)) + '</span></button>' +
+          (has && !s.manual ? '<button class="exp" data-exp="' + key + '" aria-expanded="' + !!opened[key] + '" aria-label="보스별로 체크">' + CHEV + '</button>' : '') +
+        '</div>';
+      if (has && !s.manual && opened[key]){
+        h += '<div class="bsub">' + s.routine.map(function(r){
+          var on = !!s.done[r.id];
+          return '<button class="boss sm" role="checkbox" aria-checked="' + on + '" data-kind="' + kind + '" data-cid="' + c.id + '" data-b="' + r.id + '">' +
+            '<span class="box">' + CHECK + '</span>' +
+            '<span class="main"><span class="t1">' + esc(M.bosses.label(kind, r)) + '</span>' +
+            (r.p > 1 ? '<span class="t2">' + r.p + '인 파티</span>' : '') + '</span>' +
+            '<span class="amt ' + (on ? 'pos' : 'dim') + '">' + fmtFine(M.bosses.share(kind, r)) + '</span></button>';
+        }).join("") + '</div>';
+      }
+      return h + '</div>';
     }).join("");
   }
 
   function renderBoss(){
-    var chars = M.chars.all(), wk = chars.filter(function(c){ return c.weekly > 0; }), mo = chars.filter(function(c){ return c.monthly > 0; });
+    var chars = M.chars.all();
+    var wk = chars.filter(function(c){ return M.chars.weekly(c) > 0; });
+    var mo = chars.filter(function(c){ return M.chars.monthly(c) > 0; });
     var box = $("h-boss"), ws = M.weekStart(M.today());
     if (!chars.length){
       $("h-boss-sub").textContent = "";
-      box.innerHTML = '<div class="empty">캐릭터를 등록하면 주마다 보스 돈 캐릭터를 체크해서 바로 장부에 넣을 수 있음.' +
+      box.innerHTML = '<div class="empty">캐릭터와 도는 보스를 등록하면 주마다 잡은 보스만 체크해서 바로 장부에 넣을 수 있음.' +
         '<div><a class="btn primary" href="#chars">캐릭터 등록</a></div></div>';
       return;
     }
     if (!wk.length && !mo.length){
       $("h-boss-sub").textContent = "";
-      box.innerHTML = '<div class="empty">캐릭터에 주간 · 월간보스 수익을 넣으면 여기 체크 목록이 생김.<div><a class="btn" href="#chars">수익 넣기</a></div></div>';
+      box.innerHTML = '<div class="empty">캐릭터에 도는 보스를 정하면 여기 체크 목록이 생김.<div><a class="btn" href="#chars">보스 정하기</a></div></div>';
       return;
     }
-    var done = 0, got = 0;
-    wk.forEach(function(c){ var s = bossState("w", c); if (s.on){ done++; got += s.e.a; } });
-    $("h-boss-sub").textContent = md(ws) + "~" + md(addDays(ws, 6)) + " · " + done + "/" + wk.length + (got ? " · +" + fmtEok(got) : "");
-    var h = bossRows("w", wk);
-    if (mo.length) h += '<div class="boss-h">' + (M.today().getMonth() + 1) + '월 월간보스</div>' + bossRows("m", mo);
+    // 보스 단위로 센 진행도 (루틴 없는 캐릭터는 1개로)
+    var done = 0, total = 0, got = 0;
+    wk.forEach(function(c){
+      var s = bossState("w", c), n = s.routine.length || 1;
+      total += n;
+      done += s.manual ? n : s.routine.length ? s.n : (s.e ? 1 : 0);
+      if (s.e) got += s.e.a;
+    });
+    $("h-boss-sub").textContent = md(ws) + "~" + md(addDays(ws, 6)) + " · " + done + "/" + total + (got ? " · +" + fmtEok(got) : "");
+    var h = charRows("w", wk);
+    if (mo.length) h += '<div class="boss-h">' + (M.today().getMonth() + 1) + '월 월간보스</div>' + charRows("m", mo);
     box.innerHTML = h;
   }
 
-  function toggleBoss(kind, id){
+  function toggle(kind, id, bossId){
     var c = M.chars.get(id);
     if (!c) return;
-    var s = bossState(kind, c), label = c.name + (kind === "w" ? " 주보 " : " 월보 ");
-    if (s.on){
-      if (s.manual) return;
-      var undo = M.ledger.removeEntry(s.e.id, true);
-      M.toast(label + "체크 해제 (장부에서 뺌)", undo);
+    var s = bossState(kind, c);
+    if (s.manual) return;
+    var done = {}, label, undo;
+    Object.keys(s.done).forEach(function(k){ done[k] = true; });
+    if (bossId){
+      var r = s.routine.filter(function(x){ return x.id === bossId; })[0];
+      if (!r) return;
+      if (done[bossId]) delete done[bossId]; else done[bossId] = true;
+      undo = writeCheck(kind, c, done);
+      label = c.name + " · " + M.bosses.label(kind, r) + (done[bossId] ? " 체크" : " 해제");
     } else {
-      var v = kind === "w" ? c.weekly : c.monthly;
-      var undoAdd = M.ledger.addEntry({t:"in", c: kind === "w" ? "weekly" : "monthly", a:v, ch:c.name, src:srcFor(kind, c)});
-      M.toast(label + "+" + fmtFine(v) + " 장부에 기록함", undoAdd);
+      // 캐릭터 체크박스: 다 됐으면 전부 해제, 아니면 전부 체크
+      var all = !(s.e && (!s.routine.length || s.n === s.routine.length));
+      s.routine.forEach(function(x){ if (all) done[x.id] = true; else delete done[x.id]; });
+      undo = writeCheck(kind, c, done, all);
+      label = c.name + (kind === "w" ? " 주보 " : " 월보 ") + (all ? "전부 체크" : "체크 해제");
     }
+    var e = M.ledger.findBySrc(srcFor(kind, c));
+    M.toast(label + (e ? " · 장부 +" + fmtFine(e.a) : " · 장부에서 뺌"), undo);
   }
 
   function renderGoal(L, ws, cfg){
@@ -95,7 +163,7 @@ Meso.home = (function(M){
 
   function renderOnboard(L){
     var steps = [
-      {done: M.chars.all().length > 0, text:"캐릭터 등록 — 보스 수익까지", href:"#chars"},
+      {done: M.chars.all().length > 0, text:"캐릭터 등록 — 도는 보스까지", href:"#chars"},
       {done: L.rows.some(function(r){ return r.e.t === "bal"; }), text:"지금 가진 메소 넣기", open:"bal"},
       {done: !!M.read(M.KEYS.calc), text:"계산기에서 목표 메소 정하기", href:"#calc"}
     ];
@@ -147,8 +215,10 @@ Meso.home = (function(M){
 
   /* ---------- events ---------- */
   $("h-boss").addEventListener("click", function(e){
+    var ex = e.target.closest("[data-exp]");
+    if (ex){ opened[ex.dataset.exp] = !opened[ex.dataset.exp]; renderBoss(); return; }
     var b = e.target.closest("[data-cid]");
-    if (b && !b.disabled) toggleBoss(b.dataset.kind, b.dataset.cid);
+    if (b && !b.disabled) toggle(b.dataset.kind, b.dataset.cid, b.dataset.b);
   });
   $("v-home").addEventListener("click", function(e){
     var open = e.target.closest("[data-open]");
