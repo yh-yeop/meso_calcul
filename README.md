@@ -5,7 +5,7 @@
 **→ https://yh-yeop.github.io/meso_calcul/**
 
 빌드 없음. 의존성 없음. `index.html` 하나가 전부라 파일을 그냥 브라우저로 열어도 똑같이 동작함. (`sw.js`는 오프라인 캐시용으로만 있고, 파일로 열면 안 씀)
-- 운영 메모: `index.html`을 고치면 `sw.js`의 `VERSION` 문자열을 올려야 함. 안 올리면 방문자가 옛 캐시를 한 번 더 봄.
+- 운영 메모: `index.html` · `ledger.html` · `rules.js`를 고치면 `sw.js`의 `VERSION` 문자열을 올려야 함. 안 올리면 방문자가 옛 캐시를 한 번 더 봄.
 
 ## 왜 평균으로 안 나누나
 
@@ -84,7 +84,7 @@ maplescouter의 월 합계는 **한 달 = 4주**로 잡음. 실제로는 365.242
 - `localStorage["meso-theme"]` — 테마 버튼으로 고정한 값(`light`/`dark`). 없으면 시스템 설정
 - URL의 `#s=...` — `링크 복사`로 만든 공유 링크에 담기는 스냅샷 (Base64URL). 위 저장분과 같은 내용
 - URL의 `#goal=...` — 목표 메소(억)만 적용하고 주소에서 지움
-- 서비스 워커 캐시 `meso-calc-v1` — `index.html`·`icon.svg`·`manifest.json`. 열 때마다 뒤에서 새로 받아 갈아끼움
+- 서비스 워커 캐시 `meso-calc-v2` — `index.html`·`ledger.html`·`rules.js`·`icon.svg`·`manifest.json`. 열 때마다 뒤에서 새로 받아 갈아끼움
 
 `초기화` 버튼을 누르면 저장분을 지우고 기본값으로 돌아감 (테마와 오프라인 캐시는 그대로).
 
