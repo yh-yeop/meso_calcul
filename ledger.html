@@ -5,443 +5,567 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>메소 장부</title>
 <meta name="description" content="메이플스토리 메소 장부. 어디서 벌고 어디서 썼는지 기록하고, 월 예산과 수입·지출 통계를 보고, 메소 적립 계산기의 계획과 실제를 비교함.">
-<meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#141220">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
 <link rel="manifest" href="manifest.json">
+<script>
+  // 계산기와 같은 테마 설정을 첫 그리기 전에 적용 (깜빡임 방지). 없으면 시스템 설정
+  try{ var t = localStorage.getItem("meso-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch(e){}
+</script>
 <style>
   :root{
+    color-scheme:dark;
     --ink:#141220;
     --ink-2:#1C1930;
-    --surface:#211D38;
-    --line:#332D52;
+    --surface:#262141;
+    --line:#38315A;
     --line-soft:#2A2543;
     --gold:#E9B949;
     --gold-dim:#8A6E2C;
-    --violet:#9C7BF0;
-    --rose:#E8639B;
+    --violet:#A88BF5;
+    --rose:#F0709F;
     --mint:#4FD1AA;
-    --text:#EFECF8;
-    --muted:#948DB4;
-    --muted-2:#8880AB;
-    --fs-micro:11px;
-    --fs-sm:12px;
-    --fs-md:13px;
-    --fs-base:14px;
-    --fs-lead:15px;
-    --fs-display:32px;
-    --mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,Consolas,"D2Coding",monospace;
+    --sky:#5AB0F2;
+    --text:#F1EEFA;
+    --muted:#A49DC4;
+    --faint:#7E77A2;
+    --on-gold:#1A1406;
+    --scrim:rgba(8,6,16,.62);
+    --shadow:0 10px 30px rgba(0,0,0,.35);
+    --focus:rgba(233,185,73,.22);
+    --radius:16px;
+    --tabh:64px;
     --sans:"Pretendard",-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
   }
+  @media (prefers-color-scheme:light){
+    :root:not([data-theme="dark"]){
+      color-scheme:light;
+      --ink:#F4F2FA; --ink-2:#FFFFFF; --surface:#EFEBF8; --line:#D6D1E8; --line-soft:#E7E3F3;
+      --gold:#8E6300; --gold-dim:#B8933A; --violet:#6240D4; --rose:#C2206A; --mint:#0F7A5A; --sky:#1868B8;
+      --text:#1D1A2E; --muted:#585275; --faint:#6B6590; --on-gold:#FFFFFF;
+      --scrim:rgba(30,24,60,.38); --shadow:0 10px 30px rgba(40,30,80,.16); --focus:rgba(142,99,0,.18);
+    }
+  }
+  :root[data-theme="light"]{
+    color-scheme:light;
+    --ink:#F4F2FA; --ink-2:#FFFFFF; --surface:#EFEBF8; --line:#D6D1E8; --line-soft:#E7E3F3;
+    --gold:#8E6300; --gold-dim:#B8933A; --violet:#6240D4; --rose:#C2206A; --mint:#0F7A5A; --sky:#1868B8;
+    --text:#1D1A2E; --muted:#585275; --faint:#6B6590; --on-gold:#FFFFFF;
+    --scrim:rgba(30,24,60,.38); --shadow:0 10px 30px rgba(40,30,80,.16); --focus:rgba(142,99,0,.18);
+  }
+
   *{box-sizing:border-box;margin:0;padding:0}
   [hidden]{display:none!important}
+  html{-webkit-text-size-adjust:100%}
   body{
-    background:
-      radial-gradient(1100px 620px at 82% -12%, #2C2450 0%, transparent 62%),
-      radial-gradient(760px 480px at -8% 108%, #23203C 0%, transparent 58%),
-      var(--ink);
-    background-attachment:fixed;
-    color:var(--text);font-family:var(--sans);font-size:var(--fs-base);line-height:1.6;
-    min-height:100vh;padding:36px 24px 72px;-webkit-font-smoothing:antialiased;
-    padding-left:max(24px,env(safe-area-inset-left));
-    padding-right:max(24px,env(safe-area-inset-right));
+    background:var(--ink);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.55;
+    -webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;
+    padding-bottom:calc(var(--tabh) + 96px + env(safe-area-inset-bottom));
   }
-  .wrap{max-width:1120px;margin:0 auto}
-  .eyebrow{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.2em;
-           text-transform:uppercase;color:var(--muted-2)}
+  button,input{font:inherit;color:inherit}
+  button{cursor:pointer}
+  :focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  a{color:inherit}
+  .app{max-width:760px;margin:0 auto;padding:0 16px;
+       padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
 
-  .hero{position:relative;border-bottom:1px solid var(--line);padding-bottom:30px;margin-bottom:32px}
-  .hero h1{font-size:clamp(28px,4.4vw,42px);font-weight:760;letter-spacing:-.025em;margin-top:10px;line-height:1.2}
-  .hero p{color:var(--muted);font-size:var(--fs-lead);margin-top:10px;max-width:56ch}
+  /* ---------- 헤더 ---------- */
+  .top{padding:16px 0 18px}
+  .topbar{display:flex;align-items:center;gap:8px}
+  .topbar h1{flex:1;font-size:17px;font-weight:700;letter-spacing:-.01em}
+  .icon-btn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:transparent;
+            color:var(--muted);display:grid;place-items:center;text-decoration:none;flex:none;
+            transition:color .15s,border-color .15s}
+  .icon-btn:hover{color:var(--text);border-color:var(--faint)}
+  .icon-btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .icon-btn.busy svg{animation:spin 1s linear infinite;color:var(--violet)}
+  @keyframes spin{to{transform:rotate(360deg)}}
 
-  .tools{position:absolute;top:0;right:0;display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
-  .tool{background:transparent;border:1px solid var(--line);border-radius:8px;color:var(--muted);
-        font-family:var(--sans);font-size:var(--fs-md);padding:7px 13px;cursor:pointer;white-space:nowrap;
-        text-decoration:none;line-height:1.6;transition:border-color .14s,color .14s}
-  .tool:hover{border-color:var(--gold-dim);color:var(--gold)}
-  .tool:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-  .tool.ok{border-color:var(--mint);color:var(--mint)}
+  .balance{margin-top:18px}
+  .balance .lbl{font-size:14px;color:var(--muted)}
+  .balance .num{font-size:36px;font-weight:750;letter-spacing:-.025em;color:var(--gold);line-height:1.15;margin-top:2px}
+  .balance .sub{font-size:13px;color:var(--muted);margin-top:6px}
+  .balance .sub b{font-weight:600;color:var(--text)}
 
-  .readout{
-    display:grid;grid-template-columns:repeat(3,1fr);
-    gap:1px;background:var(--line-soft);border:1px solid var(--line-soft);
-    border-radius:14px;overflow:hidden;margin-top:30px;
+  /* 셋이 한 줄에 다 들어가게 — 가로 스크롤로 숨기면 세 번째 칸을 아무도 안 봄 */
+  .pills{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px;margin-top:16px}
+  .pill{min-width:0;display:flex;flex-direction:column;gap:2px;padding:11px 14px;border-radius:14px;
+        background:var(--ink-2);border:1px solid var(--line-soft);text-align:left;transition:border-color .15s}
+  .pill:hover{border-color:var(--line)}
+  .pill small{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pill b{font-size:16px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  @media (max-width:420px){ .pill{padding:10px 11px} .pill b{font-size:15px} }
+  .pos{color:var(--mint)} .neg{color:var(--rose)} .dim{color:var(--muted)}
+
+  /* ---------- 탭 ---------- */
+  .tabs{position:sticky;top:0;z-index:5;background:var(--ink);display:flex;border-bottom:1px solid var(--line-soft);margin:0 -16px;padding:0 16px}
+  .tabs button{flex:1;background:none;border:0;border-bottom:2px solid transparent;padding:13px 0 11px;
+               color:var(--muted);font-size:15px;display:flex;align-items:center;justify-content:center;gap:6px}
+  .tabs button[aria-selected="true"]{color:var(--text);border-bottom-color:var(--gold);font-weight:650}
+  .tabs svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;display:none}
+  @media (max-width:719px){
+    .tabs{position:fixed;top:auto;bottom:0;left:0;right:0;margin:0;padding:0 0 env(safe-area-inset-bottom);
+          border-bottom:0;border-top:1px solid var(--line-soft);background:var(--ink-2)}
+    .tabs button{flex-direction:column;gap:2px;font-size:12px;border-bottom:0;border-top:2px solid transparent;padding:8px 0 9px;height:var(--tabh)}
+    .tabs button[aria-selected="true"]{border-top-color:var(--gold);color:var(--gold)}
+    .tabs svg{display:block}
   }
-  @media (max-width:720px){ .readout{grid-template-columns:1fr} }
-  .cell{background:var(--ink-2);padding:20px 22px}
-  .cell .k{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.14em;
-           text-transform:uppercase;color:var(--muted-2)}
-  .cell .v{font-family:var(--mono);font-size:var(--fs-display);font-weight:600;letter-spacing:-.03em;
-           font-variant-numeric:tabular-nums;margin-top:10px;line-height:1.1}
-  .cell .v small{font-size:var(--fs-lead);font-weight:500;color:var(--muted);margin-left:3px}
-  .cell .s{font-size:var(--fs-md);color:var(--muted);margin-top:8px;line-height:1.5;
-           font-variant-numeric:tabular-nums}
-  .cell .s .mix{display:block;color:var(--muted-2);margin-top:3px}
-  .v.gold{color:var(--gold)} .v.mint{color:var(--mint)} .v.rose{color:var(--rose)}
 
-  .grid{display:grid;grid-template-columns:372px 1fr;gap:26px;align-items:start}
-  .panel{background:var(--ink-2);border:1px solid var(--line-soft);border-radius:14px;padding:22px}
-  .panel + .panel{margin-top:20px}
-  .panel h2{font-family:var(--mono);font-size:var(--fs-sm);letter-spacing:.1em;text-transform:uppercase;
-            color:var(--muted-2);font-weight:500;margin-bottom:18px;
-            display:flex;justify-content:space-between;align-items:center;gap:10px}
-  .panel h2 em{font-style:normal;letter-spacing:0;text-transform:none;font-size:var(--fs-md);color:var(--gold);
-               font-variant-numeric:tabular-nums;text-align:right}
-  .panel h2 em.over{color:var(--rose)}
+  .view{padding-top:18px}
 
-  .row{display:flex;align-items:center;justify-content:space-between;gap:14px;
-       padding:11px 0;border-bottom:1px solid var(--line-soft)}
-  .row label{font-size:var(--fs-base);color:var(--text);flex:1;min-width:0}
-  .row label i{display:block;font-style:normal;font-size:var(--fs-sm);color:var(--muted-2);margin-top:2px;
-               font-variant-numeric:tabular-nums}
-  .row label i.bad{color:var(--rose)}
-  .row label i.good{color:var(--mint)}
-  .field{display:flex;align-items:center;gap:7px;flex-shrink:0}
-  .field .unit{font-family:var(--mono);font-size:var(--fs-md);color:var(--muted-2)}
+  /* ---------- 카드 ---------- */
+  .card{background:var(--ink-2);border:1px solid var(--line-soft);border-radius:var(--radius);padding:18px}
+  .card + .card,.grid2 + .card,.card + .grid2,.grid2 + .grid2{margin-top:14px}
+  .card h3{font-size:16px;font-weight:650;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .card h3 small{font-size:13px;font-weight:400;color:var(--muted);text-align:right}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .grid2 > .card{margin-top:0}
+  @media (max-width:719px){ .grid2{grid-template-columns:1fr} }
+  .note{font-size:13px;color:var(--muted);line-height:1.6}
+  .note b{color:var(--text);font-weight:600}
+  .callout{font-size:14px;line-height:1.6;margin-top:14px;padding:12px 14px;background:var(--surface);border-radius:12px}
+  .callout b{color:var(--gold);font-weight:650}
+  .empty{text-align:center;padding:36px 16px;color:var(--muted);font-size:14px}
+  .empty h4{font-size:17px;color:var(--text);font-weight:650;margin-bottom:6px}
+  .empty .btn{margin-top:16px}
 
-  input[type=number],input[type=date],input[type=text]{
-    background:var(--surface);border:1px solid var(--line);border-radius:8px;color:var(--text);
-    font-family:var(--mono);font-size:var(--fs-base);font-variant-numeric:tabular-nums;
-    padding:8px 10px;transition:border-color .14s,box-shadow .14s;
-  }
-  input[type=number]{width:96px;text-align:right}
-  input[type=date]{width:156px}
-  input.amt{width:150px;text-align:right}
-  input.txt{width:170px;font-family:var(--sans)}
-  input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(233,185,73,.14)}
-  input::-webkit-calendar-picker-indicator{opacity:.7;cursor:pointer}
-  input::placeholder{color:var(--muted-2);opacity:.7}
+  /* ---------- 버튼 / 입력 ---------- */
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:46px;padding:0 18px;border-radius:12px;
+       border:1px solid var(--line);background:transparent;color:var(--text);font-size:15px;font-weight:550;white-space:nowrap;
+       text-decoration:none;transition:background .15s,border-color .15s}
+  .btn:hover{border-color:var(--faint)}
+  .btn.primary{background:var(--gold);border-color:var(--gold);color:var(--on-gold);font-weight:650}
+  .btn.primary:hover{filter:brightness(1.06)}
+  .btn.danger{color:var(--rose)}
+  .btn.sm{height:36px;padding:0 12px;font-size:14px;border-radius:10px}
+  .btn:disabled{opacity:.5;cursor:default}
+  .btns{display:flex;gap:8px;flex-wrap:wrap}
 
-  .mini{background:transparent;border:1px solid var(--line);border-radius:7px;color:var(--muted-2);
-        font-family:var(--sans);font-size:var(--fs-sm);padding:6px 10px;cursor:pointer;white-space:nowrap;
-        transition:border-color .14s,color .14s}
-  .mini:hover{border-color:var(--gold-dim);color:var(--gold)}
-  .mini:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  input[type=text],input[type=number],input[type=date],input[type=password]{
+    height:44px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:0 12px;
+    font-size:15px;min-width:0;transition:border-color .15s,box-shadow .15s}
+  input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px var(--focus)}
+  input::placeholder{color:var(--faint)}
+  input[type=number]{text-align:right}
 
-  /* 구분 토글 */
-  .seg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-bottom:14px}
-  .seg button{flex:1;background:transparent;border:0;color:var(--muted);font-family:var(--sans);
-              font-size:var(--fs-md);padding:9px 6px;cursor:pointer;transition:background .14s,color .14s}
-  .seg button + button{border-left:1px solid var(--line)}
-  .seg button:hover{color:var(--text)}
-  .seg button[aria-pressed=true]{background:var(--surface);color:var(--gold)}
-  .seg button[data-t=out][aria-pressed=true]{color:var(--rose)}
-  .seg button[data-t=bal][aria-pressed=true]{color:var(--mint)}
-  .seg button:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
-  .seg.sm{margin:0;border-radius:7px}
-  .seg.sm button{font-size:var(--fs-sm);padding:5px 10px;flex:none}
+  .seg{display:flex;background:var(--surface);border-radius:12px;padding:3px;gap:3px}
+  .seg button{flex:1;height:38px;border:0;border-radius:10px;background:transparent;color:var(--muted);font-size:15px;
+              transition:background .15s,color .15s}
+  .seg button[aria-pressed="true"]{background:var(--ink-2);color:var(--text);font-weight:650;box-shadow:0 1px 3px rgba(0,0,0,.18)}
+  .seg.sm button{height:32px;font-size:13px;flex:none;padding:0 11px;white-space:nowrap}
 
-  .chips{display:flex;flex-wrap:wrap;gap:6px}
-  .chips + .chips{margin-top:8px}
-  .chip{background:transparent;border:1px solid var(--line);border-radius:999px;color:var(--muted);
-        font-family:var(--sans);font-size:var(--fs-md);padding:5px 12px;cursor:pointer;
-        transition:border-color .14s,color .14s,background .14s}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{height:34px;padding:0 13px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--muted);
+        font-size:14px;white-space:nowrap;transition:border-color .15s,color .15s,background .15s}
   .chip:hover{color:var(--text)}
-  .chip[aria-pressed=true]{color:var(--c,var(--gold));border-color:var(--c,var(--gold));background:var(--surface)}
-  .chip:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-  .chips.quick .chip{border-style:dashed;font-size:var(--fs-sm);font-family:var(--mono);padding:4px 10px}
-  .chips.quick .chip b{font-family:var(--sans);font-weight:500;color:var(--muted-2);margin-right:5px}
+  .chip[aria-pressed="true"]{border-color:var(--gold);color:var(--gold);background:var(--focus)}
 
-  .btnrow{display:flex;gap:8px;margin-top:14px}
-  .btn{flex:1;background:transparent;border:1px dashed var(--line);border-radius:9px;color:var(--muted);
-       font-family:var(--sans);font-size:var(--fs-md);padding:11px;cursor:pointer;transition:border-color .14s,color .14s}
-  .btn:hover{border-color:var(--gold-dim);color:var(--gold)}
-  .btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-  .btn.solid{border-style:solid;border-color:var(--gold-dim);color:var(--gold);flex:2}
-  .btn.solid:hover{background:rgba(233,185,73,.08)}
-  .btn.danger:hover{border-color:var(--rose);color:var(--rose)}
+  /* ---------- 기록 목록 ---------- */
+  .logbar{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .mnav{display:flex;align-items:center;gap:4px}
+  .mnav strong{font-size:18px;font-weight:700;min-width:116px;text-align:center}
+  .mnav .icon-btn{width:36px;height:36px;border:0}
+  .msum{font-size:14px;color:var(--muted);margin-top:4px}
+  .msum b{font-weight:650}
+  .filters{margin-top:14px}
+  .day{margin-top:18px}
+  .day-h{display:flex;justify-content:space-between;align-items:baseline;padding:0 4px 7px;font-size:14px;color:var(--muted)}
+  .day-h strong{color:var(--text);font-weight:600}
+  .day-list{background:var(--ink-2);border:1px solid var(--line-soft);border-radius:var(--radius);overflow:hidden}
+  .ent{display:flex;align-items:center;gap:12px;width:100%;padding:13px 16px;border:0;border-top:1px solid var(--line-soft);
+       background:transparent;text-align:left;transition:background .15s}
+  .ent:first-child{border-top:0}
+  .ent:hover{background:var(--surface)}
+  .ent.fresh{animation:fresh 1.6s ease}
+  @keyframes fresh{from{background:var(--focus)}to{background:transparent}}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--c,var(--muted));flex:none}
+  .ent .main{display:block;flex:1;min-width:0}
+  .ent .t1{font-size:15px;font-weight:600;display:flex;align-items:center;gap:6px}
+  .ent .t2{display:block;font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+  .ent .amt{font-size:16px;font-weight:650;white-space:nowrap;text-align:right}
+  .ent .amt small{display:block;font-size:12px;font-weight:400;color:var(--muted)}
+  .badge{font-size:11px;font-weight:600;letter-spacing:.02em;color:var(--violet);border:1px solid currentColor;border-radius:5px;padding:0 5px;line-height:16px}
+  .badge.lock{color:var(--gold)}
 
-  .check{display:flex;align-items:center;gap:10px;padding:8px 0}
-  .check input{width:16px;height:16px;accent-color:var(--gold);flex-shrink:0}
-  .check label{font-size:var(--fs-md);color:var(--muted);cursor:pointer}
-  .check label b{font-weight:500;color:var(--text);font-variant-numeric:tabular-nums}
-
-  .subh{font-size:var(--fs-md);color:var(--muted-2);margin-bottom:14px;line-height:1.5}
-  .subh.mt{margin-top:22px;padding-top:18px;border-top:1px solid var(--line-soft)}
-  .empty{font-size:var(--fs-md);color:var(--muted-2);padding:18px 0;text-align:center}
-  .hint{font-size:var(--fs-md);color:var(--muted);line-height:1.65;margin-top:14px;
-        padding:12px 14px;background:var(--surface);border-radius:9px}
-  .hint b{color:var(--gold);font-weight:600;font-variant-numeric:tabular-nums}
-
-  svg{display:block;width:100%;height:auto;overflow:visible}
-  .legend{display:flex;flex-wrap:wrap;gap:18px;margin-top:16px;font-size:var(--fs-md);color:var(--muted)}
-  .legend span{display:flex;align-items:center;gap:7px}
-  .swatch{width:13px;height:2.5px;border-radius:2px;flex-shrink:0}
-  .swatch.dash{background:repeating-linear-gradient(90deg,var(--violet) 0 4px,transparent 4px 7px)!important}
-
-  /* 표 */
-  .tbl{width:100%;border-collapse:collapse}
-  .tbl th{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;text-transform:uppercase;
-          color:var(--muted-2);font-weight:500;text-align:right;padding:0 0 10px;
-          border-bottom:1px solid var(--line-soft);white-space:nowrap}
-  .tbl th:first-child{text-align:left}
-  .tbl td{font-family:var(--mono);font-size:var(--fs-md);font-variant-numeric:tabular-nums;text-align:right;
-          padding:9px 0 9px 8px;border-bottom:1px solid var(--line-soft);color:var(--text);white-space:nowrap}
-  .tbl td:first-child{text-align:left;color:var(--muted);font-family:var(--sans);padding-left:0}
+  /* ---------- 통계 ---------- */
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .kpi small{display:block;font-size:13px;color:var(--muted)}
+  .kpi b{display:block;font-size:20px;font-weight:700;letter-spacing:-.01em;margin-top:2px;white-space:nowrap}
+  .bars .row{display:grid;grid-template-columns:84px 1fr auto;gap:12px;align-items:center;padding:7px 0}
+  .bars .nm{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bars .tr{height:10px;background:var(--surface);border-radius:5px;overflow:hidden}
+  .bars .fl{height:100%;border-radius:5px;transition:width .25s ease}
+  .bars .vl{font-size:14px;font-weight:600;text-align:right;white-space:nowrap}
+  .bars .vl small{font-weight:400;color:var(--muted);margin-left:6px}
+  .chart{position:relative}
+  .chart svg{display:block;width:100%}
+  .legend{display:flex;gap:16px;margin-top:10px;font-size:13px;color:var(--muted)}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .sw{width:14px;height:3px;border-radius:2px;background:var(--gold)}
+  .sw.dash{background:repeating-linear-gradient(90deg,var(--violet) 0 4px,transparent 4px 7px)}
+  .ch-grid{stroke:var(--line-soft)} .ch-axis{stroke:var(--line)} .ch-lbl{fill:var(--muted);font-size:12px;font-family:var(--sans)}
+  .ch-plan{stroke:var(--violet);fill:none} .ch-act{stroke:var(--gold);fill:none} .ch-dot{fill:var(--ink-2);stroke:var(--gold)}
+  .ch-today{stroke:var(--faint)}
+  .tbl{width:100%;border-collapse:collapse;font-size:14px}
+  .tbl th{font-size:13px;font-weight:500;color:var(--muted);text-align:right;padding:0 0 8px;border-bottom:1px solid var(--line-soft)}
+  .tbl th:first-child,.tbl td:first-child{text-align:left}
+  .tbl td{text-align:right;padding:10px 0 10px 10px;border-bottom:1px solid var(--line-soft);white-space:nowrap}
+  .tbl td:first-child{padding-left:0}
   .tbl tr:last-child td{border-bottom:0}
-  .tbl tr.now td,.tbl tr.now td:first-child{color:var(--gold)}
-  .tbl .p{color:var(--mint)} .tbl .n{color:var(--rose)} .tbl .z{color:var(--muted-2)}
+  .tbl tr.now td{font-weight:650}
+  .tbl .wrap{white-space:normal}
+  @media (max-width:520px){ .tbl .wide{display:none} }
+  .goal-big{font-size:26px;font-weight:750;letter-spacing:-.02em;color:var(--mint)}
+  .goal-big small{font-size:15px;font-weight:500;color:var(--muted);margin-left:4px}
+  .goal-lines{margin-top:6px;font-size:14px;color:var(--muted);line-height:1.7}
+  .goal-lines b{color:var(--text);font-weight:600}
 
-  /* 막대 순위 */
-  .bars2{display:grid;grid-template-columns:1fr 1fr;gap:26px}
-  @media (max-width:640px){ .bars2{grid-template-columns:1fr;gap:20px} }
-  .bh{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;
-      color:var(--muted-2);margin-bottom:10px;display:flex;justify-content:space-between}
-  .bh b{font-weight:500;color:var(--text);letter-spacing:0;font-variant-numeric:tabular-nums}
-  .bar{display:grid;grid-template-columns:70px 1fr 74px;gap:10px;align-items:center;margin-bottom:9px}
-  .bar .nm{font-size:var(--fs-md);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .bar .tr{height:7px;background:var(--surface);border-radius:4px;overflow:hidden}
-  .bar .fl{height:100%;border-radius:4px;transition:width .25s ease}
-  .bar .vl{font-family:var(--mono);font-size:var(--fs-sm);text-align:right;color:var(--muted);
-           font-variant-numeric:tabular-nums;line-height:1.3}
-  .bar .vl i{display:block;font-style:normal;color:var(--muted-2);font-size:var(--fs-micro)}
-  .stot{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:var(--fs-md);color:var(--muted);margin-bottom:18px;
-        font-variant-numeric:tabular-nums}
-  .stot b{font-family:var(--mono);font-weight:500}
+  /* ---------- 예산 ---------- */
+  .bud-hero .big{font-size:30px;font-weight:750;letter-spacing:-.02em}
+  .bud-hero .big small{font-size:16px;font-weight:500;color:var(--muted);margin-left:4px}
+  .meter{position:relative;height:12px;background:var(--surface);border-radius:6px;margin-top:14px}
+  .meter .fl{position:absolute;left:0;top:0;height:100%;border-radius:6px;background:var(--mint);transition:width .25s ease}
+  .meter .fl.warn{background:var(--gold)} .meter .fl.over{background:var(--rose)}
+  .meter .pace{position:absolute;top:-5px;bottom:-5px;width:2px;border-radius:1px;background:var(--text);opacity:.55}
+  .meter.sm{height:8px;margin-top:8px}
+  .meter.sm .pace{top:-4px;bottom:-4px}
+  .bud-status{font-size:14px;color:var(--muted);margin-top:12px;line-height:1.6}
+  .bud-status b{font-weight:650;color:var(--text)}
+  .brow{padding:12px 0;border-top:1px solid var(--line-soft)}
+  .brow:first-child{border-top:0;padding-top:0}
+  .brow .hd{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .brow .nm{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px}
+  .brow .vl{font-size:14px;color:var(--muted);text-align:right}
+  .brow .vl b{color:var(--text);font-weight:650}
+  .brow input{width:110px;height:38px}
+  .brow .edit{display:none;align-items:center;gap:6px;font-size:14px;color:var(--muted)}
+  #budget.editing .brow .edit{display:flex}
+  #budget.editing .brow .vl{display:none}
 
-  /* 예산 */
-  .brow{display:grid;grid-template-columns:88px 1fr 84px;gap:12px;align-items:center;
-        padding:9px 0;border-bottom:1px solid var(--line-soft)}
-  .brow:last-child{border-bottom:0}
-  .brow .nm{font-size:var(--fs-md);line-height:1.3}
-  .brow .nm i{display:block;font-style:normal;font-size:var(--fs-micro);color:var(--muted-2);
-              font-family:var(--mono);font-variant-numeric:tabular-nums;margin-top:2px}
-  .brow .tr{position:relative;height:8px;background:var(--surface);border-radius:4px}
-  .brow .fl{position:absolute;left:0;top:0;height:100%;border-radius:4px;background:var(--mint);transition:width .25s ease}
-  .brow .fl.warn{background:var(--gold)} .brow .fl.over{background:var(--rose)}
-  .brow .pace{position:absolute;top:-4px;bottom:-4px;width:1px;background:var(--muted-2);opacity:.7}
-  .brow input{width:100%;font-size:var(--fs-md);padding:6px 8px}
-  .brow.total .nm{font-weight:600}
-
-  /* 기록 목록 */
-  .day{margin-top:14px}
-  .day:first-child{margin-top:0}
-  .dayh{display:flex;justify-content:space-between;gap:10px;font-family:var(--mono);font-size:var(--fs-micro);
-        letter-spacing:.04em;color:var(--muted-2);padding:5px 0;border-bottom:1px solid var(--line)}
-  .dayh .dw{color:var(--muted)}
-  .ent{display:grid;grid-template-columns:auto 1fr auto 26px;gap:10px;align-items:center;
-       padding:8px 0;border-bottom:1px solid var(--line-soft);cursor:pointer;border-radius:6px;transition:background .14s}
-  .ent:hover{background:rgba(255,255,255,.025)}
-  .ent.editing{background:rgba(233,185,73,.07)}
-  .ent.fresh{animation:fresh 1.4s ease}
-  @keyframes fresh{from{background:rgba(79,209,170,.16)}to{background:transparent}}
-  .tag{font-size:var(--fs-micro);padding:2px 8px;border-radius:5px;border:1px solid var(--c,var(--line));
-       color:var(--c,var(--muted));white-space:nowrap;min-width:58px;text-align:center}
-  .desc{min-width:0;font-size:var(--fs-md);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .desc b{font-weight:500;color:var(--text)}
-  .amt-v{font-family:var(--mono);font-size:var(--fs-base);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
-  .amt-v.p{color:var(--mint)} .amt-v.n{color:var(--rose)} .amt-v.b{color:var(--text)}
-  .amt-v i{display:block;font-style:normal;font-size:var(--fs-micro);color:var(--muted-2)}
-  .del{background:transparent;border:0;color:var(--muted-2);font-size:18px;line-height:1;
-       cursor:pointer;padding:4px;border-radius:6px;transition:color .14s}
-  .del:hover{color:var(--rose)}
-  .del:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
-  .mnav{display:flex;align-items:center;gap:6px}
-  .mnav span{font-family:var(--mono);font-size:var(--fs-md);color:var(--text);letter-spacing:0;min-width:64px;text-align:center}
-  .mnav button{padding:3px 9px}
-
-  .src{font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--violet);
-       border:1px solid currentColor;border-radius:4px;padding:0 4px;margin-right:6px;vertical-align:1px}
-  .src.lock{color:var(--gold)}
-  .apilog{font-family:var(--mono);font-size:var(--fs-sm);color:var(--muted);line-height:1.7;margin-top:12px;
-          font-variant-numeric:tabular-nums;white-space:pre-wrap}
+  /* ---------- 설정 ---------- */
+  .field{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0}
+  .field label{font-size:15px}
+  .field label small{display:block;font-size:13px;color:var(--muted)}
+  .field input{width:200px}
+  .check{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:15px}
+  .check input{width:18px;height:18px;accent-color:var(--gold)}
+  .check b{font-weight:600}
+  .check .dim{font-size:14px}
+  .apilog{font-size:14px;line-height:1.7;margin-top:12px;white-space:pre-wrap;color:var(--muted)}
   .apilog:empty{display:none}
   .apilog .bad{color:var(--rose)} .apilog .ok{color:var(--mint)}
-  .tool.busy{border-color:var(--violet);color:var(--violet);cursor:progress}
+  .foot{font-size:13px;color:var(--faint);text-align:center;margin-top:24px;line-height:1.7}
 
-  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--surface);
-         border:1px solid var(--line);border-radius:10px;padding:10px 12px 10px 16px;display:flex;gap:14px;
-         align-items:center;font-size:var(--fs-md);box-shadow:0 10px 30px rgba(0,0,0,.4);z-index:10}
-  .toast button{background:transparent;border:0;color:var(--gold);font-family:var(--sans);font-size:var(--fs-md);cursor:pointer;padding:2px 6px}
+  /* ---------- 기록 버튼 ---------- */
+  .fab{position:fixed;z-index:6;right:max(16px,calc(50% - 364px));bottom:calc(var(--tabh) + 16px + env(safe-area-inset-bottom));
+       height:56px;padding:0 22px 0 18px;border-radius:28px;border:0;background:var(--gold);color:var(--on-gold);
+       font-size:16px;font-weight:700;display:flex;align-items:center;gap:6px;box-shadow:var(--shadow)}
+  .fab svg{width:22px;height:22px;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;fill:none}
+  @media (min-width:720px){ .fab{bottom:28px} body{padding-bottom:110px} }
 
-  .foot{margin-top:34px;padding-top:18px;border-top:1px solid var(--line-soft);font-size:var(--fs-sm);
-        color:var(--muted-2);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
-  .foot a{color:var(--muted);text-decoration:none;border-bottom:1px solid var(--line)}
-  .foot a:hover{color:var(--gold);border-color:var(--gold-dim)}
-
-  @media (max-width:900px){
-    body{padding:26px 16px 56px}
-    .grid{grid-template-columns:1fr}
-    :root{--fs-display:28px}
-    .tools{position:static;margin-top:18px;justify-content:flex-start}
+  /* ---------- 기록 시트 ---------- */
+  dialog.sheet{border:0;padding:0;background:var(--ink-2);color:var(--text);width:100%;max-width:100%;
+               margin:auto 0 0;border-radius:22px 22px 0 0;max-height:94vh;box-shadow:var(--shadow)}
+  dialog.sheet::backdrop{background:var(--scrim)}
+  dialog.sheet[open]{animation:up .22s ease}
+  @keyframes up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+  @media (min-width:720px){
+    dialog.sheet{margin:auto;width:500px;border-radius:22px;max-height:88vh}
   }
-  @media (max-width:560px){
-    .tbl .inc{display:none}
-    .panel{padding:18px 16px}
-    input.amt{width:130px}
-    input.txt{width:140px}
-    input[type=date]{width:148px}
-    .bar{grid-template-columns:62px 1fr 70px}
-  }
-  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  .sh{padding:8px 18px calc(16px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px}
+  .sh-grip{width:40px;height:4px;border-radius:2px;background:var(--line);margin:4px auto 0}
+  @media (min-width:720px){ .sh-grip{display:none} .sh{padding-top:18px} }
+  .sh-head{display:flex;align-items:center;justify-content:space-between}
+  .sh-head h2{font-size:19px;font-weight:700}
+  .sh-head .icon-btn{border:0}
+  .sh-lbl{font-size:13px;color:var(--muted);margin-bottom:7px}
+  .presets{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -18px;padding:0 18px}
+  .presets::-webkit-scrollbar{display:none}
+  .preset{flex:none;text-align:left;padding:8px 13px;border-radius:12px;border:1px dashed var(--line);background:transparent;line-height:1.35}
+  .preset:hover{border-color:var(--gold-dim)}
+  .preset span{display:block;font-size:12px;color:var(--muted)}
+  .preset b{font-size:15px;font-weight:650}
+  .cats{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+  .cat{height:56px;border-radius:12px;border:1px solid var(--line);background:transparent;font-size:14px;color:var(--muted);
+       display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;transition:border-color .15s,color .15s,background .15s}
+  .cat .dot{width:8px;height:8px}
+  .cat[aria-pressed="true"]{border-color:var(--c);color:var(--text);background:var(--surface);font-weight:650}
+  .amt-box{display:flex;align-items:baseline;gap:8px;border-bottom:2px solid var(--line);padding:2px 2px 6px;transition:border-color .15s}
+  .amt-box:focus-within{border-color:var(--gold)}
+  .amt-box input{flex:1;min-width:0;border:0;background:transparent;font-size:34px;font-weight:700;letter-spacing:-.02em;
+                 padding:0;height:auto;box-shadow:none;text-align:left}
+  .amt-box input:focus{box-shadow:none}
+  .amt-box span{font-size:20px;color:var(--muted);font-weight:600}
+  .amt-prev{font-size:14px;color:var(--muted);margin-top:6px;min-height:22px}
+  .amt-prev.bad{color:var(--rose)} .amt-prev.good{color:var(--mint)}
+  .quick{display:flex;gap:6px;flex-wrap:wrap}
+  .quick .chip{border-style:dashed}
+  .frow{display:flex;align-items:center;gap:10px}
+  .frow > .sh-lbl{margin:0;width:56px;flex:none;font-size:14px}
+  .frow .grow{flex:1;min-width:0}
+  .frow input[type=text]{width:100%}
+  .frow input[type=date]{flex:1;min-width:0}
+  .frow input[type=number]{width:90px}
+  .charrow{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .charrow input{flex:1;min-width:110px}
+  .api-note{font-size:13px;color:var(--violet);background:var(--surface);border-radius:10px;padding:9px 12px;line-height:1.55}
+  /* 저장 버튼은 시트가 길어도 항상 보이게 바닥에 붙임 */
+  dialog.sheet{overflow:auto;overscroll-behavior:contain}
+  .sh-foot{display:flex;gap:8px;position:sticky;bottom:0;background:var(--ink-2);
+           margin:0 -18px calc(-16px - env(safe-area-inset-bottom));padding:12px 18px calc(16px + env(safe-area-inset-bottom));
+           border-top:1px solid var(--line-soft)}
+  .sh-foot .primary{flex:1}
+
+  .toast{position:fixed;z-index:30;left:0;right:0;margin:0 auto;width:max-content;max-width:calc(100% - 32px);
+         bottom:calc(var(--tabh) + 84px + env(safe-area-inset-bottom));
+         background:var(--text);color:var(--ink);border-radius:14px;padding:11px 10px 11px 16px;display:flex;gap:12px;align-items:center;
+         font-size:14px;box-shadow:var(--shadow)}
+  .toast button{border:0;background:transparent;color:var(--ink);font-weight:700;padding:4px 8px;text-decoration:underline;white-space:nowrap}
+  @media (min-width:720px){ .toast{bottom:100px} }
+  @media (prefers-reduced-motion:reduce){ *{transition:none!important;animation:none!important} }
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="app">
 
-  <header class="hero">
-    <div class="eyebrow">Meso Ledger</div>
-    <h1>메소 장부</h1>
-    <p>어디서 벌었고 어디에 썼는지. 계산기는 앞으로를, 장부는 지금까지를 셈.</p>
-    <div class="tools">
-      <button class="tool" id="btn-sync" hidden title="넥슨 Open API에서 새 이력 가져오기">동기화</button>
-      <a class="tool" href="index.html" title="메소 적립 계산기로">계산기</a>
-      <button class="tool" id="btn-backup" title="장부 전체를 JSON 파일로 저장">백업</button>
-      <button class="tool" id="btn-restore" title="백업 JSON 불러오기 (현재 장부를 덮어씀)">복원</button>
-      <button class="tool" id="btn-csv" title="스프레드시트용 CSV">CSV</button>
-      <input type="file" id="file" accept="application/json,.json" hidden>
+  <header class="top">
+    <div class="topbar">
+      <h1>메소 장부</h1>
+      <button class="icon-btn" id="btn-sync" hidden title="넥슨 Open API 동기화" aria-label="동기화">
+        <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/></svg>
+      </button>
+      <button class="icon-btn" id="btn-theme" title="라이트/다크 전환" aria-label="테마 전환">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor"/></svg>
+      </button>
+      <a class="icon-btn" href="index.html" title="메소 적립 계산기" aria-label="계산기로">
+        <svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M8.5 7.5h7M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 16h.01M12 16h.01M15.5 16h.01"/></svg>
+      </a>
     </div>
-
-    <div class="readout">
-      <div class="cell">
-        <div class="k">현재 잔고</div>
-        <div class="v gold" id="out-bal">—</div>
-        <div class="s" id="out-bal-sub">—</div>
-      </div>
-      <div class="cell">
-        <div class="k" id="out-month-k">이번 달 순수익</div>
-        <div class="v" id="out-month">—</div>
-        <div class="s" id="out-month-sub">—</div>
-      </div>
-      <div class="cell">
-        <div class="k">목표 도달 (실측 페이스)</div>
-        <div class="v mint" id="out-goal">—</div>
-        <div class="s" id="out-goal-sub">—</div>
-      </div>
+    <div class="balance">
+      <div class="lbl">현재 잔고</div>
+      <div class="num" id="h-bal">—</div>
+      <div class="sub" id="h-sub"></div>
     </div>
+    <div class="pills" id="pills"></div>
   </header>
 
-  <div class="grid">
-    <div>
-      <section class="panel" id="entry">
-        <h2><span id="form-title">기록 추가</span> <em id="form-sub"></em></h2>
-        <div class="seg" id="seg" role="group" aria-label="구분">
-          <button type="button" data-t="in" aria-pressed="true">수입</button>
-          <button type="button" data-t="out" aria-pressed="false">지출</button>
-          <button type="button" data-t="bal" aria-pressed="false" title="실제 보유 메소를 확인해서 장부를 맞춤">잔고 확인</button>
-        </div>
-        <form id="form" autocomplete="off">
-          <div class="chips" id="cats" role="group" aria-label="항목"></div>
-          <div class="chips quick" id="quick"></div>
-          <div class="row">
-            <label for="f-amt" id="l-amt"><span id="amt-label">금액</span> <i id="amt-prev"></i></label>
-            <div class="field"><input type="text" class="amt" id="f-amt" placeholder="0" enterkeyhint="done"><span class="unit">억</span></div>
-          </div>
-          <div class="row" id="r-hours">
-            <label for="f-hours">사냥 시간 <i id="hrs-prev">시급 계산용 · 비워도 됨</i></label>
-            <div class="field"><input type="number" id="f-hours" step="0.5" min="0" max="24" placeholder="—"><span class="unit">시간</span></div>
-          </div>
-          <div class="row">
-            <label for="f-date">날짜</label>
-            <div class="field">
-              <button type="button" class="mini" id="btn-today">오늘</button>
-              <input type="date" id="f-date" required>
-            </div>
-          </div>
-          <div class="row" id="r-char">
-            <label for="f-char">캐릭터 <i>선택</i></label>
-            <div class="field"><input type="text" class="txt" id="f-char" list="chars" placeholder="—"></div>
-          </div>
-          <datalist id="chars"></datalist>
-          <div class="row">
-            <label for="f-memo">메모</label>
-            <div class="field"><input type="text" class="txt" id="f-memo" placeholder="—"></div>
-          </div>
-          <div class="btnrow">
-            <button type="submit" class="btn solid" id="f-submit">추가</button>
-            <button type="button" class="btn" id="f-cancel" hidden>취소</button>
-            <button type="button" class="btn danger" id="f-del" hidden>삭제</button>
-          </div>
-        </form>
-      </section>
+  <nav class="tabs" role="tablist" aria-label="화면">
+    <button role="tab" data-view="log" aria-selected="true">
+      <svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h8M4 6h.01M4 12h.01M4 18h.01"/></svg>기록</button>
+    <button role="tab" data-view="stats" aria-selected="false">
+      <svg viewBox="0 0 24 24"><path d="M5 20V11M12 20V4M19 20v-6"/></svg>통계</button>
+    <button role="tab" data-view="budget" aria-selected="false">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5V12l6 4.5"/></svg>예산</button>
+    <button role="tab" data-view="settings" aria-selected="false">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>설정</button>
+  </nav>
 
-      <section class="panel" id="api">
-        <h2>넥슨 Open API <em id="api-state">키 없음</em></h2>
-        <div class="row">
-          <label for="api-key">API 키 <i>이 기기에만 저장 · 백업과 CSV에 안 실림</i></label>
-          <div class="field"><input type="password" class="txt" id="api-key" autocomplete="off" spellcheck="false" placeholder="test_…"></div>
-        </div>
-        <div class="row" id="r-api-from">
-          <label for="api-from">처음 가져올 날짜 <i>첫 동기화만. 이력은 2024-01-25부터</i></label>
-          <div class="field"><input type="date" id="api-from"></div>
-        </div>
-        <div class="btnrow">
-          <button class="btn solid" id="api-sync">동기화</button>
-          <button class="btn danger" id="api-forget">키 지우기</button>
-        </div>
-        <div class="apilog" id="api-log" aria-live="polite"></div>
-        <div class="subh" style="margin:12px 0 0">지금 가져오는 것: 잠재능력 · 에디셔널 재설정 (지출). 금액은 규칙표로 계산한 추정치(≈)라 강화 전후로 잔고 확인을 넣어 두면 오차가 미기록으로 보임. 키는 <a href="https://openapi.nexon.com/ko/my-application/" target="_blank" rel="noopener" style="color:var(--muted)">내 애플리케이션</a>에서 발급.</div>
-      </section>
+  <!-- 기록 -->
+  <main class="view" id="v-log">
+    <div class="logbar">
+      <div class="mnav">
+        <button class="icon-btn" id="m-prev" aria-label="이전 달"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+        <strong id="m-label">—</strong>
+        <button class="icon-btn" id="m-next" aria-label="다음 달"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+      </div>
+    </div>
+    <div class="msum" id="m-sum"></div>
+    <div class="chips filters" id="filters" role="group" aria-label="보기">
+      <button class="chip" data-f="all" aria-pressed="true">전체</button>
+      <button class="chip" data-f="in" aria-pressed="false">수입</button>
+      <button class="chip" data-f="out" aria-pressed="false">지출</button>
+    </div>
+    <div id="list"></div>
+  </main>
 
-      <section class="panel">
-        <h2>월 지출 예산 <em id="bud-sum">—</em></h2>
-        <div id="budget"></div>
-        <div class="subh" style="margin:12px 0 0">세로선 = 오늘까지의 예산 페이스. 막대가 선을 넘으면 이 속도론 월말에 초과.</div>
-      </section>
+  <!-- 통계 -->
+  <main class="view" id="v-stats" hidden>
+    <section class="card">
+      <h3>잔고 흐름 <small id="chart-sub"></small></h3>
+      <div class="chart" id="chart"></div>
+      <div class="legend" id="legend">
+        <span><i class="sw"></i>실제 잔고</span>
+        <span id="lg-plan"><i class="sw dash"></i>계산기 계획</span>
+      </div>
+    </section>
 
-      <section class="panel">
-        <h2>계산기와 비교 <em id="cmp-sub">—</em></h2>
-        <table class="tbl">
-          <thead><tr><th>항목</th><th>장부 실측</th><th>계산기 가정</th></tr></thead>
-          <tbody id="cmp"></tbody>
-        </table>
-        <div class="hint" id="cmp-hint" hidden></div>
-        <div class="subh mt">계산기에 반영</div>
-        <div class="check"><input type="checkbox" id="s-bal" checked><label for="s-bal">현재 잔고를 시작 보유로 <b id="s-bal-v"></b></label></div>
-        <div class="check"><input type="checkbox" id="s-rate"><label for="s-rate">실측 재획 시급 <b id="s-rate-v"></b></label></div>
-        <div class="check"><input type="checkbox" id="s-hours"><label for="s-hours">실측 일 사냥 시간 <b id="s-hours-v"></b></label></div>
-        <div class="btnrow"><button class="btn solid" id="btn-send">계산기에 반영하고 열기</button></div>
-      </section>
+    <section class="card">
+      <h3>
+        <span>수입과 지출</span>
+        <div class="seg sm" id="speriod" role="group" aria-label="통계 기간">
+          <button data-p="month" aria-pressed="true">이번 달</button>
+          <button data-p="28" aria-pressed="false">4주</button>
+          <button data-p="all" aria-pressed="false">전체</button>
+        </div>
+      </h3>
+      <div class="kpis" id="kpis"></div>
+      <div class="note" id="kpi-note" style="margin-top:10px"></div>
+    </section>
+
+    <div class="grid2">
+      <section class="card"><h3>어디서 벌었나</h3><div class="bars" id="b-in"></div></section>
+      <section class="card"><h3>어디에 썼나</h3><div class="bars" id="b-out"></div></section>
+    </div>
+    <div class="grid2">
+      <section class="card"><h3>캐릭터별 수입</h3><div class="bars" id="b-char"></div></section>
+      <section class="card"><h3>큰 지출</h3><div id="b-big"></div></section>
     </div>
 
-    <div>
-      <section class="panel">
-        <h2>잔고 흐름 <em id="chart-sub"></em></h2>
-        <div id="chart"></div>
-        <div class="legend" id="legend">
-          <span><i class="swatch" style="background:var(--gold)"></i>실제 잔고</span>
-          <span id="lg-plan"><i class="swatch dash"></i>계산기 계획</span>
-        </div>
-      </section>
+    <section class="card">
+      <h3>목표 <small id="goal-sub"></small></h3>
+      <div id="goal"></div>
+    </section>
 
-      <section class="panel">
-        <h2>통계
-          <div class="seg sm" id="speriod" role="group" aria-label="통계 기간">
-            <button type="button" data-p="month" aria-pressed="true">이번 달</button>
-            <button type="button" data-p="28" aria-pressed="false">최근 4주</button>
-            <button type="button" data-p="all" aria-pressed="false">전체</button>
-          </div>
-        </h2>
-        <div id="stats"></div>
-      </section>
+    <section class="card">
+      <h3>주차별 <small>목요일 리셋 기준</small></h3>
+      <table class="tbl">
+        <thead><tr><th>주차</th><th class="wide">수입</th><th class="wide">지출</th><th>순익</th><th>잔고</th></tr></thead>
+        <tbody id="weeks"></tbody>
+      </table>
+    </section>
 
-      <section class="panel">
-        <h2>주차별 <em>목요일 리셋 기준</em></h2>
-        <table class="tbl">
-          <thead><tr><th>주차</th><th class="inc">수입</th><th class="inc">지출</th><th>순익</th><th>주말 잔고</th></tr></thead>
-          <tbody id="weeks"></tbody>
-        </table>
-      </section>
+    <section class="card">
+      <h3>실측 vs 계산기 <small id="cmp-sub"></small></h3>
+      <table class="tbl">
+        <thead><tr><th>항목</th><th>장부 실측</th><th>계산기</th></tr></thead>
+        <tbody id="cmp"></tbody>
+      </table>
+    </section>
+  </main>
 
-      <section class="panel">
-        <h2>기록
-          <span class="mnav">
-            <button class="mini" id="m-prev" aria-label="이전 달">&lsaquo;</button>
-            <span id="m-label">—</span>
-            <button class="mini" id="m-next" aria-label="다음 달">&rsaquo;</button>
-          </span>
-        </h2>
-        <div id="list"></div>
-      </section>
-    </div>
-  </div>
+  <!-- 예산 -->
+  <main class="view" id="v-budget" hidden>
+    <section class="card bud-hero">
+      <h3 id="bud-title">이번 달 지출</h3>
+      <div class="big"><span id="bud-spent">—</span><small id="bud-of"></small></div>
+      <div class="meter" id="bud-meter"><div class="fl" id="bud-fill"></div><div class="pace" id="bud-pace"></div></div>
+      <div class="bud-status" id="bud-status"></div>
+    </section>
+    <section class="card">
+      <h3>항목별 <button class="btn sm" id="bud-edit">예산 정하기</button></h3>
+      <div id="budget"></div>
+      <div class="note" style="margin-top:12px">막대 위 세로선은 오늘까지 써도 되는 만큼. 막대가 선을 넘으면 이 속도론 월말에 예산을 넘김.</div>
+    </section>
+  </main>
 
-  <footer class="foot">
-    <span>장부는 이 브라우저에만 저장됨. 기기를 옮기거나 캐시를 지우기 전엔 백업을 받아 둘 것. · Data based on NEXON Open API</span>
-    <a href="index.html">메소 적립 계산기 &rarr;</a>
-  </footer>
+  <!-- 설정 -->
+  <main class="view" id="v-settings" hidden>
+    <section class="card" id="api">
+      <h3>넥슨 Open API <small id="api-state">키 없음</small></h3>
+      <p class="note">키를 넣으면 <b>잠재능력 · 에디셔널 재설정</b> 지출이 날짜 · 캐릭터별로 자동 기록됨. 금액은 비용표로 계산한 추정치(≈)라, 강화 전후로 잔고 확인을 해 두면 오차가 미기록으로 드러남.</p>
+      <div class="field">
+        <label for="api-key">API 키<small>이 기기에만 저장 · 백업에 안 실림</small></label>
+        <input type="password" id="api-key" autocomplete="off" spellcheck="false" placeholder="test_…">
+      </div>
+      <div class="field" id="r-api-from">
+        <label for="api-from">처음 가져올 날짜<small>첫 동기화만 · 2024-01-25부터</small></label>
+        <input type="date" id="api-from">
+      </div>
+      <div class="btns" style="margin-top:6px">
+        <button class="btn primary" id="api-sync">지금 동기화</button>
+        <button class="btn danger" id="api-forget">키 지우기</button>
+        <a class="btn" href="https://openapi.nexon.com/ko/my-application/" target="_blank" rel="noopener">키 발급 ↗</a>
+      </div>
+      <div class="apilog" id="api-log" aria-live="polite"></div>
+    </section>
+
+    <section class="card">
+      <h3>계산기에 반영</h3>
+      <label class="check"><input type="checkbox" id="s-bal" checked>현재 잔고를 시작 보유로 <span class="dim" id="s-bal-v"></span></label>
+      <label class="check"><input type="checkbox" id="s-rate">실측 재획 시급 <span class="dim" id="s-rate-v"></span></label>
+      <label class="check"><input type="checkbox" id="s-hours">실측 하루 사냥 시간 <span class="dim" id="s-hours-v"></span></label>
+      <div class="btns" style="margin-top:10px"><button class="btn primary" id="btn-send">반영하고 계산기 열기</button></div>
+    </section>
+
+    <section class="card">
+      <h3>데이터</h3>
+      <p class="note">장부는 이 브라우저에만 저장됨. 기기를 바꾸거나 캐시를 지우기 전에 백업해 둘 것.</p>
+      <div class="btns" style="margin-top:12px">
+        <button class="btn" id="btn-backup">백업 (JSON)</button>
+        <button class="btn" id="btn-restore">백업 불러오기</button>
+        <button class="btn" id="btn-csv">CSV 내보내기</button>
+      </div>
+      <input type="file" id="file" accept="application/json,.json" hidden>
+    </section>
+
+    <p class="foot">Data based on NEXON Open API<br><a href="index.html">메소 적립 계산기 →</a></p>
+  </main>
 </div>
+
+<button class="fab" id="fab" aria-haspopup="dialog">
+  <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>기록
+</button>
+
+<dialog class="sheet" id="sheet" aria-labelledby="sh-title">
+  <form class="sh" id="form" autocomplete="off" novalidate>
+    <div class="sh-grip"></div>
+    <div class="sh-head">
+      <h2 id="sh-title">기록 추가</h2>
+      <button type="button" class="icon-btn" id="sh-close" aria-label="닫기"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+
+    <div class="seg" id="seg" role="group" aria-label="구분">
+      <button type="button" data-t="in" aria-pressed="true">수입</button>
+      <button type="button" data-t="out" aria-pressed="false">지출</button>
+      <button type="button" data-t="bal" aria-pressed="false">잔고 확인</button>
+    </div>
+
+    <div id="r-presets">
+      <div class="sh-lbl">최근 기록 다시 넣기</div>
+      <div class="presets" id="presets"></div>
+    </div>
+
+    <div id="r-cats">
+      <div class="sh-lbl">어디서</div>
+      <div class="cats" id="cats" role="group" aria-label="항목"></div>
+    </div>
+
+    <div>
+      <div class="sh-lbl" id="amt-label">얼마</div>
+      <label class="amt-box"><input type="text" id="f-amt" inputmode="decimal" placeholder="0" enterkeyhint="done" aria-labelledby="amt-label"><span>억</span></label>
+      <div class="amt-prev" id="amt-prev"></div>
+      <div class="quick" id="quick"></div>
+    </div>
+
+    <div class="frow" id="r-hours">
+      <span class="sh-lbl">사냥</span>
+      <input type="number" id="f-hours" step="0.5" min="0" max="24" placeholder="—" aria-label="사냥 시간">
+      <span class="note">시간</span>
+      <span class="note grow" id="hrs-prev" style="text-align:right"></span>
+    </div>
+
+    <div class="frow">
+      <span class="sh-lbl">날짜</span>
+      <div class="chips" id="dates">
+        <button type="button" class="chip" data-dd="0">오늘</button>
+        <button type="button" class="chip" data-dd="1">어제</button>
+      </div>
+      <input type="date" id="f-date" aria-label="날짜">
+    </div>
+
+    <div class="frow" id="r-char">
+      <span class="sh-lbl">캐릭터</span>
+      <div class="charrow grow">
+        <div class="chips" id="charchips"></div>
+        <input type="text" id="f-char" placeholder="이름 (선택)" aria-label="캐릭터">
+      </div>
+    </div>
+
+    <div class="frow">
+      <span class="sh-lbl">메모</span>
+      <input type="text" class="grow" id="f-memo" placeholder="선택" aria-label="메모">
+    </div>
+
+    <div class="api-note" id="api-note" hidden></div>
+
+    <div class="sh-foot">
+      <button type="button" class="btn danger" id="f-del" hidden>삭제</button>
+      <button type="button" class="btn" id="f-more">저장하고 계속</button>
+      <button type="submit" class="btn primary" id="f-submit">저장</button>
+    </div>
+  </form>
+</dialog>
 
 <div class="toast" id="toast" hidden role="status"><span id="toast-msg"></span><button id="toast-undo">되돌리기</button></div>
 
@@ -455,6 +579,7 @@
   var DAYS_PER_MONTH = 365.2425 / 12;
   var WEEK_PER_MONTH = DAYS_PER_MONTH / 7;
   var WINDOW = 28;                      // 실측 페이스를 잡는 기간
+  var VIEWS = ["log", "stats", "budget", "settings"];
   var $ = function(id){ return document.getElementById(id); };
 
   var CATS = {
@@ -463,20 +588,20 @@
       {k:"monthly", n:"월간보스", c:"var(--rose)"},
       {k:"hunt",    n:"사냥",     c:"var(--violet)"},
       {k:"sell",    n:"판매",     c:"var(--mint)"},
-      {k:"etc",     n:"기타",     c:"var(--muted)"}
+      {k:"etc",     n:"기타",     c:"var(--faint)"}
     ],
     "out": [
       {k:"sf",  n:"스타포스", c:"var(--gold)"},
       {k:"pot", n:"잠재능력", c:"var(--violet)"},
       {k:"buy", n:"구매",     c:"var(--mint)"},
       {k:"sym", n:"심볼",     c:"var(--rose)"},
-      {k:"etc", n:"기타",     c:"var(--muted)"}
+      {k:"etc", n:"기타",     c:"var(--faint)"}
     ]
   };
   function cat(t, k){
     var list = CATS[t] || [];
     for (var i = 0; i < list.length; i++) if (list[i].k === k) return list[i];
-    return {k:k, n:k || "기타", c:"var(--muted)"};
+    return {k:k, n:k || "기타", c:"var(--faint)"};
   }
 
   /* 기록 하나 = {id, d:"YYYY-MM-DD", t:"in"|"out"|"bal", a:억, c?:항목, h?:사냥시간, ch?:캐릭터, m?:메모}
@@ -485,8 +610,9 @@
      Open API 로 가져온 기록은 추가로 src(출처 키), est(규칙표 추정), x(근거 요약), lock(사용자가 고침)을 가짐.
      같은 src 는 다시 동기화하면 교체되고, lock 이면 건드리지 않고, 지운 src 는 api.skip 에 남아 다시 안 들어옴. */
   var st = {v:1, seq:0, entries:[], budget:{total:0, cats:{}}, api:{last:{}, skip:{}, run:null}};
-  var ui = {t:"in", c:{"in":"hunt", "out":"sf"}, edit:null, month:null, period:"month", fresh:null};
-  var lastDeleted = null, toastTimer = null;
+  var ui = {view:"log", t:"in", c:{"in":"hunt", "out":"sf"}, edit:null, month:null, period:"month",
+            filter:"all", fresh:null, lastChar:"", budEdit:false};
+  var lastAction = null, toastTimer = null;
 
   /* ---------- helpers ---------- */
   var DOW = ["일","월","화","수","목","금","토"];
@@ -502,10 +628,12 @@
   }
   function addDays(d,n){ var x = new Date(d.getTime()); x.setDate(x.getDate()+n); return x; }
   function dayDiff(a, b){ return Math.round((b - a) / 864e5); }
-  function md(d){ return String(d.getMonth()+1).padStart(2,"0") + "." + String(d.getDate()).padStart(2,"0"); }
+  function md(d){ return (d.getMonth()+1) + "." + d.getDate(); }
+  function mdLong(d){ return (d.getMonth()+1) + "월 " + d.getDate() + "일 (" + DOW[d.getDay()] + ")"; }
   // 메이플 주간 리셋은 목요일 0시
   function weekStart(d){ return addDays(d, -((d.getDay() - 4 + 7) % 7)); }
   function today(){ var n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); }
+  function coarse(){ return window.matchMedia && matchMedia("(pointer:coarse)").matches; }
 
   function esc(s){
     return String(s).replace(/[&<>"']/g, function(c){
@@ -522,7 +650,7 @@
     } else {
       out = v.toLocaleString("ko-KR", {maximumFractionDigits: v < 100 ? 1 : 0}) + "억";
     }
-    return (neg ? "-" : "") + out;
+    return (neg ? "−" : "") + out;
   }
   function fmtSigned(v){ return (v > 0 ? "+" : "") + fmtEok(v); }
   // 기록 단위는 만 메소까지 정확히: 21억 3,170만
@@ -534,7 +662,7 @@
     if (jo) p.push(jo + "조");
     if (eok) p.push(eok.toLocaleString("ko-KR") + "억");
     if (r) p.push(r.toLocaleString("ko-KR") + "만");
-    return (neg ? "-" : "") + (p.join(" ") || "0");
+    return (neg ? "−" : "") + (p.join(" ") || "0");
   }
   function fmtFine(v){
     if (v >= 0.1) return (+v.toFixed(2)) + "억";
@@ -545,6 +673,7 @@
     return Math.round(v).toLocaleString("ko-KR");
   }
   function round(v, n){ var k = Math.pow(10, n); return Math.round(v * k) / k; }
+  function signCls(v){ return v > 0 ? "pos" : v < 0 ? "neg" : "dim"; }
 
   /* "21.5"(억) / "21억 3170만" / "1조 2000억" / "2,131,700,000"(원 단위) 전부 억으로.
      조/억/만 말고 다른 글자가 섞이면 오타로 보고 거절함. */
@@ -745,347 +874,263 @@
            c.rate * c.hours * DAYS_PER_MONTH * (c.skip ? 6/7 : 1) - calcMonthExpense(c);
   }
 
-  /* ---------- 입력 폼 ---------- */
-  function renderForm(calc){
-    Array.prototype.forEach.call($("seg").children, function(b){
-      b.setAttribute("aria-pressed", b.dataset.t === ui.t ? "true" : "false");
-    });
-    var isBal = ui.t === "bal", c = ui.c[ui.t];
-
-    $("cats").hidden = isBal;
-    $("cats").innerHTML = isBal ? "" : CATS[ui.t].map(function(x){
-      return '<button type="button" class="chip" data-c="' + x.k + '" style="--c:' + x.c + '" aria-pressed="' +
-             (x.k === c) + '">' + x.n + '</button>';
-    }).join("");
-
-    // 계산기 로스터에서 바로 채우는 버튼
-    var q = [];
-    if (calc && ui.t === "in"){
-      if (c === "weekly" || c === "monthly"){
-        var withV = calc.roster.filter(function(r){ return r[c] > 0; });
-        withV.forEach(function(r){
-          q.push({label:r.name, v:r[c], ch:r.name});
-        });
-        if (withV.length > 1) q.push({label:"전체", v:calc[c], ch:""});
-      } else if (c === "hunt" && calc.rate > 0 && calc.hours > 0){
-        q.push({label:calc.hours + "h × " + fmtFine(calc.rate) + " =", v:calc.rate * calc.hours, h:calc.hours});
-      }
+  // 목표까지: 실측 순수익 페이스로 언제 닿나, 계산기 계획과 며칠 차이인가
+  function goalInfo(L, ws, calc){
+    if (!calc || !(calc.goal > 0)) return null;
+    var g = {goal:calc.goal, left:calc.goal - L.bal, planD:planGoalDate(calc)};
+    if (!L.first) g.state = "nodata";
+    else if (g.left <= 0) g.state = "done";
+    else if (!ws || ws.netDay <= 0) g.state = "stall";
+    else {
+      g.state = "eta";
+      g.days = Math.ceil(g.left / ws.netDay);
+      g.eta = addDays(today(), g.days);
+      if (g.planD) g.diff = dayDiff(g.planD, g.eta);
     }
-    $("quick").hidden = !q.length;
-    $("quick").innerHTML = q.map(function(x, i){
-      return '<button type="button" class="chip" data-q="' + i + '" data-v="' + round(x.v, 4) + '"' +
-             (x.ch !== undefined ? ' data-ch="' + esc(x.ch) + '"' : '') +
-             (x.h ? ' data-h="' + x.h + '"' : '') +
-             ' title="계산기 값으로 채움"><b>' + esc(x.label) + '</b>' + fmtFine(x.v) + '</button>';
-    }).join("");
-
-    $("r-hours").hidden = !(ui.t === "in" && c === "hunt");
-    $("r-char").hidden = isBal;
-    $("amt-label").textContent = isBal ? "실제 보유 메소" : "금액";
-    $("form-title").textContent = ui.edit ? "기록 수정" : "기록 추가";
-    $("f-submit").textContent = ui.edit ? "수정" : (isBal ? "잔고 맞추기" : "추가");
-    $("f-cancel").hidden = !ui.edit;
-    $("f-del").hidden = !ui.edit;
-    var editing = ui.edit ? findEntry(ui.edit) : null;
-    $("form-sub").textContent = editing && editing.src
-      ? (editing.lock ? "API 기록 · 고정됨" : "API 기록 · 고치면 동기화가 안 덮어씀")
-      : !st.entries.length ? "처음엔 지금 잔고부터" : "";
-
-    $("chars").innerHTML = charNames(calc).map(function(n){ return '<option value="' + esc(n) + '">'; }).join("");
-    preview();
+    return g;
   }
 
-  function charNames(calc){
-    var seen = {}, out = [];
-    function add(n){ if (n && !seen[n]){ seen[n] = 1; out.push(n); } }
-    if (calc) calc.roster.forEach(function(r){ add(r.name); });
-    st.entries.forEach(function(e){ add(e.ch); });
-    return out;
-  }
-
-  function balBefore(iso, excludeId){
-    var run = null;
-    st.entries.slice().sort(function(a, b){ return a.d < b.d ? -1 : a.d > b.d ? 1 : a.id - b.id; })
-      .forEach(function(e){
-        if (e.id === excludeId || e.d > iso) return;
-        run = e.t === "bal" ? e.a : (run || 0) + (e.t === "in" ? e.a : -e.a);
-      });
-    return run;
-  }
-
-  function preview(){
-    var raw = $("f-amt").value, v = parseMeso(raw), el = $("amt-prev");
-    el.className = "";
-    if (!raw.trim()){
-      el.textContent = ui.t === "bal" ? "인벤토리 + 창고 메소 합" : "예: 21.5 · 21억 3170만";
-    } else if (v === null){
-      el.textContent = "못 읽음 — 숫자와 조/억/만만";
-      el.className = "bad";
-    } else {
-      var txt = "= " + fmtMan(v);
-      if (ui.t === "bal"){
-        var prev = balBefore($("f-date").value, ui.edit);
-        if (prev !== null){
-          var d = v - prev;
-          txt += " · 기록상 " + fmtEok(prev) + (Math.abs(d) < 1e-4 ? " 일치" : ", 미기록 " + fmtSigned(d));
-          el.className = Math.abs(d) < 1e-4 ? "good" : "";
-        }
-      }
-      el.textContent = txt;
-    }
-    var h = parseFloat($("f-hours").value);
-    $("hrs-prev").textContent = (v > 0 && h > 0) ? "시급 " + fmtFine(v / h) : "시급 계산용 · 비워도 됨";
-  }
-
-  function resetForm(){
-    ui.edit = null;
-    $("f-amt").value = "";
-    $("f-hours").value = "";
-    $("f-memo").value = "";
-  }
-
-  function startEdit(id){
-    var e = findEntry(id);
-    if (!e) return;
-    ui.edit = id;
-    ui.t = e.t;
-    if (e.c && e.t !== "bal") ui.c[e.t] = e.c;
-    $("f-date").value = e.d;
-    $("f-amt").value = round(e.a, 4);
-    $("f-hours").value = e.h || "";
-    $("f-char").value = e.ch || "";
-    $("f-memo").value = e.m || "";
-    renderAll();
-    var box = $("entry").getBoundingClientRect();
-    if (box.top < 0 || box.top > innerHeight * 0.6) $("entry").scrollIntoView({behavior:"smooth", block:"start"});
-    $("f-amt").focus();
-  }
-
-  function findEntry(id){
-    for (var i = 0; i < st.entries.length; i++) if (st.entries[i].id === id) return st.entries[i];
-    return null;
-  }
-
-  function removeEntry(id){
-    var e = findEntry(id);
-    if (!e) return;
-    st.entries = st.entries.filter(function(x){ return x.id !== id; });
-    if (e.src) st.api.skip[e.src] = 1;     // 지운 API 기록은 다음 동기화에서 다시 안 들어오게
-    lastDeleted = e;
-    if (ui.edit === id) resetForm();
-    renderAll();
-    toast(cat(e.t, e.c).n + " " + fmtMan(e.a) + " 삭제함", true);
-  }
-
-  function toast(msg, undo){
-    $("toast-msg").textContent = msg;
-    $("toast-undo").hidden = !undo;
-    $("toast").hidden = false;
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(function(){ $("toast").hidden = true; lastDeleted = null; }, 5000);
-  }
-
-  /* ---------- 상단 요약 ---------- */
-  function renderReadout(L, ws, calc){
-    var t = today(), tISO = toISO(t);
-
-    if (!L.first){
-      $("out-bal").textContent = "—";
-      $("out-bal-sub").textContent = "잔고 확인으로 지금 보유 메소를 넣고 시작";
-    } else {
-      $("out-bal").textContent = fmtMan(round(L.bal, 1));
-      var sub = parseDate(L.last) ? md(parseDate(L.last)) + " 기록까지" : "";
-      var lb = L.lastBal;
-      if (lb){
-        sub += '<span class="mix">마지막 확인 ' + md(parseDate(lb.e.d)) +
-               (lb.open ? " (시작 잔고)" : Math.abs(lb.adj) >= 1e-4 ? " · 미기록 " + fmtSigned(lb.adj) + " 보정" : " · 기록과 일치") +
-               "</span>";
-      } else {
-        sub += '<span class="mix">잔고 확인 기록이 없어 0에서 시작한 값</span>';
-      }
-      $("out-bal-sub").innerHTML = sub;
-    }
-
-    // 이번 달
-    var mFrom = tISO.slice(0, 7) + "-01";
-    var m = sumRange(L, mFrom, tISO);
-    var net = m.inc - m.out;
-    $("out-month-k").textContent = (t.getMonth() + 1) + "월 순수익";
-    var mv = $("out-month");
-    mv.textContent = (m.inc || m.out) ? fmtSigned(net) : "—";
-    mv.className = "v " + (net > 0 ? "mint" : net < 0 ? "rose" : "");
-    var bud = budgetTotal();
-    $("out-month-sub").innerHTML = "수입 " + fmtEok(m.inc) + " · 지출 " + fmtEok(m.out) +
-      '<span class="mix">' + (bud > 0 ? "예산 " + fmtEok(bud) + " 중 " +
-        (m.out <= bud ? fmtEok(bud - m.out) + " 남음" : fmtEok(m.out - bud) + " 초과") : "지출 예산 미설정") + "</span>";
-
-    // 목표
-    var gv = $("out-goal"), gs = $("out-goal-sub");
-    gv.className = "v mint";
-    if (!calc || !(calc.goal > 0)){
-      gv.textContent = "—";
-      gs.innerHTML = '계산기에서 목표 메소를 정하면 표시';
-      return;
-    }
-    var left = calc.goal - L.bal;
-    var planD = planGoalDate(calc);
-    var planTxt = planD ? "계산기 계획 " + md(planD) : "계산기 계획 도달 불가";
-    if (!L.first){
-      gv.textContent = "—";
-      gs.innerHTML = "목표 " + fmtEok(calc.goal) + '<span class="mix">' + planTxt + "</span>";
-      return;
-    }
-    if (left <= 0){
-      gv.textContent = "달성";
-      gs.innerHTML = "목표 " + fmtEok(calc.goal) + " 대비 +" + fmtEok(-left);
-      return;
-    }
-    if (!ws || ws.netDay <= 0){
-      gv.textContent = "—";
-      gv.className = "v rose";
-      gs.innerHTML = "남은 " + fmtEok(left) + " · 최근 순수익이 0 이하" + '<span class="mix">' + planTxt + "</span>";
-      return;
-    }
-    var days = Math.ceil(left / ws.netDay);
-    var eta = addDays(t, days);
-    gv.innerHTML = md(eta) + "<small>(" + DOW[eta.getDay()] + ")</small>";
-    var diffTxt = "";
-    if (planD){
-      var dd = dayDiff(planD, eta);
-      diffTxt = " · " + (dd === 0 ? "계획과 같음" : dd > 0 ? dd + "일 늦음" : (-dd) + "일 빠름");
-    }
-    gs.innerHTML = "남은 " + fmtEok(left) + " · " + days + "일 뒤" +
-      '<span class="mix">' + planTxt + diffTxt + (ws.days < 14 ? " · " + ws.days + "일 기록 기준" : "") + "</span>";
-  }
-
-  /* ---------- 예산 ---------- */
   function budgetTotal(){
     if (st.budget.total > 0) return st.budget.total;
     var s = 0;
     Object.keys(st.budget.cats).forEach(function(k){ s += st.budget.cats[k]; });
     return s;
   }
+  function monthSum(L){ var t = toISO(today()); return sumRange(L, t.slice(0, 7) + "-01", t); }
+  function monthPace(){ var t = today(); return t.getDate() / new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate(); }
 
-  // 입력칸은 한 번만 만들고(타이핑 중 포커스 유지), 막대만 매번 갱신
-  function buildBudget(){
-    var rows = [{k:"_total", n:"전체", cls:" total"}].concat(CATS.out.map(function(x){ return {k:x.k, n:x.n, cls:""}; }));
-    $("budget").innerHTML = rows.map(function(r){
-      var v = r.k === "_total" ? st.budget.total : st.budget.cats[r.k];
-      return '<div class="brow' + r.cls + '" data-b="' + r.k + '">' +
-             '<div class="nm">' + r.n + '<i data-bi>—</i></div>' +
-             '<div class="tr"><div class="fl" data-bf></div><div class="pace" data-bp></div></div>' +
-             '<input type="number" min="0" step="1" data-bk="' + r.k + '" value="' + (v > 0 ? v : "") +
-             '" placeholder="억/월" aria-label="' + r.n + ' 월 예산 (억)">' +
-             '</div>';
+  /* ---------- 헤더 ---------- */
+  function renderHeader(L, ws, calc){
+    if (!L.first){
+      $("h-bal").textContent = "—";
+      $("h-sub").textContent = "아직 기록 없음 · 아래 기록 버튼으로 지금 잔고부터 넣기";
+    } else {
+      $("h-bal").textContent = fmtMan(round(L.bal, 1));
+      var lb = L.lastBal, sub = md(parseDate(L.last)) + " 기록까지";
+      if (lb){
+        sub += " · 마지막 확인 " + md(parseDate(lb.e.d));
+        if (!lb.open && Math.abs(lb.adj) >= 1e-4) sub += " (미기록 <b>" + fmtSigned(lb.adj) + "</b>)";
+      }
+      $("h-sub").innerHTML = sub;
+    }
+
+    var t = today(), m = monthSum(L), net = m.inc - m.out, bud = budgetTotal(), pills = [];
+    pills.push({go:"stats", k:(t.getMonth() + 1) + "월 순수익",
+                v:(m.inc || m.out) ? fmtSigned(net) : "—", cls:signCls(net)});
+    if (bud > 0){
+      var left = bud - m.out;
+      pills.push({go:"budget", k:(t.getMonth() + 1) + "월 예산",
+                  v:left >= 0 ? fmtEok(left) + " 남음" : fmtEok(-left) + " 초과", cls:left >= 0 ? "" : "neg"});
+    } else {
+      pills.push({go:"budget", k:"월 예산", v:"정하기 →", cls:"dim"});
+    }
+    var g = goalInfo(L, ws, calc);
+    if (g){
+      var gv = g.state === "done" ? "달성" : g.state === "eta" ? md(g.eta) + " (" + DOW[g.eta.getDay()] + ")" : "—";
+      pills.push({go:"stats", k:fmtEok(g.goal) + " 도달", v:gv, cls:g.state === "eta" || g.state === "done" ? "pos" : "dim"});
+    }
+    $("pills").innerHTML = pills.map(function(p){
+      return '<button class="pill" data-go="' + p.go + '"><small>' + esc(p.k) + '</small><b class="' + p.cls + '">' + p.v + '</b></button>';
     }).join("");
   }
 
-  function renderBudget(L){
-    var t = today(), tISO = toISO(t);
-    var dim = new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate();
-    var pace = t.getDate() / dim;
-    var m = sumRange(L, tISO.slice(0, 7) + "-01", tISO);
-    var sumCats = 0;
-    Object.keys(st.budget.cats).forEach(function(k){ sumCats += st.budget.cats[k]; });
-
-    Array.prototype.forEach.call($("budget").children, function(row){
-      var k = row.dataset.b;
-      var spent = k === "_total" ? m.out : (m.byOut[k] || 0);
-      var bud = k === "_total" ? (st.budget.total > 0 ? st.budget.total : sumCats) : (st.budget.cats[k] || 0);
-      var fl = row.querySelector("[data-bf]"), pc = row.querySelector("[data-bp]"), info = row.querySelector("[data-bi]");
-      if (k === "_total"){
-        row.querySelector("input").placeholder = sumCats > 0 ? String(round(sumCats, 2)) : "억/월";
-      }
-      if (bud > 0){
-        var r = spent / bud;
-        fl.style.width = Math.min(100, r * 100).toFixed(1) + "%";
-        fl.className = "fl" + (r > 1 ? " over" : r > pace ? " warn" : "");
-        pc.style.left = (pace * 100).toFixed(1) + "%";
-        pc.hidden = false;
-        info.textContent = fmtEok(spent) + " · " + Math.round(r * 100) + "%";
-      } else {
-        fl.style.width = "0";
-        pc.hidden = true;
-        info.textContent = spent > 0 ? fmtEok(spent) + " 사용" : "—";
-      }
+  /* ---------- 기록 탭 ---------- */
+  function renderLog(L){
+    var p = ui.month.split("-");
+    $("m-label").textContent = p[0] + "년 " + (+p[1]) + "월";
+    Array.prototype.forEach.call($("filters").children, function(b){
+      b.setAttribute("aria-pressed", b.dataset.f === ui.filter ? "true" : "false");
     });
+    var monthRows = L.rows.filter(function(r){ return r.e.d.slice(0, 7) === ui.month; });
+    var ms = sumRange({rows:monthRows});
+    $("m-sum").innerHTML = monthRows.length
+      ? '수입 <b class="pos">' + fmtEok(ms.inc) + '</b> · 지출 <b class="neg">' + fmtEok(ms.out) + '</b> · 순 <b>' + fmtSigned(ms.inc - ms.out) + '</b>'
+      : "";
 
-    var tot = budgetTotal(), em = $("bud-sum");
-    if (tot > 0){
-      var leftB = tot - m.out;
-      em.textContent = (t.getMonth() + 1) + "월 · " + (leftB >= 0 ? fmtEok(leftB) + " 남음" : fmtEok(-leftB) + " 초과");
-      em.className = leftB < 0 ? "over" : "";
-    } else {
-      em.textContent = (t.getMonth() + 1) + "월 · 미설정";
-      em.className = "";
+    var box = $("list");
+    if (!st.entries.length){
+      box.innerHTML = '<div class="card empty" style="margin-top:16px"><h4>지금 잔고부터 넣어 봐</h4>' +
+        '인벤토리 + 창고 메소를 한 번 넣으면 그다음부터는 벌고 쓴 것만 적으면 됨.' +
+        '<div><button class="btn primary" data-open="bal">지금 잔고 넣기</button></div></div>';
+      return;
     }
+    var rows = monthRows.filter(function(r){ return ui.filter === "all" || r.e.t === ui.filter; });
+    if (!rows.length){
+      box.innerHTML = '<div class="empty">' + (monthRows.length ? "이 조건의 기록 없음" : "이 달 기록 없음") + '</div>';
+      return;
+    }
+    var days = {}, order = [];
+    rows.forEach(function(r){
+      if (!days[r.e.d]){ days[r.e.d] = []; order.push(r.e.d); }
+      days[r.e.d].push(r);
+    });
+    order.reverse();
+    box.innerHTML = order.map(function(d){
+      var list = days[d], net = 0, has = false;
+      list.forEach(function(r){ if (r.e.t !== "bal"){ has = true; net += r.e.t === "in" ? r.e.a : -r.e.a; } });
+      return '<div class="day"><div class="day-h"><strong>' + mdLong(parseDate(d)) + '</strong>' +
+             (has ? '<span class="' + signCls(net) + '">' + fmtSigned(net) + '</span>' : '') + '</div>' +
+             '<div class="day-list">' + list.slice().reverse().map(entryRow).join("") + '</div></div>';
+    }).join("");
   }
 
-  /* ---------- 계산기 비교 ---------- */
-  function renderCompare(L, ws, calc){
-    var rows = [];
+  function entryRow(r){
+    var e = r.e, info, amt, sub = [];
+    if (e.t === "bal"){
+      info = {n:"잔고 확인", c:"var(--sky)"};
+      amt = '<div class="amt">' + fmtMan(e.a) + '<small>' + (r.open ? "시작 잔고" :
+            Math.abs(r.adj) >= 1e-4 ? "미기록 " + fmtSigned(r.adj) : "기록과 일치") + '</small></div>';
+    } else {
+      info = cat(e.t, e.c);
+      amt = '<div class="amt ' + (e.t === "in" ? "pos" : "") + '">' + (e.est ? "≈ " : "") +
+            (e.t === "in" ? "+" : "−") + fmtMan(e.a) + '</div>';
+    }
+    if (e.ch) sub.push(esc(e.ch));
+    if (e.h > 0) sub.push(e.h + "시간 · 시급 " + fmtFine(e.a / e.h));
+    if (e.m) sub.push(esc(e.m));
+    var badge = e.src ? '<span class="badge' + (e.lock ? ' lock' : '') + '">' + (e.lock ? "API·고정" : "API") + '</span>' : "";
+    var tip = e.src && e.x && e.x.items ? e.x.items.map(function(it){
+      return it[0] + "  " + it[1] + "회  " + fmtEok(it[2]);
+    }).join("\n") : "";
+    return '<button class="ent' + (ui.fresh === e.id ? " fresh" : "") + '" data-id="' + e.id + '"' +
+           (tip ? ' title="' + esc(tip) + '"' : '') + '>' +
+           '<span class="dot" style="--c:' + info.c + '"></span>' +
+           '<span class="main"><span class="t1">' + info.n + badge + '</span>' +
+           (sub.length ? '<span class="t2">' + sub.join(" · ") + '</span>' : '') + '</span>' + amt + '</button>';
+  }
+
+  /* ---------- 통계 탭 ---------- */
+  function bars(obj, t, total){
+    var keys = Object.keys(obj).filter(function(k){ return obj[k] > 0; })
+      .sort(function(a, b){ return obj[b] - obj[a]; });
+    if (!keys.length) return '<div class="note">아직 없음</div>';
+    var max = obj[keys[0]];
+    return keys.map(function(k){
+      var info = t ? cat(t, k) : {n:k, c:"var(--violet)"};
+      return '<div class="row"><div class="nm" title="' + esc(info.n) + '">' + esc(info.n) + '</div>' +
+             '<div class="tr"><div class="fl" style="width:' + (obj[k] / max * 100).toFixed(1) + '%;background:' + info.c + '"></div></div>' +
+             '<div class="vl">' + fmtEok(obj[k]) + '<small>' + Math.round(obj[k] / total * 100) + '%</small></div></div>';
+    }).join("");
+  }
+
+  function renderStats(L, ws, calc){
+    Array.prototype.forEach.call($("speriod").children, function(b){
+      b.setAttribute("aria-pressed", b.dataset.p === ui.period ? "true" : "false");
+    });
+    var t = today(), tISO = toISO(t), from = null;
+    if (ui.period === "month") from = tISO.slice(0, 7) + "-01";
+    else if (ui.period === "28") from = toISO(addDays(t, -(WINDOW - 1)));
+    if (from && L.first && from < L.first) from = L.first;
+    var s = sumRange(L, from, ui.period === "all" ? null : tISO), net = s.inc - s.out;
+
+    $("kpis").innerHTML =
+      '<div class="kpi"><small>수입</small><b class="pos">' + fmtEok(s.inc) + '</b></div>' +
+      '<div class="kpi"><small>지출</small><b class="neg">' + fmtEok(s.out) + '</b></div>' +
+      '<div class="kpi"><small>순익</small><b class="' + signCls(net) + '">' + fmtSigned(net) + '</b></div>';
+    $("kpi-note").innerHTML = Math.abs(s.adj) >= 1e-4
+      ? "잔고 확인으로 맞춘 <b>미기록 " + fmtSigned(s.adj) + "</b>은 위 숫자에 안 들어감 — 빠뜨린 기록이 이만큼 있다는 뜻." : "";
+    $("b-in").innerHTML = bars(s.byIn, "in", s.inc || 1);
+    $("b-out").innerHTML = bars(s.byOut, "out", s.out || 1);
+    $("b-char").innerHTML = Object.keys(s.byChar).length ? bars(s.byChar, null, s.inc || 1)
+      : '<div class="note">수입에 캐릭터를 적으면 여기 나옴</div>';
+    var big = s.outs.slice().sort(function(a, b){ return b.a - a.a; }).slice(0, 5);
+    $("b-big").innerHTML = big.length ? '<table class="tbl"><tbody>' + big.map(function(e){
+      return '<tr><td class="wrap">' + cat("out", e.c).n + '<div class="note">' + md(parseDate(e.d)) +
+             (e.m ? " · " + esc(e.m) : "") + '</div></td><td class="neg">' + fmtEok(e.a) + '</td></tr>';
+    }).join("") + '</tbody></table>' : '<div class="note">아직 없음</div>';
+
+    renderGoal(L, ws, calc);
+    renderWeeks(L);
+    renderCompare(ws, calc);
+    if (ui.view === "stats") drawChart(L, calc);
+  }
+
+  function renderGoal(L, ws, calc){
+    var g = goalInfo(L, ws, calc), box = $("goal");
+    if (!g){
+      $("goal-sub").textContent = "";
+      box.innerHTML = '<div class="note">계산기에서 목표 메소를 정하면, 실제로 버는 속도로 언제 닿는지 여기서 보여줌.</div>' +
+                      '<div class="btns" style="margin-top:12px"><a class="btn sm" href="index.html">계산기 열기</a></div>';
+      return;
+    }
+    $("goal-sub").textContent = fmtEok(g.goal);
+    var planTxt = g.planD ? "계산기 계획 <b>" + md(g.planD) + "</b>" : "계산기 계획으론 도달 불가";
+    var h;
+    if (g.state === "nodata") h = '<div class="note">기록이 생기면 계산함 · ' + planTxt + '</div>';
+    else if (g.state === "done") h = '<div class="goal-big">달성<small>목표보다 ' + fmtEok(-g.left) + ' 많음</small></div>';
+    else if (g.state === "stall") h = '<div class="goal-big" style="color:var(--rose)">—<small>최근 순수익이 0 이하</small></div>' +
+                                      '<div class="goal-lines">남은 <b>' + fmtEok(g.left) + '</b> · ' + planTxt + '</div>';
+    else {
+      var diff = g.diff === undefined ? "" : g.diff === 0 ? " · 계획과 같음"
+               : g.diff > 0 ? ' · <b class="neg">' + g.diff + "일 늦음</b>" : ' · <b class="pos">' + (-g.diff) + "일 빠름</b>";
+      h = '<div class="goal-big">' + mdLong(g.eta) + '<small>' + g.days + '일 뒤</small></div>' +
+          '<div class="goal-lines">남은 <b>' + fmtEok(g.left) + '</b> · 최근 ' + ws.days + '일 순수익 페이스 기준<br>' + planTxt + diff + '</div>';
+    }
+    /* 계산기의 정기 지출은 사용자가 예상한 값이고, 이건 실제 기록 기준.
+       실제 지출 페이스가 목표를 얼마나 미루는지 따로 보여준다. */
+    if (ws && ws.outDay > 0 && g.left > 0 && ws.incDay > 0){
+      var withOut = ws.netDay > 0 ? Math.ceil(g.left / ws.netDay) : null;
+      var noOut = Math.ceil(g.left / ws.incDay);
+      h += '<div class="callout">' + (withOut
+        ? "지금 지출(<b>" + fmtEok(ws.outDay * DAYS_PER_MONTH) + "/월</b>)이 도달을 <b>" + (withOut - noOut) + "일</b> 미루는 중. 안 쓰고 모으면 " + noOut + "일."
+        : "최근 지출이 수입보다 많아서 이 페이스론 못 감. 안 쓰고 모으면 <b>" + noOut + "일</b>.") + '</div>';
+    }
+    box.innerHTML = h;
+  }
+
+  function renderCompare(ws, calc){
     function cls(a, b, higherGood){
       // 3% 안쪽은 같은 걸로 봄 (2.98억 vs 3억에 빨간색은 과함)
       if (a === null || b === null || !isFinite(a) || !isFinite(b) || Math.abs(a - b) <= Math.abs(b) * 0.03) return "";
-      return (a > b) === higherGood ? "p" : "n";
+      return (a > b) === higherGood ? "pos" : "neg";
     }
-    function cell(v, f){ return v === null || !isFinite(v) ? '<span class="z">—</span>' : f(v); }
+    function cell(v, f){ return v === null || !isFinite(v) ? '<span class="dim">—</span>' : f(v); }
     var c = calc;
     var aRate = ws ? ws.rate : null, aHours = ws ? ws.hours : null, aWeekly = ws ? ws.weekly : null;
     var aOut = ws ? ws.outDay * DAYS_PER_MONTH : null, aNet = ws ? ws.netDay * DAYS_PER_MONTH : null;
-    var cNet = c ? calcMonthIncome(c) : null;
-
-    rows.push(["재획 시급", '<span class="' + cls(aRate, c && c.rate, true) + '">' + cell(aRate, function(v){ return fmtFine(v) + "/h"; }) + "</span>",
-               c ? fmtFine(c.rate) + "/h" : "—"]);
-    rows.push(["일 사냥", '<span class="' + cls(aHours, c && c.hours, true) + '">' + cell(aHours, function(v){ return (+v.toFixed(1)) + "h"; }) + "</span>",
-               c ? c.hours + "h" : "—"]);
-    rows.push(["주간보스", '<span class="' + cls(aWeekly, c && c.weekly, true) + '">' + cell(aWeekly, function(v){ return fmtEok(v) + "/주"; }) + "</span>",
-               c ? fmtEok(c.weekly) + "/주" : "—"]);
-    var cOut = c ? calcMonthExpense(c) : null;
-    rows.push(["지출", '<span class="' + cls(cOut, aOut, true) + '">' + cell(aOut, function(v){ return fmtEok(v) + "/월"; }) + "</span>",
-               c ? (cOut > 0 ? fmtEok(cOut) + "/월" : '<span class="z">정기 지출 없음</span>') : "—"]);
-    rows.push(["순수익", '<span class="' + cls(aNet, cNet, true) + '">' + cell(aNet, function(v){ return fmtEok(v) + "/월"; }) + "</span>",
-               c ? fmtEok(cNet) + "/월" : "—"]);
-
+    var cNet = c ? calcMonthIncome(c) : null, cOut = c ? calcMonthExpense(c) : null;
+    var rows = [
+      ["재획 시급", cls(aRate, c && c.rate, true), cell(aRate, function(v){ return fmtFine(v) + "/h"; }), c ? fmtFine(c.rate) + "/h" : "—"],
+      ["하루 사냥", cls(aHours, c && c.hours, true), cell(aHours, function(v){ return (+v.toFixed(1)) + "시간"; }), c ? c.hours + "시간" : "—"],
+      ["주간보스", cls(aWeekly, c && c.weekly, true), cell(aWeekly, function(v){ return fmtEok(v) + "/주"; }), c ? fmtEok(c.weekly) + "/주" : "—"],
+      ["지출", cls(cOut, aOut, true), cell(aOut, function(v){ return fmtEok(v) + "/월"; }),
+               c ? (cOut > 0 ? fmtEok(cOut) + "/월" : '<span class="dim">없음</span>') : "—"],
+      ["순수익", cls(aNet, cNet, true), cell(aNet, function(v){ return fmtEok(v) + "/월"; }), c ? fmtEok(cNet) + "/월" : "—"]
+    ];
     $("cmp").innerHTML = rows.map(function(r){
-      return "<tr><td>" + r[0] + "</td><td>" + r[1] + "</td><td>" + r[2] + "</td></tr>";
+      return '<tr><td>' + r[0] + '</td><td class="' + r[1] + '">' + r[2] + '</td><td>' + r[3] + '</td></tr>';
     }).join("");
-    $("cmp-sub").textContent = ws ? "최근 " + ws.days + "일 기록" : "기록 없음";
-
-    /* 계산기의 정기 지출은 사용자가 예상한 값이고, 이건 실제 기록 기준.
-       실제 지출 페이스가 목표를 얼마나 미루는지 따로 보여준다. */
-    var hint = $("cmp-hint");
-    if (c && c.goal > 0 && ws && ws.outDay > 0 && L.bal < c.goal && ws.incDay > 0){
-      var left = c.goal - L.bal;
-      var withOut = ws.netDay > 0 ? Math.ceil(left / ws.netDay) : null;
-      var noOut = Math.ceil(left / ws.incDay);
-      hint.innerHTML = withOut
-        ? "지금 지출 페이스(<b>" + fmtEok(ws.outDay * DAYS_PER_MONTH) + "/월</b>)가 목표 도달을 <b>" + (withOut - noOut) +
-          "일</b> 미루는 중. 안 쓰고 모으면 " + noOut + "일, 이대로면 " + withOut + "일."
-        : "최근 지출이 수입보다 많아서 이 페이스론 목표에 못 감. 안 쓰고 모으면 <b>" + noOut + "일</b>.";
-      hint.hidden = false;
-    } else {
-      hint.hidden = true;
-    }
-
-    $("s-bal-v").textContent = L.last ? fmtEok(L.bal) + " · " + md(addDays(parseDate(L.last), 1)) + "부터" : "";
-    $("s-bal").disabled = !L.last;
-    $("s-rate-v").textContent = aRate ? fmtFine(aRate) : "기록 없음";
-    $("s-rate").disabled = !aRate;
-    if (!aRate) $("s-rate").checked = false;
-    $("s-hours-v").textContent = ws ? (+ws.hours.toFixed(1)) + "h" : "기록 없음";
-    $("s-hours").disabled = !ws;
+    $("cmp-sub").textContent = ws ? "최근 " + ws.days + "일" : "기록 없음";
   }
 
-  /* ---------- 그래프 ---------- */
+  function renderWeeks(L){
+    var body = $("weeks");
+    if (!L.first){ body.innerHTML = '<tr><td colspan="5" class="dim">기록이 생기면 나옴</td></tr>'; return; }
+    var t = today(), cur = weekStart(t), first = weekStart(parseDate(L.first)), out = [];
+    for (var w = 0; w < 8; w++){
+      var ws = addDays(cur, -7 * w);
+      if (ws < first) break;
+      var we = addDays(ws, 6), s = sumRange(L, toISO(ws), toISO(we)), net = s.inc - s.out;
+      var endBal = balAt(L, toISO(we > t ? t : we));
+      out.push('<tr' + (w === 0 ? ' class="now"' : '') + '><td>' + md(ws) + ' ~ ' + md(we) + (w === 0 ? ' · 이번 주' : '') + '</td>' +
+               '<td class="wide">' + (s.inc ? fmtEok(s.inc) : '<span class="dim">—</span>') + '</td>' +
+               '<td class="wide">' + (s.out ? fmtEok(s.out) : '<span class="dim">—</span>') + '</td>' +
+               '<td class="' + signCls(net) + '">' + (s.inc || s.out ? fmtSigned(net) : "—") + '</td>' +
+               '<td>' + (endBal === null ? "—" : fmtEok(endBal)) + '</td></tr>');
+    }
+    body.innerHTML = out.join("");
+  }
+
+  /* 그래프는 실제 픽셀 폭으로 그림 — viewBox 를 고정하면 폰에서 축 글씨가 5px 대로 줄어듦 */
   function drawChart(L, calc){
     var box = $("chart");
     if (!L.first){
-      box.innerHTML = '<div class="empty">기록이 생기면 잔고 흐름이 그려짐.</div>';
+      box.innerHTML = '<div class="note" style="padding:24px 0;text-align:center">기록이 생기면 잔고 흐름이 그려짐</div>';
       $("legend").hidden = true;
       $("chart-sub").textContent = "";
       return;
     }
+    var W = Math.max(280, Math.round(box.clientWidth || 600)), H = W < 480 ? 200 : 240;
     $("legend").hidden = false;
     var t = today(), from = parseDate(L.first), lastD = parseDate(L.last);
     var actEnd = lastD > t ? lastD : t;
@@ -1118,24 +1163,20 @@
     lo = lo >= 0 ? Math.max(0, lo - pad) : lo - pad;
     hi += pad;
 
-    var W = 760, H = 280, padL = 62, padR = 18, padT = 16, padB = 30;
-    var iw = W - padL - padR, ih = H - padT - padB;
+    var padL = 46, padR = 8, padT = 10, padB = 26, iw = W - padL - padR, ih = H - padT - padB;
     function sx(i){ return padL + (i / (days - 1)) * iw; }
     function sy(v){ return padT + ih - ((v - lo) / (hi - lo)) * ih; }
-    var s = ['<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="잔고 흐름 그래프">'];
-    for (var k = 0; k <= 4; k++){
-      var val = lo + (hi - lo) * k / 4, y = sy(val);
-      s.push('<line x1="' + padL + '" y1="' + y.toFixed(1) + '" x2="' + (W - padR) + '" y2="' + y.toFixed(1) + '" stroke="#2A2543" stroke-width="1"/>');
-      s.push('<text x="' + (padL - 10) + '" y="' + (y + 4).toFixed(1) + '" text-anchor="end" fill="#8880AB" font-size="11.5" font-family="monospace">' + fmtShort(val) + '</text>');
+    var s = ['<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="잔고 흐름 그래프">'];
+    for (var k = 0; k <= 3; k++){
+      var val = lo + (hi - lo) * k / 3, y = sy(val);
+      s.push('<line class="ch-grid" x1="' + padL + '" y1="' + y.toFixed(1) + '" x2="' + (W - padR) + '" y2="' + y.toFixed(1) + '"/>');
+      s.push('<text class="ch-lbl" x="' + (padL - 8) + '" y="' + (y + 4).toFixed(1) + '" text-anchor="end">' + fmtShort(val) + '</text>');
     }
-
-    // 계획: 점선
     if (hasPlan){
       var pp = [];
       plan.forEach(function(v, i){ if (v !== null) pp.push(sx(i).toFixed(1) + "," + sy(v).toFixed(1)); });
-      s.push('<polyline points="' + pp.join(" ") + '" fill="none" stroke="#9C7BF0" stroke-width="1.5" stroke-dasharray="5 4" opacity=".85"/>');
+      s.push('<polyline class="ch-plan" points="' + pp.join(" ") + '" stroke-width="1.6" stroke-dasharray="5 4"/>');
     }
-
     // 실제: 계단. 그날 기록이 반영된 잔고가 그날 칸에서 시작
     var i0 = -1, iL = -1, path = "";
     act.forEach(function(v, i){
@@ -1146,170 +1187,358 @@
     });
     if (iL > i0) path += " H " + sx(iL).toFixed(1);
     if (i0 >= 0){
-      s.push('<defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#E9B949" stop-opacity=".2"/><stop offset="100%" stop-color="#E9B949" stop-opacity="0"/></linearGradient></defs>');
+      s.push('<defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" style="stop-color:var(--gold);stop-opacity:.22"/><stop offset="100%" style="stop-color:var(--gold);stop-opacity:0"/></linearGradient></defs>');
       s.push('<path d="' + path + ' V ' + (padT + ih) + ' H ' + sx(i0).toFixed(1) + ' Z" fill="url(#ag)"/>');
-      s.push('<path d="' + path + '" fill="none" stroke="#E9B949" stroke-width="2" stroke-linejoin="round"/>');
-      s.push('<circle cx="' + sx(iL).toFixed(1) + '" cy="' + sy(act[iL]).toFixed(1) + '" r="4" fill="#141220" stroke="#E9B949" stroke-width="2"/>');
+      s.push('<path class="ch-act" d="' + path + '" stroke-width="2.2" stroke-linejoin="round"/>');
+      s.push('<circle class="ch-dot" cx="' + sx(iL).toFixed(1) + '" cy="' + sy(act[iL]).toFixed(1) + '" r="4.5" stroke-width="2.2"/>');
     }
-
     var ti = dayDiff(from, t);
     if (ti > 0 && ti < days - 1){
-      s.push('<line x1="' + sx(ti).toFixed(1) + '" y1="' + padT + '" x2="' + sx(ti).toFixed(1) + '" y2="' + (padT + ih) + '" stroke="#948DB4" stroke-width="1" opacity=".35"/>');
+      s.push('<line class="ch-today" x1="' + sx(ti).toFixed(1) + '" y1="' + padT + '" x2="' + sx(ti).toFixed(1) + '" y2="' + (padT + ih) + '" stroke-dasharray="2 3"/>');
     }
-    s.push('<line x1="' + padL + '" y1="' + (padT + ih) + '" x2="' + (W - padR) + '" y2="' + (padT + ih) + '" stroke="#332D52" stroke-width="1"/>');
-    for (var x = 0; x <= 5; x++){
-      var dn = Math.round((days - 1) * x / 5);
-      s.push('<text x="' + sx(dn).toFixed(1) + '" y="' + (padT + ih + 18) + '" text-anchor="' + (x === 0 ? "start" : x === 5 ? "end" : "middle") +
-             '" fill="#8880AB" font-size="11.5" font-family="monospace">' + md(addDays(from, dn)) + '</text>');
+    s.push('<line class="ch-axis" x1="' + padL + '" y1="' + (padT + ih) + '" x2="' + (W - padR) + '" y2="' + (padT + ih) + '"/>');
+    var ticks = W < 480 ? 3 : 5;
+    for (var x = 0; x <= ticks; x++){
+      var dn = Math.round((days - 1) * x / ticks);
+      s.push('<text class="ch-lbl" x="' + sx(dn).toFixed(1) + '" y="' + (padT + ih + 18) + '" text-anchor="' +
+             (x === 0 ? "start" : x === ticks ? "end" : "middle") + '">' + md(addDays(from, dn)) + '</text>');
     }
     s.push('</svg>');
     box.innerHTML = s.join("");
 
     // 계획 대비: 마지막 기록일(오늘 이후면 오늘) 기준
-    var sub = "", behind = false;
+    var sub = "", cl = "";
     if (hasPlan){
-      var cmpD = lastD > t ? t : lastD;
-      var ci = dayDiff(from, cmpD);
+      var cmpD = lastD > t ? t : lastD, ci = dayDiff(from, cmpD);
       if (ci >= 0 && ci < days && plan[ci] !== null && act[ci] !== null){
         var diff = act[ci] - plan[ci];
-        sub = md(cmpD) + " 계획 대비 " + fmtSigned(diff);
-        behind = diff < 0;
+        sub = "계획 대비 " + fmtSigned(diff);
+        cl = signCls(diff);
       }
     }
     $("chart-sub").textContent = sub;
-    $("chart-sub").className = behind ? "over" : "";
+    $("chart-sub").className = cl;
   }
 
-  /* ---------- 통계 ---------- */
-  function bars(obj, t, total){
-    var keys = Object.keys(obj).filter(function(k){ return obj[k] > 0; })
-      .sort(function(a, b){ return obj[b] - obj[a]; });
-    if (!keys.length) return '<div class="empty" style="padding:6px 0;text-align:left">없음</div>';
-    var max = obj[keys[0]];
-    return keys.map(function(k){
-      var info = t ? cat(t, k) : {n:k, c:"var(--violet)"};
-      return '<div class="bar"><div class="nm" title="' + esc(info.n) + '">' + esc(info.n) + '</div>' +
-             '<div class="tr"><div class="fl" style="width:' + (obj[k] / max * 100).toFixed(1) + '%;background:' + info.c + '"></div></div>' +
-             '<div class="vl">' + fmtEok(obj[k]) + '<i>' + Math.round(obj[k] / total * 100) + '%</i></div></div>';
+  /* ---------- 예산 탭 ---------- */
+  // 행 구조는 한 번만 만들고(편집 중 입력칸 포커스 유지), 값과 막대만 매번 갱신
+  function buildBudget(){
+    var rows = [{k:"_total", n:"전체 한도", c:"var(--text)"}].concat(CATS.out);
+    $("budget").innerHTML = rows.map(function(r){
+      var v = r.k === "_total" ? st.budget.total : st.budget.cats[r.k];
+      return '<div class="brow" data-b="' + r.k + '"' + (r.k === "_total" ? ' data-total' : '') + '>' +
+             '<div class="hd"><span class="nm"><span class="dot" style="--c:' + r.c + '"></span>' + r.n + '</span>' +
+             '<span class="vl" data-bv></span>' +
+             '<label class="edit"><input type="number" min="0" step="1" inputmode="decimal" data-bk="' + r.k + '" value="' + (v > 0 ? v : "") +
+             '" placeholder="없음" aria-label="' + r.n + ' 월 예산">억/월</label></div>' +
+             '<div class="meter sm" data-bm><div class="fl" data-bf></div><div class="pace" data-bp></div></div></div>';
     }).join("");
   }
 
-  function renderStats(L){
-    Array.prototype.forEach.call($("speriod").children, function(b){
-      b.setAttribute("aria-pressed", b.dataset.p === ui.period ? "true" : "false");
+  function renderBudget(L){
+    var t = today(), pace = monthPace(), m = monthSum(L), tot = budgetTotal();
+    var sumCats = 0;
+    Object.keys(st.budget.cats).forEach(function(k){ sumCats += st.budget.cats[k]; });
+
+    $("bud-title").textContent = (t.getMonth() + 1) + "월 지출";
+    $("bud-spent").textContent = fmtEok(m.out);
+    $("bud-of").textContent = tot > 0 ? " / 예산 " + fmtEok(tot) : "";
+    var fill = $("bud-fill"), status;
+    $("bud-meter").hidden = !(tot > 0);
+    if (tot > 0){
+      var r = m.out / tot, should = tot * pace;
+      fill.style.width = Math.min(100, r * 100).toFixed(1) + "%";
+      fill.className = "fl" + (r > 1 ? " over" : m.out > should ? " warn" : "");
+      $("bud-pace").style.left = (pace * 100).toFixed(1) + "%";
+      if (m.out > tot) status = '예산을 <b class="neg">' + fmtEok(m.out - tot) + '</b> 넘김.';
+      else if (m.out > should) status = '오늘까지 쓸 만큼보다 <b class="neg">' + fmtEok(m.out - should) + '</b> 빠름. 이대로면 월말 <b>' +
+                                        fmtEok(m.out / pace) + '</b> 예상.';
+      else status = '페이스 안쪽. 이번 달 <b>' + fmtEok(tot - m.out) + '</b> 더 쓸 수 있음.';
+    } else {
+      status = m.out > 0 ? "예산을 정하면 이 속도로 월말에 얼마가 될지 알려줌. 이대로면 월말 <b>" + fmtEok(m.out / pace) + "</b>."
+                         : "아직 이번 달 지출 없음.";
+    }
+    $("bud-status").innerHTML = status;
+
+    $("budget").classList.toggle("editing", ui.budEdit);
+    $("bud-edit").textContent = ui.budEdit ? "완료" : (tot > 0 ? "예산 수정" : "예산 정하기");
+    Array.prototype.forEach.call($("budget").children, function(row){
+      var k = row.dataset.b, isTot = k === "_total";
+      var spent = isTot ? m.out : (m.byOut[k] || 0);
+      var bud = isTot ? st.budget.total : (st.budget.cats[k] || 0);
+      // 전체 행은 편집할 때만. 평소엔 위 큰 카드가 전체를 보여줌
+      row.hidden = isTot && !ui.budEdit;
+      if (isTot) row.querySelector("input").placeholder = sumCats > 0 ? "항목 합 " + round(sumCats, 1) : "없음";
+      var fl = row.querySelector("[data-bf]"), pc = row.querySelector("[data-bp]"), vl = row.querySelector("[data-bv]");
+      row.querySelector("[data-bm]").hidden = !(bud > 0);
+      if (bud > 0){
+        var r = spent / bud;
+        fl.style.width = Math.min(100, r * 100).toFixed(1) + "%";
+        fl.className = "fl" + (r > 1 ? " over" : r > pace ? " warn" : "");
+        pc.style.left = (pace * 100).toFixed(1) + "%";
+        vl.innerHTML = "<b>" + fmtEok(spent) + "</b> / " + fmtEok(bud);
+      } else {
+        vl.innerHTML = spent > 0 ? "<b>" + fmtEok(spent) + "</b>" : "—";
+      }
     });
-    var box = $("stats");
-    if (!L.first){ box.innerHTML = '<div class="empty">기록이 쌓이면 어디서 벌고 어디서 썼는지 나옴.</div>'; return; }
-
-    var t = today(), tISO = toISO(t), from = null, label;
-    if (ui.period === "month"){ from = tISO.slice(0, 7) + "-01"; label = (t.getMonth() + 1) + "월"; }
-    else if (ui.period === "28"){ from = toISO(addDays(t, -(WINDOW - 1))); label = "최근 4주"; }
-    else { label = "전체"; }
-    if (from && from < L.first) from = L.first;
-    var s = sumRange(L, from, ui.period === "all" ? null : tISO);
-    var net = s.inc - s.out;
-
-    var h = '<div class="stot"><span>' + label + '</span>' +
-            '<span>수입 <b style="color:var(--mint)">' + fmtEok(s.inc) + '</b></span>' +
-            '<span>지출 <b style="color:var(--rose)">' + fmtEok(s.out) + '</b></span>' +
-            '<span>순 <b>' + fmtSigned(net) + '</b></span>' +
-            (Math.abs(s.adj) >= 1e-4 ? '<span title="잔고 확인으로 맞춘 차이 — 빠뜨린 기록">미기록 <b>' + fmtSigned(s.adj) + '</b></span>' : '') +
-            '</div>';
-    h += '<div class="bars2"><div><div class="bh">어디서 벌었나 <b>' + fmtEok(s.inc) + '</b></div>' + bars(s.byIn, "in", s.inc || 1) + '</div>' +
-         '<div><div class="bh">어디에 썼나 <b>' + fmtEok(s.out) + '</b></div>' + bars(s.byOut, "out", s.out || 1) + '</div></div>';
-
-    var chars = Object.keys(s.byChar);
-    var big = s.outs.slice().sort(function(a, b){ return b.a - a.a; }).slice(0, 5);
-    if (chars.length || big.length){
-      h += '<div class="bars2" style="margin-top:22px;padding-top:18px;border-top:1px solid var(--line-soft)">';
-      h += '<div><div class="bh">캐릭터별 수입</div>' + (chars.length ? bars(s.byChar, null, s.inc || 1)
-             : '<div class="empty" style="padding:6px 0;text-align:left">캐릭터를 적은 수입 없음</div>') + '</div>';
-      h += '<div><div class="bh">큰 지출</div>' + (big.length ? '<table class="tbl"><tbody>' + big.map(function(e){
-             return '<tr><td>' + md(parseDate(e.d)) + ' ' + cat("out", e.c).n +
-                    (e.m ? ' <span style="color:var(--muted-2)">' + esc(e.m) + '</span>' : '') +
-                    '</td><td class="n">' + fmtEok(e.a) + '</td></tr>';
-           }).join("") + '</tbody></table>' : '<div class="empty" style="padding:6px 0;text-align:left">없음</div>') + '</div>';
-      h += '</div>';
-    }
-    box.innerHTML = h;
   }
 
-  /* ---------- 주차별 ---------- */
-  function renderWeeks(L){
-    var body = $("weeks");
-    if (!L.first){ body.innerHTML = '<tr><td colspan="5" class="z">—</td></tr>'; return; }
-    var t = today(), cur = weekStart(t), first = weekStart(parseDate(L.first)), out = [];
-    for (var w = 0; w < 8; w++){
-      var ws = addDays(cur, -7 * w);
-      if (ws < first) break;
-      var we = addDays(ws, 6), wsI = toISO(ws), weI = toISO(we);
-      var s = sumRange(L, wsI, weI);
-      var net = s.inc - s.out;
-      var endBal = balAt(L, toISO(we > t ? t : we));
-      out.push('<tr' + (w === 0 ? ' class="now"' : '') + '>' +
-               '<td>' + md(ws) + ' ~ ' + md(we) + '</td>' +
-               '<td class="inc">' + (s.inc ? fmtEok(s.inc) : '<span class="z">—</span>') + '</td>' +
-               '<td class="inc">' + (s.out ? fmtEok(s.out) : '<span class="z">—</span>') + '</td>' +
-               '<td class="' + (net > 0 ? "p" : net < 0 ? "n" : "z") + '"' +
-                 (Math.abs(s.adj) >= 1e-4 ? ' title="미기록 보정 ' + fmtSigned(s.adj) + ' 별도"' : '') + '>' +
-                 (s.inc || s.out ? fmtSigned(net) : "—") + '</td>' +
-               '<td>' + (endBal === null ? "—" : fmtEok(endBal)) + '</td></tr>');
-    }
-    body.innerHTML = out.join("");
+  /* ---------- 설정 탭 ---------- */
+  function renderSettings(L, ws){
+    $("s-bal-v").textContent = L.last ? fmtEok(L.bal) + " · " + md(addDays(parseDate(L.last), 1)) + "부터" : "기록 없음";
+    $("s-bal").disabled = !L.last;
+    var rate = ws ? ws.rate : null;
+    $("s-rate-v").textContent = rate ? fmtFine(rate) : "사냥 기록 없음";
+    $("s-rate").disabled = !rate;
+    if (!rate) $("s-rate").checked = false;
+    $("s-hours-v").textContent = ws ? (+ws.hours.toFixed(1)) + "시간" : "기록 없음";
+    $("s-hours").disabled = !ws;
   }
 
-  /* ---------- 기록 목록 ---------- */
-  function renderList(L){
-    var mo = ui.month, p = mo.split("-");
-    $("m-label").textContent = p[0] + "." + p[1];
-    var rows = L.rows.filter(function(r){ return r.e.d.slice(0, 7) === mo; });
-    var box = $("list");
-    if (!rows.length){
-      box.innerHTML = '<div class="empty">' + (st.entries.length ? "이 달 기록 없음" : "아직 기록 없음") + '</div>';
+  /* ---------- 기록 시트 ---------- */
+  function charNames(calc){
+    var seen = {}, out = [];
+    function add(n){ if (n && !seen[n]){ seen[n] = 1; out.push(n); } }
+    st.entries.slice().sort(function(a, b){ return b.id - a.id; }).forEach(function(e){ add(e.ch); });
+    if (calc) calc.roster.forEach(function(r){ add(r.name); });
+    return out;
+  }
+
+  // 최근 손으로 넣은 기록 중 (항목, 캐릭, 금액, 시간)이 다른 것 6개 — 반복 기록을 한 번에
+  function presets(t){
+    var seen = {}, out = [];
+    var list = st.entries.slice().sort(function(a, b){ return b.id - a.id; });
+    for (var i = 0; i < list.length && out.length < 6; i++){
+      var e = list[i];
+      if (e.t !== t || e.src) continue;
+      var key = [e.c, e.ch || "", round(e.a, 4), e.h || ""].join("|");
+      if (seen[key]) continue;
+      seen[key] = 1;
+      out.push(e);
+    }
+    return out;
+  }
+
+  function balBefore(iso, excludeId){
+    var run = null;
+    st.entries.slice().sort(function(a, b){ return a.d < b.d ? -1 : a.d > b.d ? 1 : a.id - b.id; })
+      .forEach(function(e){
+        if (e.id === excludeId || e.d > iso) return;
+        run = e.t === "bal" ? e.a : (run || 0) + (e.t === "in" ? e.a : -e.a);
+      });
+    return run;
+  }
+
+  function renderSheet(calc){
+    Array.prototype.forEach.call($("seg").children, function(b){
+      b.setAttribute("aria-pressed", b.dataset.t === ui.t ? "true" : "false");
+    });
+    var isBal = ui.t === "bal", c = ui.c[ui.t], editing = ui.edit ? findEntry(ui.edit) : null;
+    $("sh-title").textContent = editing ? "기록 수정" : "기록 추가";
+
+    var ps = isBal || editing ? [] : presets(ui.t);
+    $("r-presets").hidden = !ps.length;
+    $("presets").innerHTML = ps.map(function(e){
+      var info = cat(e.t, e.c);
+      return '<button type="button" class="preset" data-pid="' + e.id + '"><span>' + info.n +
+             (e.ch ? " · " + esc(e.ch) : "") + (e.h ? " · " + e.h + "시간" : "") + '</span><b>' + fmtMan(e.a) + '</b></button>';
+    }).join("");
+
+    $("r-cats").hidden = isBal;
+    $("cats").innerHTML = isBal ? "" : CATS[ui.t].map(function(x){
+      return '<button type="button" class="cat" data-c="' + x.k + '" style="--c:' + x.c + '" aria-pressed="' + (x.k === c) + '">' +
+             '<span class="dot" style="--c:' + x.c + '"></span>' + x.n + '</button>';
+    }).join("");
+
+    // 계산기 로스터 값으로 채우기
+    var q = [];
+    if (calc && ui.t === "in"){
+      if (c === "weekly" || c === "monthly"){
+        var withV = calc.roster.filter(function(r){ return r[c] > 0; });
+        withV.forEach(function(r){ q.push({label:r.name + " " + fmtFine(r[c]), v:r[c], ch:r.name}); });
+        if (withV.length > 1) q.push({label:"전체 " + fmtFine(calc[c]), v:calc[c], ch:""});
+      } else if (c === "hunt" && calc.rate > 0 && calc.hours > 0){
+        q.push({label:calc.hours + "시간 × " + fmtFine(calc.rate), v:calc.rate * calc.hours, h:calc.hours});
+      }
+    }
+    $("quick").hidden = !q.length;
+    $("quick").innerHTML = q.map(function(x){
+      return '<button type="button" class="chip" data-v="' + round(x.v, 4) + '"' +
+             (x.ch !== undefined ? ' data-ch="' + esc(x.ch) + '"' : '') + (x.h ? ' data-h="' + x.h + '"' : '') +
+             ' title="계산기 값으로 채움">' + esc(x.label) + '</button>';
+    }).join("");
+
+    $("amt-label").textContent = isBal ? "지금 실제로 가진 메소 (인벤토리 + 창고)" : "얼마";
+    $("r-hours").hidden = !(ui.t === "in" && c === "hunt");
+    $("r-char").hidden = isBal;
+    var names = charNames(calc).slice(0, 6), cur = $("f-char").value.trim();
+    $("charchips").innerHTML = names.map(function(n){
+      return '<button type="button" class="chip" data-name="' + esc(n) + '" aria-pressed="' + (n === cur) + '">' + esc(n) + '</button>';
+    }).join("");
+    syncDateChips();
+
+    $("api-note").hidden = !(editing && editing.src);
+    if (editing && editing.src) $("api-note").textContent = editing.lock
+      ? "Open API에서 가져온 기록 · 직접 고쳐서 동기화가 덮어쓰지 않음"
+      : "Open API에서 가져온 기록 · 고치면 고정되어 다음 동기화가 덮어쓰지 않음";
+    $("f-del").hidden = !editing;
+    $("f-more").hidden = !!editing;
+    $("f-submit").textContent = editing ? "수정" : isBal ? "잔고 맞추기" : "저장";
+    preview();
+  }
+
+  function syncDateChips(){
+    var v = $("f-date").value, t = today();
+    Array.prototype.forEach.call($("dates").children, function(b){
+      b.setAttribute("aria-pressed", v === toISO(addDays(t, -(+b.dataset.dd))) ? "true" : "false");
+    });
+  }
+
+  function preview(){
+    var raw = $("f-amt").value, v = parseMeso(raw), el = $("amt-prev");
+    el.className = "amt-prev";
+    if (!raw.trim()){
+      el.textContent = ui.t === "bal" ? "" : "21.5 · 21억 3170만 · 게임 숫자 그대로";
+    } else if (v === null){
+      el.textContent = "못 읽음 — 숫자와 조 · 억 · 만만";
+      el.className = "amt-prev bad";
+    } else {
+      var txt = "= " + fmtMan(v);
+      if (ui.t === "bal"){
+        var prev = balBefore($("f-date").value, ui.edit);
+        if (prev !== null){
+          var d = v - prev;
+          if (Math.abs(d) < 1e-4){ txt += " · 장부와 일치"; el.className = "amt-prev good"; }
+          else txt += " · 장부보다 " + fmtSigned(d) + " (빠뜨린 기록)";
+        }
+      }
+      el.textContent = txt;
+    }
+    var h = parseFloat($("f-hours").value);
+    $("hrs-prev").textContent = (v > 0 && h > 0) ? "시급 " + fmtFine(v / h) : "";
+  }
+
+  function openSheet(opts){
+    opts = opts || {};
+    ui.edit = null;
+    $("f-amt").value = ""; $("f-hours").value = ""; $("f-memo").value = "";
+    if (opts.id){
+      var e = findEntry(opts.id);
+      if (!e) return;
+      ui.edit = e.id;
+      ui.t = e.t;
+      if (e.c && e.t !== "bal") ui.c[e.t] = e.c;
+      $("f-date").value = e.d;
+      $("f-amt").value = round(e.a, 4);
+      $("f-hours").value = e.h || "";
+      $("f-char").value = e.ch || "";
+      $("f-memo").value = e.m || "";
+    } else {
+      if (opts.t) ui.t = opts.t;
+      else if (!st.entries.length) ui.t = "bal";
+      $("f-date").value = toISO(today());
+      $("f-char").value = ui.lastChar;
+    }
+    renderSheet(readCalc());
+    if (!$("sheet").open) $("sheet").showModal();
+    // 폰에선 바로 키보드를 올리면 항목 칸을 가려서, 데스크톱에서만 금액에 포커스
+    if (!coarse()) $("f-amt").focus();
+  }
+
+  function saveSheet(keep){
+    var d = $("f-date").value;
+    if (!parseDate(d)){ $("f-date").focus(); return; }
+    var a = parseMeso($("f-amt").value);
+    if (a === null || a < 0 || (ui.t !== "bal" && a <= 0)){
+      $("amt-prev").textContent = "금액을 넣어줘";
+      $("amt-prev").className = "amt-prev bad";
+      $("f-amt").focus();
       return;
     }
-    var days = {}, order = [];
-    rows.forEach(function(r){
-      if (!days[r.e.d]){ days[r.e.d] = []; order.push(r.e.d); }
-      days[r.e.d].push(r);
-    });
-    order.reverse();
-    box.innerHTML = order.map(function(d){
-      var list = days[d], dt = parseDate(d), net = 0;
-      list.forEach(function(r){ if (r.e.t !== "bal") net += r.e.t === "in" ? r.e.a : -r.e.a; });
-      var end = list[list.length - 1].after;
-      return '<div class="day"><div class="dayh"><span>' + md(dt) + ' <span class="dw">' + DOW[dt.getDay()] + '</span></span>' +
-             '<span>' + (net ? fmtSigned(net) + ' · ' : '') + '잔고 ' + fmtEok(end) + '</span></div>' +
-             list.slice().reverse().map(entryRow).join("") + '</div>';
-    }).join("");
+    var e = {id: ui.edit || ++st.seq, d:d, t:ui.t, a:round(a, 6)};
+    if (ui.t !== "bal"){
+      e.c = ui.c[ui.t];
+      var ch = $("f-char").value.trim();
+      if (ch) e.ch = ch;
+      ui.lastChar = ch;
+    }
+    if (ui.t === "in" && e.c === "hunt"){
+      var h = parseFloat($("f-hours").value);
+      if (h > 0) e.h = Math.min(24, h);
+    }
+    var m = $("f-memo").value.trim();
+    if (m) e.m = m;
+    var label = (e.t === "bal" ? "잔고 확인 " : cat(e.t, e.c).n + " ") + fmtMan(e.a);
+    if (ui.edit){
+      var old = findEntry(ui.edit);
+      // API 기록을 손으로 고치면 고정 — 다음 동기화가 규칙표 값으로 되돌리지 않음
+      if (old && old.src){
+        e.src = old.src;
+        e.lock = true;
+        if (old.x) e.x = old.x;
+        if (old.est && Math.abs(old.a - e.a) < 1e-9) e.est = true;
+      }
+      lastAction = {kind:"edit", before:old};
+      st.entries = st.entries.map(function(x){ return x.id === e.id ? e : x; });
+      label += " 수정함";
+    } else {
+      lastAction = {kind:"add", id:e.id};
+      st.entries.push(e);
+      label += " 기록함";
+    }
+    // 시작 잔고를 넣고 나면 다음 기록은 수입부터
+    if (st.entries.length === 1 && e.t === "bal") ui.t = "in";
+    ui.month = d.slice(0, 7);
+    ui.fresh = e.id;
+    if (keep && !ui.edit){
+      $("f-amt").value = ""; $("f-hours").value = ""; $("f-memo").value = "";
+      renderAll();
+      $("f-amt").focus();
+    } else {
+      ui.edit = null;
+      $("sheet").close();
+      renderAll();
+    }
+    toast(label, true);
   }
 
-  function entryRow(r){
-    var e = r.e, info, amt, desc = [];
-    if (e.t === "bal"){
-      info = {n:"잔고 확인", c:"var(--mint)"};
-      amt = '<div class="amt-v b">' + fmtMan(e.a) + (r.open ? "<i>시작 잔고</i>" :
-            Math.abs(r.adj) >= 1e-4 ? "<i>미기록 " + fmtSigned(r.adj) + "</i>" : "<i>기록과 일치</i>") + '</div>';
-    } else {
-      info = cat(e.t, e.c);
-      amt = '<div class="amt-v ' + (e.t === "in" ? "p" : "n") + '">' + (e.est ? "≈" : "") +
-            (e.t === "in" ? "+" : "−") + fmtMan(e.a) + '</div>';
+  function findEntry(id){
+    for (var i = 0; i < st.entries.length; i++) if (st.entries[i].id === id) return st.entries[i];
+    return null;
+  }
+
+  function removeEntry(id){
+    var e = findEntry(id);
+    if (!e) return;
+    st.entries = st.entries.filter(function(x){ return x.id !== id; });
+    if (e.src) st.api.skip[e.src] = 1;     // 지운 API 기록은 다음 동기화에서 다시 안 들어오게
+    lastAction = {kind:"del", e:e};
+    ui.edit = null;
+    if ($("sheet").open) $("sheet").close();
+    renderAll();
+    toast((e.t === "bal" ? "잔고 확인" : cat(e.t, e.c).n) + " " + fmtMan(e.a) + " 삭제함", true);
+  }
+
+  function undo(){
+    var a = lastAction;
+    lastAction = null;
+    if (!a) return;
+    if (a.kind === "add") st.entries = st.entries.filter(function(x){ return x.id !== a.id; });
+    else if (a.kind === "edit") st.entries = st.entries.map(function(x){ return x.id === a.before.id ? a.before : x; });
+    else if (a.kind === "del"){
+      if (a.e.src) delete st.api.skip[a.e.src];
+      st.entries.push(a.e);
+      ui.fresh = a.e.id;
     }
-    var tip = "눌러서 수정", badge = "";
-    if (e.src){
-      badge = '<span class="src' + (e.lock ? ' lock' : '') + '">' + (e.lock ? "API·고정" : "API") + '</span>';
-      if (e.x && e.x.items) tip = e.x.items.map(function(it){
-        return it[0] + "  " + it[1] + "회  " + fmtEok(it[2]);
-      }).join("\n") + (e.x.rules ? "\n규칙표 " + e.x.rules : "");
-    }
-    if (e.ch) desc.push("<b>" + esc(e.ch) + "</b>");
-    if (e.h > 0) desc.push(e.h + "h · 시급 " + fmtFine(e.a / e.h));
-    if (e.m) desc.push(esc(e.m));
-    return '<div class="ent' + (ui.edit === e.id ? " editing" : "") + (ui.fresh === e.id ? " fresh" : "") +
-           '" data-id="' + e.id + '" tabindex="0" title="' + esc(tip) + '">' +
-           '<span class="tag" style="--c:' + info.c + '">' + (e.t === "out" ? "−" : "") + info.n + '</span>' +
-           '<span class="desc">' + badge + desc.join(" · ") + '</span>' + amt +
-           '<button class="del" data-del="' + e.id + '" aria-label="삭제" title="삭제">&times;</button></div>';
+    renderAll();
+  }
+
+  function toast(msg, canUndo){
+    $("toast-msg").textContent = msg;
+    $("toast-undo").hidden = !canUndo;
+    $("toast").hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ $("toast").hidden = true; lastAction = null; }, 5000);
   }
 
   /* ---------- 넥슨 Open API ----------
@@ -1405,7 +1634,7 @@
       var g = by[ch], main = g.n - g.add - g.unk, memo = [];
       if (main) memo.push("잠재 " + main + "회");
       if (g.add) memo.push("에디 " + g.add + "회");
-      if (g.up) memo.push("등급↑" + g.up);
+      if (g.up) memo.push("등급 상승 " + g.up);
       if (g.unk) memo.push("비용 미상 " + g.unk + "회");
       var items = Object.keys(g.items).map(function(k){ return g.items[k]; })
         .sort(function(a, b){ return b[2] - a[2] || b[1] - a[1]; }).slice(0, 8)
@@ -1437,7 +1666,7 @@
   function runSync(){
     if (syncing) return;
     if (!apiKey()){
-      $("api").scrollIntoView({behavior:"smooth", block:"start"});
+      showView("settings");
       $("api-key").focus();
       apiLog('<span class="bad">API 키를 먼저 넣어줘</span>');
       return;
@@ -1488,147 +1717,84 @@
       apiLog((err ? "" : '<span class="ok">') + esc(head) + (err ? "" : "</span>") +
              (parts.length ? "\n" + parts.join(" · ") : n ? "\n바뀐 기록 없음" : "") +
              (err ? '\n<span class="bad">중단: ' + esc(err.message) + (st.api.last.pot ? " — " + md(parseDate(st.api.last.pot)) + "까지 반영됨" : "") + "</span>" : ""));
-      if (!err && (tally.added || tally.updated)) toast("잠재 재설정 " + (tally.added + tally.updated) + "건 반영", false);
+      if (err) toast("동기화 중단: " + err.message, false);
+      else if (tally.added || tally.updated) toast("잠재 재설정 " + (tally.added + tally.updated) + "건 반영", false);
+      else toast("새로 들어온 기록 없음", false);
     });
   }
 
   function setSyncUI(){
-    var has = !!apiKey();
+    var has = !!apiKey(), run = st.api.run ? new Date(st.api.run) : null;
+    var when = run ? md(run) + " " + String(run.getHours()).padStart(2, "0") + ":" + String(run.getMinutes()).padStart(2, "0") : "";
     $("btn-sync").hidden = !has;
     $("btn-sync").classList.toggle("busy", syncing);
-    $("btn-sync").textContent = syncing ? "동기화 중…" : "동기화";
+    $("btn-sync").title = syncing ? "동기화 중…" : "넥슨 Open API 동기화" + (when ? " · 마지막 " + when : "");
     $("api-sync").disabled = syncing;
-    $("api-sync").textContent = syncing ? "동기화 중…" : "동기화";
+    $("api-sync").textContent = syncing ? "동기화 중…" : "지금 동기화";
     $("api-forget").hidden = !has;
     // 저장된 키는 칸에 다시 채우지 않고 끝 4자리만 안내
     $("api-key").placeholder = has ? "저장됨 …" + apiKey().slice(-4) : "test_…";
     $("r-api-from").hidden = !!st.api.last.pot;
-    var run = st.api.run ? new Date(st.api.run) : null;
-    $("api-state").textContent = !has ? "키 없음" :
-      run ? "마지막 " + md(run) + " " + String(run.getHours()).padStart(2, "0") + ":" + String(run.getMinutes()).padStart(2, "0") : "키 저장됨";
+    $("api-state").textContent = !has ? "키 없음" : when ? "마지막 " + when : "키 저장됨";
   }
 
-  /* ---------- render ---------- */
+  /* ---------- 화면 전환 ---------- */
+  function showView(v){
+    if (VIEWS.indexOf(v) < 0) v = "log";
+    var changed = ui.view !== v;
+    ui.view = v;
+    VIEWS.forEach(function(x){ $("v-" + x).hidden = x !== v; });
+    Array.prototype.forEach.call(document.querySelectorAll(".tabs [data-view]"), function(b){
+      b.setAttribute("aria-selected", b.dataset.view === v ? "true" : "false");
+    });
+    $("fab").hidden = v === "settings";
+    if (location.hash !== "#" + v) history.replaceState(null, "", "#" + v);
+    // 그래프는 보이는 상태에서 폭을 재야 해서 통계로 올 때 그림
+    if (v === "stats") drawChart(compute(), readCalc());
+    if (changed) window.scrollTo(0, 0);
+  }
+
   function renderAll(){
-    var calc = readCalc();
-    var L = compute(), ws = windowStats(L);
-    renderForm(calc);
-    renderReadout(L, ws, calc);
+    var calc = readCalc(), L = compute(), ws = windowStats(L);
+    renderHeader(L, ws, calc);
+    renderLog(L);
+    renderStats(L, ws, calc);
     renderBudget(L);
-    renderCompare(L, ws, calc);
-    drawChart(L, calc);
-    renderStats(L);
-    renderWeeks(L);
-    renderList(L);
+    renderSettings(L, ws);
     setSyncUI();
+    if ($("sheet").open) renderSheet(calc);
     save(L, ws);
     ui.fresh = null;
   }
 
   /* ---------- events ---------- */
-  $("seg").addEventListener("click", function(e){
-    var b = e.target.closest("[data-t]");
-    if (!b) return;
-    ui.t = b.dataset.t;
-    renderForm(readCalc());
-    $("f-amt").focus();
+  document.querySelector(".tabs").addEventListener("click", function(e){
+    var b = e.target.closest("[data-view]");
+    if (b) showView(b.dataset.view);
   });
-
-  $("cats").addEventListener("click", function(e){
-    var b = e.target.closest("[data-c]");
-    if (!b) return;
-    ui.c[ui.t] = b.dataset.c;
-    renderForm(readCalc());
+  $("pills").addEventListener("click", function(e){
+    var b = e.target.closest("[data-go]");
+    if (b) showView(b.dataset.go);
   });
+  window.addEventListener("hashchange", function(){ showView(location.hash.slice(1)); });
 
-  $("quick").addEventListener("click", function(e){
-    var b = e.target.closest("[data-q]");
-    if (!b) return;
-    $("f-amt").value = b.dataset.v;
-    if (b.dataset.ch !== undefined) $("f-char").value = b.dataset.ch;
-    if (b.dataset.h) $("f-hours").value = b.dataset.h;
-    preview();
-    $("f-submit").focus();
-  });
-
-  ["f-amt", "f-hours", "f-date"].forEach(function(id){ $(id).addEventListener("input", preview); });
-
-  $("btn-today").addEventListener("click", function(){ $("f-date").value = toISO(today()); preview(); });
-
-  $("form").addEventListener("submit", function(ev){
-    ev.preventDefault();
-    var d = $("f-date").value;
-    if (!parseDate(d)){ $("f-date").focus(); return; }
-    var a = parseMeso($("f-amt").value);
-    if (a === null || a < 0 || (ui.t !== "bal" && a <= 0)){
-      $("amt-prev").textContent = "금액을 넣어줘";
-      $("amt-prev").className = "bad";
-      $("f-amt").focus();
-      return;
-    }
-    var e = {id: ui.edit || ++st.seq, d:d, t:ui.t, a:round(a, 6)};
-    if (ui.t !== "bal"){
-      e.c = ui.c[ui.t];
-      var ch = $("f-char").value.trim();
-      if (ch) e.ch = ch;
-    }
-    if (ui.t === "in" && e.c === "hunt"){
-      var h = parseFloat($("f-hours").value);
-      if (h > 0) e.h = Math.min(24, h);
-    }
-    var m = $("f-memo").value.trim();
-    if (m) e.m = m;
-    if (ui.edit){
-      var old = findEntry(ui.edit);
-      // API 기록을 손으로 고치면 고정 — 다음 동기화가 규칙표 값으로 되돌리지 않음
-      if (old && old.src){
-        e.src = old.src;
-        e.lock = true;
-        if (old.x) e.x = old.x;
-        if (old.est && Math.abs(old.a - e.a) < 1e-9) e.est = true;
-      }
-      st.entries = st.entries.map(function(x){ return x.id === e.id ? e : x; });
-    } else {
-      st.entries.push(e);
-    }
-    resetForm();
-    ui.month = d.slice(0, 7);
-    ui.fresh = e.id;
-    if (ui.t === "bal" && st.entries.length === 1) ui.t = "in";   // 시작 잔고를 넣고 나면 수입 기록으로
-    renderAll();
-    $("f-amt").focus();
-  });
-
-  $("f-cancel").addEventListener("click", function(){ resetForm(); renderAll(); });
-  $("f-del").addEventListener("click", function(){ if (ui.edit) removeEntry(ui.edit); });
-
+  $("fab").addEventListener("click", function(){ openSheet(); });
   $("list").addEventListener("click", function(e){
-    var del = e.target.closest("[data-del]");
-    if (del){ e.stopPropagation(); removeEntry(+del.dataset.del); return; }
+    var open = e.target.closest("[data-open]");
+    if (open){ openSheet({t:open.dataset.open}); return; }
     var row = e.target.closest("[data-id]");
-    if (row) startEdit(+row.dataset.id);
+    if (row) openSheet({id:+row.dataset.id});
   });
-  $("list").addEventListener("keydown", function(e){
-    if (e.key !== "Enter") return;
-    var row = e.target.closest("[data-id]");
-    if (row && e.target === row) startEdit(+row.dataset.id);
+  $("filters").addEventListener("click", function(e){
+    var b = e.target.closest("[data-f]");
+    if (!b) return;
+    ui.filter = b.dataset.f;
+    renderLog(compute());
   });
-
-  $("toast-undo").addEventListener("click", function(){
-    if (lastDeleted){
-      if (lastDeleted.src) delete st.api.skip[lastDeleted.src];
-      st.entries.push(lastDeleted);
-      ui.fresh = lastDeleted.id;
-      lastDeleted = null;
-      renderAll();
-    }
-    $("toast").hidden = true;
-  });
-
   function shiftMonth(n){
     var p = ui.month.split("-"), d = new Date(+p[0], +p[1] - 1 + n, 1);
     ui.month = toISO(d).slice(0, 7);
-    renderList(compute());
+    renderLog(compute());
   }
   $("m-prev").addEventListener("click", function(){ shiftMonth(-1); });
   $("m-next").addEventListener("click", function(){ shiftMonth(1); });
@@ -1637,9 +1803,81 @@
     var b = e.target.closest("[data-p]");
     if (!b) return;
     ui.period = b.dataset.p;
-    renderStats(compute());
+    var L = compute();
+    renderStats(L, windowStats(L), readCalc());
   });
 
+  // 시트
+  $("sh-close").addEventListener("click", function(){ $("sheet").close(); });
+  $("sheet").addEventListener("click", function(e){ if (e.target === this) this.close(); });   // 바깥(배경) 클릭
+  $("sheet").addEventListener("close", function(){ ui.edit = null; });
+  $("seg").addEventListener("click", function(e){
+    var b = e.target.closest("[data-t]");
+    if (!b) return;
+    ui.t = b.dataset.t;
+    renderSheet(readCalc());
+  });
+  $("cats").addEventListener("click", function(e){
+    var b = e.target.closest("[data-c]");
+    if (!b) return;
+    ui.c[ui.t] = b.dataset.c;
+    renderSheet(readCalc());
+    if (!coarse()) $("f-amt").focus();
+  });
+  $("presets").addEventListener("click", function(e){
+    var b = e.target.closest("[data-pid]"), p = b && findEntry(+b.dataset.pid);
+    if (!p) return;
+    ui.c[p.t] = p.c;
+    $("f-amt").value = round(p.a, 4);
+    $("f-char").value = p.ch || "";
+    $("f-hours").value = p.h || "";
+    renderSheet(readCalc());
+    $("f-submit").focus();
+  });
+  $("quick").addEventListener("click", function(e){
+    var b = e.target.closest("[data-v]");
+    if (!b) return;
+    $("f-amt").value = b.dataset.v;
+    if (b.dataset.ch !== undefined) $("f-char").value = b.dataset.ch;
+    if (b.dataset.h) $("f-hours").value = b.dataset.h;
+    renderSheet(readCalc());
+    $("f-submit").focus();
+  });
+  $("charchips").addEventListener("click", function(e){
+    var b = e.target.closest("[data-name]");
+    if (!b) return;
+    $("f-char").value = $("f-char").value.trim() === b.dataset.name ? "" : b.dataset.name;
+    renderSheet(readCalc());
+  });
+  $("f-char").addEventListener("input", function(){
+    var v = this.value.trim();
+    Array.prototype.forEach.call($("charchips").children, function(b){
+      b.setAttribute("aria-pressed", b.dataset.name === v ? "true" : "false");
+    });
+  });
+  $("dates").addEventListener("click", function(e){
+    var b = e.target.closest("[data-dd]");
+    if (!b) return;
+    $("f-date").value = toISO(addDays(today(), -(+b.dataset.dd)));
+    syncDateChips();
+    preview();
+  });
+  $("f-date").addEventListener("input", function(){ syncDateChips(); preview(); });
+  ["f-amt", "f-hours"].forEach(function(id){ $(id).addEventListener("input", preview); });
+  $("form").addEventListener("submit", function(ev){ ev.preventDefault(); saveSheet(false); });
+  $("f-more").addEventListener("click", function(){ saveSheet(true); });
+  $("f-del").addEventListener("click", function(){ if (ui.edit) removeEntry(ui.edit); });
+  $("toast-undo").addEventListener("click", function(){ $("toast").hidden = true; undo(); });
+
+  // 예산
+  $("bud-edit").addEventListener("click", function(){
+    ui.budEdit = !ui.budEdit;
+    renderBudget(compute());
+    if (ui.budEdit){
+      var first = $("budget").querySelector('.brow:not([data-total]) input');
+      if (first && !coarse()) first.focus();
+    }
+  });
   $("budget").addEventListener("input", function(e){
     var k = e.target.dataset.bk;
     if (!k) return;
@@ -1647,10 +1885,10 @@
     if (k === "_total") st.budget.total = v > 0 ? v : 0;
     else if (v > 0) st.budget.cats[k] = v;
     else delete st.budget.cats[k];
-    var calc = readCalc(), L = compute();
+    var calc = readCalc(), L = compute(), ws = windowStats(L);
     renderBudget(L);
-    renderReadout(L, windowStats(L), calc);
-    save(L, windowStats(L));
+    renderHeader(L, ws, calc);
+    save(L, ws);
   });
 
   /* 계산기로 넘기기: 계산기 저장분을 고쳐 쓰고 연다. 잔고는 마지막 기록일 마감 기준이라
@@ -1697,7 +1935,6 @@
         if (!s || !Array.isArray(s.entries)) throw 0;
         if (st.entries.length && !confirm("지금 장부 " + st.entries.length + "건을 백업 " + s.entries.length + "건으로 덮어씀. 진행?")) return;
         adopt(s);
-        resetForm();
         buildBudget();
         renderAll();
         toast("복원함 — " + st.entries.length + "건", false);
@@ -1724,6 +1961,7 @@
     download("meso-ledger-" + stamp() + ".csv", "﻿" + lines.join("\r\n"), "text/csv");
   });
 
+  // API
   $("api-key").addEventListener("change", function(){
     var k = this.value.trim();
     if (!k) return;                       // 빈칸으로 두면 기존 키 유지. 지우기는 버튼으로
@@ -1740,20 +1978,47 @@
   $("api-sync").addEventListener("click", runSync);
   $("btn-sync").addEventListener("click", runSync);
 
+  // 테마 — 계산기와 같은 저장 키라 한쪽에서 바꾸면 둘 다 따라감
+  function curTheme(){
+    return document.documentElement.dataset.theme ||
+           (window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+  }
+  function syncThemeColor(){
+    document.querySelector('meta[name="theme-color"]').content = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim();
+  }
+  $("btn-theme").addEventListener("click", function(){
+    var next = curTheme() === "light" ? "dark" : "light";
+    document.documentElement.dataset.theme = next;
+    try{ localStorage.setItem("meso-theme", next); } catch(e){}
+    syncThemeColor();
+  });
+  if (window.matchMedia) matchMedia("(prefers-color-scheme: light)").addEventListener("change", syncThemeColor);
+
   // 다른 탭(계산기)에서 값을 바꾸면 따라감
   window.addEventListener("storage", function(e){
     if (e.key === CALC_KEY) renderAll();
     if (e.key === STORE_KEY){ load(); buildBudget(); renderAll(); }
+    if (e.key === "meso-theme"){
+      if (e.newValue === "light" || e.newValue === "dark") document.documentElement.dataset.theme = e.newValue;
+      else delete document.documentElement.dataset.theme;
+      syncThemeColor();
+    }
+  });
+
+  var resizeTimer = null;
+  window.addEventListener("resize", function(){
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function(){ if (ui.view === "stats") drawChart(compute(), readCalc()); }, 120);
   });
 
   /* ---------- init ---------- */
   load();
   ui.month = toISO(today()).slice(0, 7);
-  $("f-date").value = toISO(today());
   $("api-from").value = toISO(addDays(today(), -6));
-  if (!st.entries.length) ui.t = "bal";
   buildBudget();
   renderAll();
+  showView(location.hash.slice(1));
+  syncThemeColor();
 
   // 오프라인 캐시 (계산기와 같은 sw.js). file:// 에선 안 됨
   if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
