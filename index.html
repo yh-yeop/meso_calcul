@@ -3,1761 +3,453 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>메소 적립 계산기</title>
-<meta name="description" content="메이플스토리 메소 적립 계산기. 주간보스·월간보스·재획 시급을 넣으면 목표 메소 도달일, 사냥 시간별 시나리오, 수익 구성을 하루 단위 달력 기준으로 계산함.">
-<meta name="color-scheme" content="dark light">
+<title>메소 — 장부 · 계산기</title>
+<meta name="description" content="메이플스토리 메소 관리. 어디서 벌고 어디에 썼는지 기록하는 장부, 목표 메소 도달일 계산기, 캐릭터별 보스 수익을 한곳에서.">
 <meta name="theme-color" content="#141220">
 <meta property="og:type" content="website">
-<meta property="og:title" content="메소 적립 계산기">
-<meta property="og:description" content="주간보스·월간보스·재획 시급으로 목표 메소 도달일을 하루 단위로 계산함.">
+<meta property="og:title" content="메소 — 장부 · 계산기">
+<meta property="og:description" content="메소 장부, 목표 도달 계산기, 캐릭터별 보스 수익을 한곳에서.">
 <meta property="og:locale" content="ko_KR">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="메소계산기">
+<meta name="apple-mobile-web-app-title" content="메소">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <script>
-  // 저장된 테마를 첫 그리기 전에 적용 (깜빡임 방지). 없으면 시스템 설정을 따름
+  // 저장된 테마를 첫 그리기 전에 적용 (깜빡임 방지). 없으면 시스템 설정
   try{ var t = localStorage.getItem("meso-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch(e){}
 </script>
-<style>
-  :root{
-    color-scheme:dark;
-    --ink:#141220;
-    --ink-2:#1C1930;
-    --surface:#211D38;
-    --line:#332D52;
-    --line-soft:#2A2543;
-    --gold:#E9B949;
-    --gold-dim:#8A6E2C;
-    --violet:#9C7BF0;
-    --rose:#E8639B;
-    --mint:#4FD1AA;
-    --sky:#5AB0F2;
-    --orange:#F2784B;
-    --text:#EFECF8;
-    --muted:#948DB4;
-    --muted-2:#8880AB;
-    --glow-1:#2C2450;
-    --glow-2:#23203C;
-    --shadow:0 6px 20px rgba(0,0,0,.28);
-    --focus:rgba(233,185,73,.14);
-    --chip-on:rgba(233,185,73,.1);
-    /* 타입 스케일 — 크기는 이 여섯 개 밖으로 나가지 않는다 */
-    --fs-micro:11px;    /* 표 헤더, eyebrow, 그래프 축 */
-    --fs-sm:12px;       /* 각주, 범례, 입력 힌트 */
-    --fs-md:13px;       /* 보조 값, 버튼 */
-    --fs-base:14px;     /* 본문, 라벨, 입력, 표 셀 */
-    --fs-lead:15px;     /* 리드 문장 */
-    --fs-display:32px;  /* 핵심 수치 */
-    --mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,Consolas,"D2Coding",monospace;
-    --sans:"Pretendard",-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
-  }
-  /* 라이트 팔레트 — 본문 색은 흰 패널 기준 대비 4.5:1 이상. 시스템이 라이트면 자동, 버튼으로 고정 가능 */
-  @media (prefers-color-scheme:light){
-    :root:not([data-theme="dark"]){
-    color-scheme:light;
-    --ink:#F4F2FA;
-    --ink-2:#FFFFFF;
-    --surface:#F0EDF8;
-    --line:#D6D1E8;
-    --line-soft:#E7E3F3;
-    --gold:#8E6300;
-    --gold-dim:#B8933A;
-    --violet:#6240D4;
-    --rose:#C2206A;
-    --mint:#0F7A5A;
-    --sky:#1868B8;
-    --orange:#B5400E;
-    --text:#1D1A2E;
-    --muted:#585275;
-    --muted-2:#6B6590;
-    --glow-1:#E6E0F7;
-    --glow-2:#EDE8F6;
-    --shadow:0 6px 20px rgba(40,30,80,.14);
-    --focus:rgba(142,99,0,.16);
-    --chip-on:rgba(142,99,0,.08);
-    }
-  }
-  :root[data-theme="light"]{
-    color-scheme:light;
-    --ink:#F4F2FA;
-    --ink-2:#FFFFFF;
-    --surface:#F0EDF8;
-    --line:#D6D1E8;
-    --line-soft:#E7E3F3;
-    --gold:#8E6300;
-    --gold-dim:#B8933A;
-    --violet:#6240D4;
-    --rose:#C2206A;
-    --mint:#0F7A5A;
-    --sky:#1868B8;
-    --orange:#B5400E;
-    --text:#1D1A2E;
-    --muted:#585275;
-    --muted-2:#6B6590;
-    --glow-1:#E6E0F7;
-    --glow-2:#EDE8F6;
-    --shadow:0 6px 20px rgba(40,30,80,.14);
-    --focus:rgba(142,99,0,.16);
-    --chip-on:rgba(142,99,0,.08);
-  }
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{
-    background:
-      radial-gradient(1100px 620px at 82% -12%, var(--glow-1) 0%, transparent 62%),
-      radial-gradient(760px 480px at -8% 108%, var(--glow-2) 0%, transparent 58%),
-      var(--ink);
-    background-attachment:fixed;
-    color:var(--text);font-family:var(--sans);font-size:var(--fs-base);line-height:1.6;
-    min-height:100vh;padding:36px 24px 72px;-webkit-font-smoothing:antialiased;
-    padding-left:max(24px,env(safe-area-inset-left));
-    padding-right:max(24px,env(safe-area-inset-right));
-  }
-  .wrap{max-width:1120px;margin:0 auto}
-  .eyebrow{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.2em;
-           text-transform:uppercase;color:var(--muted-2)}
-
-  .hero{position:relative;border-bottom:1px solid var(--line);padding-bottom:30px;margin-bottom:32px}
-  .hero h1{font-size:clamp(28px,4.4vw,42px);font-weight:760;letter-spacing:-.025em;margin-top:10px;line-height:1.2}
-  .hero p{color:var(--muted);font-size:var(--fs-lead);margin-top:10px;max-width:56ch}
-
-  .tools{position:absolute;top:0;right:0;display:flex;gap:7px}
-  .tool{background:transparent;border:1px solid var(--line);border-radius:8px;color:var(--muted);
-        font-family:var(--sans);font-size:var(--fs-md);padding:7px 13px;cursor:pointer;white-space:nowrap;
-        transition:border-color .14s,color .14s}
-  .tool:hover{border-color:var(--gold-dim);color:var(--gold)}
-  .tool:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-  .tool.ok{border-color:var(--mint);color:var(--mint)}
-  a.tool{text-decoration:none;line-height:1.6}
-
-  /* 셀이 3개라 auto-fit 이 2열로 접히면 네 번째 자리가 빈 상자로 남는다.
-     3열 아니면 1열, 두 상태만 갖게 고정한다. */
-  .readout{
-    display:grid;grid-template-columns:repeat(3,1fr);
-    gap:1px;background:var(--line-soft);border:1px solid var(--line-soft);
-    border-radius:14px;overflow:hidden;margin-top:30px;
-  }
-  @media (max-width:720px){ .readout{grid-template-columns:1fr} }
-  .cell{background:var(--ink-2);padding:20px 22px}
-  .cell .k{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.14em;
-           text-transform:uppercase;color:var(--muted-2)}
-  .cell .v{font-family:var(--mono);font-size:var(--fs-display);font-weight:600;letter-spacing:-.03em;
-           font-variant-numeric:tabular-nums;margin-top:10px;line-height:1.1}
-  .cell .v small{font-size:var(--fs-lead);font-weight:500;color:var(--muted);margin-left:3px}
-  .cell .s{font-size:var(--fs-md);color:var(--muted);margin-top:8px;line-height:1.5;
-           font-variant-numeric:tabular-nums}
-  .cell .s .mix{display:block;color:var(--muted-2);margin-top:3px}
-  .cell .v small.thu{color:var(--gold)}
-  .v.gold{color:var(--gold)} .v.mint{color:var(--mint)}
-
-  .grid{display:grid;grid-template-columns:372px 1fr;gap:26px;align-items:start}
-  .panel{background:var(--ink-2);border:1px solid var(--line-soft);border-radius:14px;padding:22px}
-  .panel + .panel{margin-top:20px}
-  .panel h2{font-family:var(--mono);font-size:var(--fs-sm);letter-spacing:.1em;text-transform:uppercase;
-            color:var(--muted-2);font-weight:500;margin-bottom:18px;
-            display:flex;justify-content:space-between;align-items:center;gap:10px}
-  .panel h2 em{font-style:normal;letter-spacing:0;text-transform:none;font-size:var(--fs-md);color:var(--gold);
-               font-variant-numeric:tabular-nums;text-align:right}
-
-  .row{display:flex;align-items:center;justify-content:space-between;gap:14px;
-       padding:12px 0;border-bottom:1px solid var(--line-soft)}
-  .row:last-of-type{border-bottom:0;padding-bottom:0}
-  .row label{font-size:var(--fs-base);color:var(--text);flex:1;min-width:0}
-  .row label i{display:block;font-style:normal;font-size:var(--fs-sm);color:var(--muted-2);margin-top:2px}
-  .field{display:flex;align-items:center;gap:7px;flex-shrink:0}
-  .field .unit{font-family:var(--mono);font-size:var(--fs-md);color:var(--muted-2)}
-
-  input[type=number],input[type=date],input[type=text],textarea{
-    background:var(--surface);border:1px solid var(--line);border-radius:8px;color:var(--text);
-    font-family:var(--mono);font-size:var(--fs-base);font-variant-numeric:tabular-nums;
-    padding:8px 10px;transition:border-color .14s,box-shadow .14s;
-  }
-  input[type=number]{width:114px;text-align:right}
-  input[type=date]{width:156px}
-  input:focus,textarea:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px var(--focus)}
-  input::-webkit-calendar-picker-indicator{opacity:.7;cursor:pointer}
-  input::-webkit-calendar-picker-indicator:hover{opacity:1}
-
-  .mini{background:transparent;border:1px solid var(--line);border-radius:7px;color:var(--muted-2);
-        font-family:var(--sans);font-size:var(--fs-sm);padding:6px 10px;cursor:pointer;white-space:nowrap;
-        transition:border-color .14s,color .14s}
-  .mini:hover{border-color:var(--gold-dim);color:var(--gold)}
-  .mini:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-
-  /* roster */
-  .rhead,.rrow{display:grid;grid-template-columns:1fr 86px 86px 26px;gap:8px;align-items:center}
-  .rhead{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;color:var(--muted-2);
-         text-transform:uppercase;padding-bottom:9px;border-bottom:1px solid var(--line-soft);margin-bottom:11px}
-  .rhead span:nth-child(2),.rhead span:nth-child(3){text-align:right}
-  .rrow{margin-bottom:8px}
-  .rrow input[type=text]{width:100%;font-family:var(--sans);font-size:var(--fs-md);text-align:left;padding:7px 9px}
-  .rrow input[type=number]{width:100%;font-size:var(--fs-md);padding:7px 8px}
-  .del{background:transparent;border:0;color:var(--muted-2);font-size:18px;line-height:1;
-       cursor:pointer;padding:4px;border-radius:6px;transition:color .14s}
-  .del:hover:not(:disabled){color:var(--rose)}
-  .del:disabled{opacity:.26;cursor:default}
-  .del:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
-
-  .btnrow{display:flex;gap:8px;margin-top:12px}
-
-  /* one-off items */
-  .ohead,.orow{display:grid;grid-template-columns:132px 1fr 82px 26px;gap:8px;align-items:center}
-  .ohead{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;color:var(--muted-2);
-         text-transform:uppercase;padding-bottom:9px;border-bottom:1px solid var(--line-soft);margin-bottom:11px}
-  .ohead span:nth-child(3){text-align:right}
-  .orow{margin-bottom:8px}
-  .orow input[type=date]{width:100%;font-size:var(--fs-md);padding:7px 8px}
-  .orow input[type=text]{width:100%;font-family:var(--sans);font-size:var(--fs-md);text-align:left;padding:7px 9px}
-  .orow input[type=number]{width:100%;font-size:var(--fs-md);padding:7px 8px}
-  .orow input.neg{color:var(--rose)}
-  .oempty{font-size:var(--fs-md);color:var(--muted-2);padding:2px 0 4px}
-  [hidden]{display:none!important}
-
-  /* recurring expenses */
-  .xhead,.xrow{display:grid;grid-template-columns:1fr 78px 112px 26px;gap:8px;align-items:center}
-  .xhead{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;color:var(--muted-2);
-         text-transform:uppercase;padding-bottom:9px;border-bottom:1px solid var(--line-soft);margin-bottom:11px}
-  .xhead span:nth-child(2){text-align:right}
-  .xrow{margin-bottom:8px}
-  .xrow input[type=text]{width:100%;font-family:var(--sans);font-size:var(--fs-md);text-align:left;padding:7px 9px}
-  .xrow input[type=number]{width:100%;font-size:var(--fs-md);padding:7px 8px;color:var(--orange)}
-  select{background:var(--surface);border:1px solid var(--line);border-radius:8px;color:var(--text);
-         font-family:var(--sans);font-size:var(--fs-md);padding:7px 8px;width:100%;cursor:pointer;
-         transition:border-color .14s,box-shadow .14s}
-  select:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px var(--focus)}
-
-  /* skipped weeks */
-  .skiph{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;color:var(--muted-2);
-         text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;gap:10px;
-         margin-top:16px;padding-top:14px;border-top:1px solid var(--line-soft)}
-  .skiph em{font-style:normal;letter-spacing:0;text-transform:none;color:var(--gold);font-variant-numeric:tabular-nums}
-  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-  .chip{background:transparent;border:1px solid var(--line);border-radius:999px;color:var(--muted);
-        font-family:var(--mono);font-size:var(--fs-sm);font-variant-numeric:tabular-nums;padding:4px 10px;
-        cursor:pointer;transition:border-color .14s,color .14s,background .14s}
-  .chip:hover{border-color:var(--gold-dim);color:var(--gold)}
-  .chip:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-  .chip[aria-pressed=true]{border-color:var(--gold);color:var(--gold);background:var(--chip-on);text-decoration:line-through}
-  .skipnote{font-size:var(--fs-sm);color:var(--muted-2);margin-top:9px;line-height:1.5}
-  .btn{flex:1;background:transparent;border:1px dashed var(--line);border-radius:9px;color:var(--muted);
-       font-family:var(--sans);font-size:var(--fs-md);padding:11px;cursor:pointer;transition:border-color .14s,color .14s}
-  .btn:hover{border-color:var(--gold-dim);color:var(--gold)}
-  .btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-
-  textarea{width:100%;min-height:100px;resize:vertical;font-size:var(--fs-sm);line-height:1.65;
-           margin-top:12px;display:none}
-  textarea.open{display:block}
-  .parsemsg{font-size:var(--fs-md);margin-top:10px;color:var(--mint);min-height:1em}
-  .parsemsg.bad{color:var(--rose)}
-  .parsemsg .diag{display:block;margin-top:5px;font-size:var(--fs-sm);color:var(--muted-2);line-height:1.5}
-
-  .check{display:flex;align-items:center;gap:10px;padding-top:15px;margin-top:4px;border-top:1px solid var(--line-soft)}
-  .check input{width:16px;height:16px;accent-color:var(--gold);flex-shrink:0}
-  .check label{font-size:var(--fs-base);color:var(--muted);cursor:pointer}
-
-  .chartbox{position:relative}
-  #chart{position:relative}
-  svg{display:block;width:100%;height:auto;overflow:visible;touch-action:pan-y;cursor:crosshair}
-  .tip{position:absolute;z-index:2;pointer-events:none;min-width:150px;max-width:240px;
-       background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:9px 11px;
-       font-size:var(--fs-sm);color:var(--muted);line-height:1.5;box-shadow:var(--shadow)}
-  .tip b{display:block;font-family:var(--mono);font-size:var(--fs-md);color:var(--text);font-weight:600;
-         font-variant-numeric:tabular-nums}
-  .tip b small{font-weight:400;color:var(--muted-2);margin-left:6px;font-size:var(--fs-micro)}
-  .tip .tbal{font-family:var(--mono);color:var(--text);font-variant-numeric:tabular-nums;margin:2px 0 5px}
-  .tip ul{list-style:none;margin:0;padding:0}
-  .tip li{display:flex;align-items:center;gap:7px;font-variant-numeric:tabular-nums;white-space:nowrap}
-  .tip li em{font-style:normal;color:var(--muted-2);overflow:hidden;text-overflow:ellipsis}
-  .tip .swatch{width:9px;height:9px;border-radius:50%}
-  .tip .none{color:var(--muted-2)}
-  .legend{display:flex;flex-wrap:wrap;gap:18px;margin-top:18px;font-size:var(--fs-md);color:var(--muted)}
-  .legend span{display:flex;align-items:center;gap:7px}
-  .swatch{width:13px;height:2.5px;border-radius:2px;flex-shrink:0}
-
-  /* scenarios */
-  .scen{width:100%;border-collapse:collapse}
-  .scen th{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;text-transform:uppercase;
-           color:var(--muted-2);font-weight:500;text-align:right;padding:0 0 10px;
-           border-bottom:1px solid var(--line-soft);white-space:nowrap}
-  .scen th:first-child{text-align:left}
-  .scen td{font-family:var(--mono);font-size:var(--fs-base);font-variant-numeric:tabular-nums;text-align:right;
-           padding:10px 0;border-bottom:1px solid var(--line-soft);color:var(--text);white-space:nowrap}
-  .scen td:first-child{text-align:left;color:var(--muted);font-family:var(--sans)}
-  .scen tr:last-child td{border-bottom:0}
-  .scen tr.now td,.scen tr.now td:first-child{color:var(--gold)}
-  .scen tr.now td:first-child::after{content:"현재";font-family:var(--mono);font-size:10px;
-    letter-spacing:.06em;color:var(--ink);background:var(--gold);border-radius:4px;
-    padding:2px 6px;margin-left:8px;vertical-align:1px}
-  .scen td.inc{color:var(--muted)}
-  .scen tr.cheap td,.scen tr.cheap td:first-child{color:var(--mint)}
-  .scen .d-up{color:var(--mint)} .scen .d-dn{color:var(--rose)} .scen .d-0{color:var(--muted-2)}
-
-  /* sensitivity */
-  .subh{font-size:var(--fs-md);color:var(--muted-2);margin-bottom:16px;line-height:1.5}
-  .subh.mt{margin-top:26px;padding-top:20px;border-top:1px solid var(--line-soft)}
-  .tor-row{display:grid;grid-template-columns:104px 1fr 100px;gap:14px;align-items:center;margin-bottom:13px}
-  .tor-row:last-child{margin-bottom:0}
-  .tor-name{font-size:var(--fs-base);color:var(--text);line-height:1.3}
-  .tor-name i{display:block;font-style:normal;font-size:var(--fs-micro);
-              color:var(--muted-2);margin-top:2px;font-variant-numeric:tabular-nums}
-  .tor-track{position:relative;height:8px;background:var(--surface);border-radius:4px}
-  .tor-track::before{content:"";position:absolute;left:50%;top:-4px;bottom:-4px;width:1px;background:var(--line)}
-  .tor-bar{position:absolute;top:0;height:100%;border-radius:3px;transition:width .25s ease}
-  .tor-bar.good{background:var(--mint)}
-  .tor-bar.bad{background:var(--rose)}
-  .tor-val{font-family:var(--mono);font-size:var(--fs-md);text-align:right;color:var(--muted);
-           font-variant-numeric:tabular-nums}
-  .tor-val b{font-weight:500;color:var(--mint)}
-  .tor-val s{text-decoration:none;color:var(--rose)}
-  .tor-val em{font-style:normal;color:var(--muted-2);font-size:var(--fs-sm)}
-
-  .thu{color:var(--gold);cursor:help;border-bottom:1px dotted var(--gold-dim)}
-  .hint{font-size:var(--fs-md);color:var(--muted);line-height:1.65;margin-top:16px;
-        padding:12px 14px;background:var(--surface);border-radius:9px}
-  .hint b{color:var(--gold);font-weight:600;font-variant-numeric:tabular-nums}
-
-  .foot{margin-top:34px;padding-top:18px;border-top:1px solid var(--line-soft);font-size:var(--fs-sm);
-        color:var(--muted-2);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
-  .foot a{color:var(--muted);text-decoration:none;border-bottom:1px solid var(--line)}
-  .foot a:hover{color:var(--gold);border-color:var(--gold-dim)}
-
-  @media (max-width:900px){
-    body{padding:26px 16px 56px}
-    .grid{grid-template-columns:1fr}
-    :root{--fs-display:28px}
-    .tools{position:static;margin-top:18px}
-  }
-  @media (max-width:560px){
-    .scen .inc{display:none}
-    .rhead,.rrow{grid-template-columns:1fr 76px 76px 24px;gap:6px}
-    .ohead,.orow{grid-template-columns:118px 1fr 72px 24px;gap:6px}
-    .xhead,.xrow{grid-template-columns:1fr 68px 104px 24px;gap:6px}
-    .tor-row{grid-template-columns:92px 1fr 88px;gap:10px}
-    .panel{padding:18px 16px}
-    input[type=number]{width:100px}
-    input[type=date]{width:148px}
-  }
-  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
-</style>
+<link rel="stylesheet" href="app.css">
 </head>
 <body>
-<div class="wrap">
+<div class="app">
 
-  <header class="hero">
-    <div class="eyebrow">Meso Projection</div>
-    <h1>메소 적립 계산기</h1>
-    <p>주간보스는 목요일, 월간보스는 매월 1일에 한 번에 들어옴. 사냥만 매일 쌓임. 그래서 잔고는 매끄럽게 늘지 않고 계단으로 올라감.</p>
-    <div class="tools">
-      <a class="tool" href="ledger.html" title="실제 수입·지출 기록">장부</a>
-      <button class="tool" id="btn-theme" title="라이트/다크 테마 전환" aria-label="테마 전환">◐ 테마</button>
-      <button class="tool" id="btn-share" title="현재 설정이 담긴 링크 복사">링크 복사</button>
-      <button class="tool" id="btn-image" title="도달 날짜·월 수익이 담긴 결과 카드를 PNG 로 저장">이미지 저장</button>
-      <button class="tool" id="btn-reset" title="저장된 값 지우고 기본값으로">초기화</button>
-    </div>
-
-    <div class="readout">
-      <div class="cell">
-        <div class="k">목표 도달</div>
-        <div class="v gold" id="out-date">—</div>
-        <div class="s" id="out-days">—</div>
-      </div>
-      <div class="cell">
-        <div class="k">목표 날짜 예상 잔고</div>
-        <div class="v mint" id="out-bal">—</div>
-        <div class="s" id="out-bal-sub">—</div>
-      </div>
-      <div class="cell">
-        <div class="k">월 평균 수익</div>
-        <div class="v" id="out-month">—</div>
-        <div class="s" id="out-day">—</div>
-      </div>
-    </div>
+  <header class="top">
+    <a class="brand" href="#home"><img src="icon.svg" alt="">메소</a>
+    <button class="icon-btn" id="btn-sync" hidden title="넥슨 Open API 동기화" aria-label="동기화">
+      <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/></svg>
+    </button>
+    <a class="icon-btn" id="btn-settings" href="#settings" title="설정" aria-label="설정">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>
+    </a>
   </header>
 
-  <div class="grid">
-    <div>
-      <section class="panel">
-        <h2>캐릭터 <em id="roster-sum">—</em></h2>
-        <div class="rhead"><span>캐릭터</span><span>주간보스</span><span>월간보스</span><span></span></div>
-        <div id="roster"></div>
-        <div class="btnrow">
-          <button class="btn" id="btn-add">캐릭터 추가</button>
-          <button class="btn" id="btn-paste" aria-expanded="false" aria-controls="paste">정산표 붙여넣기</button>
-        </div>
-        <textarea id="paste" aria-label="maplescouter 캐릭터 목록 붙여넣기" placeholder="maplescouter 보스 정산 페이지의 캐릭터 목록을 통째로 드래그해서 붙여넣으면 이름·주간·월간이 자동으로 잡힘.&#10;&#10;#1제네시스 2차 해방&#10;베라&#10;호야시치&#10;Lv.289 소마&#10;주간수익&#10;2,131,700,000&#10;월간수익&#10;665,000,000"></textarea>
-        <div class="parsemsg" id="parsemsg"></div>
-        <div class="skiph"><span>주보 건너뛸 주</span><em id="skip-sum">—</em></div>
-        <div class="chips" id="skip-chips" role="group" aria-label="주간보스를 건너뛸 목요일"></div>
-        <div class="skipnote">못 도는 주의 목요일을 누르면 그 주 주간보스 수입이 0이 됨. 도달 날짜가 얼마나 밀리는지는 위 결과에 표시됨.</div>
-      </section>
+  <nav class="tabs" aria-label="화면">
+    <a href="#home" data-view="home"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v8.5a1.5 1.5 0 0 1-1.5 1.5H15v-6H9v6H5.5A1.5 1.5 0 0 1 4 19.5z"/></svg>홈</a>
+    <a href="#ledger" data-view="ledger"><svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h8M4 6h.01M4 12h.01M4 18h.01"/></svg>장부</a>
+    <a href="#calc" data-view="calc"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M8.5 7.5h7M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 16h.01M12 16h.01M15.5 16h.01"/></svg>계산기</a>
+    <a href="#chars" data-view="chars"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.2c2.8.4 5 2.9 5 5.8"/></svg>캐릭터</a>
+  </nav>
 
-      <section class="panel">
-        <h2>사냥</h2>
-        <div class="row">
-          <label for="in-rate">재획 시급 <i>사냥 1시간당</i></label>
-          <div class="field"><button class="mini" id="btn-ledger-rate" hidden>실측</button><input type="number" id="in-rate" step="0.01" value="3"><span class="unit">억</span></div>
-        </div>
-        <div class="row">
-          <label for="in-hours">일 사냥 시간</label>
-          <div class="field"><input type="number" id="in-hours" step="0.5" min="0" max="24" value="2"><span class="unit">시간</span></div>
-        </div>
-        <div class="check">
-          <input type="checkbox" id="in-skip" checked>
-          <label for="in-skip">목요일은 보스런으로 사냥 못 함</label>
+  <!-- ===================== 홈 ===================== -->
+  <main class="view" id="v-home">
+    <section class="card" id="h-onboard" hidden>
+      <h3>시작하기</h3>
+      <ol class="steps" id="h-steps"></ol>
+    </section>
+
+    <section class="card">
+      <div class="lbl">현재 잔고</div>
+      <div class="big-num gold" id="h-bal">—</div>
+      <div class="sub" id="h-sub"></div>
+      <div class="pills" id="h-pills"></div>
+    </section>
+
+    <section class="card" id="h-goal-card">
+      <h3>목표 <a href="#calc">계산기 →</a></h3>
+      <div id="h-goal"></div>
+    </section>
+
+    <section class="card" id="h-boss-card">
+      <h3>이번 주 보스 <small id="h-boss-sub"></small></h3>
+      <div class="list" id="h-boss"></div>
+    </section>
+
+    <section class="card">
+      <h3>최근 기록 <a href="#ledger">전체 →</a></h3>
+      <div class="list" id="h-recent"></div>
+    </section>
+  </main>
+
+  <!-- ===================== 장부 ===================== -->
+  <main class="view" id="v-ledger" hidden>
+    <nav class="seg subtabs" aria-label="장부">
+      <a href="#ledger" data-sub="log">기록</a>
+      <a href="#ledger/stats" data-sub="stats">통계</a>
+      <a href="#ledger/budget" data-sub="budget">예산</a>
+    </nav>
+
+    <div id="l-log">
+      <div class="mnav">
+        <button class="icon-btn" id="m-prev" aria-label="이전 달"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+        <strong id="m-label">—</strong>
+        <button class="icon-btn" id="m-next" aria-label="다음 달"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+      </div>
+      <div class="msum" id="m-sum"></div>
+      <div class="chips filters" id="filters" role="group" aria-label="보기">
+        <button class="chip" data-f="all" aria-pressed="true">전체</button>
+        <button class="chip" data-f="in" aria-pressed="false">수입</button>
+        <button class="chip" data-f="out" aria-pressed="false">지출</button>
+      </div>
+      <div id="list"></div>
+    </div>
+
+    <div class="stack" id="l-stats" hidden>
+      <section class="card">
+        <h3>잔고 흐름 <small id="chart-sub"></small></h3>
+        <div class="chart" id="chart"></div>
+        <div class="legend" id="legend">
+          <span><i class="sw"></i>실제 잔고</span>
+          <span id="lg-plan"><i class="sw dash"></i>계산기 계획</span>
         </div>
       </section>
-
-      <section class="panel">
-        <h2>기간 · 목표</h2>
-        <div class="row">
-          <label for="in-start">시작일 <i>당일 수익부터 포함</i></label>
-          <div class="field">
-            <button class="mini" id="btn-today" title="시작일을 오늘로 맞춤">오늘</button>
-            <input type="date" id="in-start">
+      <section class="card">
+        <h3>
+          <span>수입과 지출</span>
+          <div class="seg sm" id="speriod" role="group" aria-label="통계 기간">
+            <button data-p="month" aria-pressed="true">이번 달</button>
+            <button data-p="28" aria-pressed="false">4주</button>
+            <button data-p="all" aria-pressed="false">전체</button>
           </div>
-        </div>
-        <div class="row">
-          <label for="in-have">시작 보유 메소</label>
-          <div class="field"><button class="mini" id="btn-ledger" hidden>장부</button><input type="number" id="in-have" step="1" value="0"><span class="unit">억</span></div>
-        </div>
-        <div class="row">
-          <label for="in-goal">목표 메소</label>
-          <div class="field"><input type="number" id="in-goal" step="1" value="781.25"><span class="unit">억</span></div>
-        </div>
-        <div class="row">
-          <label for="in-target">목표 날짜</label>
-          <div class="field"><input type="date" id="in-target"></div>
-        </div>
+        </h3>
+        <div class="kpis" id="kpis"></div>
+        <div class="note" id="kpi-note" style="margin-top:10px"></div>
       </section>
+      <div class="grid2">
+        <section class="card"><h3>어디서 벌었나</h3><div class="bars" id="b-in"></div></section>
+        <section class="card"><h3>어디에 썼나</h3><div class="bars" id="b-out"></div></section>
+      </div>
+      <div class="grid2">
+        <section class="card"><h3>캐릭터별 수입</h3><div class="bars" id="b-char"></div></section>
+        <section class="card"><h3>큰 지출</h3><div id="b-big"></div></section>
+      </div>
+      <section class="card">
+        <h3>목표 <small id="goal-sub"></small></h3>
+        <div id="goal"></div>
+      </section>
+      <section class="card">
+        <h3>주차별 <small>목요일 리셋 기준</small></h3>
+        <table class="tbl">
+          <thead><tr><th>주차</th><th class="wide">수입</th><th class="wide">지출</th><th>순익</th><th>잔고</th></tr></thead>
+          <tbody id="weeks"></tbody>
+        </table>
+      </section>
+      <section class="card">
+        <h3>실측 vs 계산기 <small id="cmp-sub"></small></h3>
+        <table class="tbl">
+          <thead><tr><th>항목</th><th>장부 실측</th><th>계산기</th></tr></thead>
+          <tbody id="cmp"></tbody>
+        </table>
+      </section>
+    </div>
 
-      <section class="panel">
-        <h2>일회성 항목 <em id="once-sum">—</em></h2>
-        <div class="ohead"><span>날짜</span><span>내용</span><span>억</span><span></span></div>
+    <div class="stack" id="l-budget" hidden>
+      <section class="card">
+        <h3 id="bud-title">이번 달 지출</h3>
+        <div class="big-num"><span id="bud-spent">—</span><small id="bud-of"></small></div>
+        <div class="meter" id="bud-meter"><div class="fl" id="bud-fill"></div><div class="pace" id="bud-pace"></div></div>
+        <div class="bud-status" id="bud-status"></div>
+      </section>
+      <section class="card">
+        <h3>항목별 <button class="btn sm" id="bud-edit">예산 정하기</button></h3>
+        <div id="budget"></div>
+        <div class="note" style="margin-top:12px">막대 위 세로선은 오늘까지 써도 되는 만큼. 막대가 선을 넘으면 이 속도론 월말에 예산을 넘김.</div>
+      </section>
+    </div>
+  </main>
+
+  <!-- ===================== 계산기 ===================== -->
+  <main class="view" id="v-calc" hidden>
+    <section class="card">
+      <div class="lbl">목표 도달</div>
+      <div class="big-num gold" id="out-date">—</div>
+      <div class="sub" id="out-days"></div>
+      <div class="split">
+        <div><small>목표 날짜 예상 잔고</small><b id="out-bal">—</b><span id="out-bal-sub"></span></div>
+        <div><small>월 평균 순수익</small><b id="out-month">—</b><span id="out-day"></span></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>보스 수입 <a href="#chars">캐릭터 관리 →</a></h3>
+      <div id="c-income"></div>
+      <div class="sh-lbl" style="margin-top:16px">주보 건너뛸 주 <span id="skip-sum"></span></div>
+      <div class="chips" id="skip-chips" role="group" aria-label="주보 건너뛸 주"></div>
+    </section>
+
+    <section class="card">
+      <h3>사냥</h3>
+      <div class="field">
+        <label for="in-rate">재획 시급<small>사냥 1시간당</small></label>
+        <div class="ctl"><button class="btn sm" id="btn-ledger-rate" hidden>실측</button><input type="number" id="in-rate" step="0.01" value="3"><span class="unit">억</span></div>
+      </div>
+      <div class="field">
+        <label for="in-hours">하루 사냥 시간</label>
+        <div class="ctl"><input type="number" id="in-hours" step="0.5" min="0" max="24" value="2"><span class="unit">시간</span></div>
+      </div>
+      <label class="check"><input type="checkbox" id="in-skip" checked>목요일은 보스런으로 사냥 못 함</label>
+    </section>
+
+    <section class="card">
+      <h3>기간 · 목표</h3>
+      <div class="field">
+        <label for="in-start">시작일<small>당일 수익부터 포함</small></label>
+        <div class="ctl"><button class="btn sm" id="btn-today">오늘</button><input type="date" id="in-start"></div>
+      </div>
+      <div class="field">
+        <label for="in-have">시작 보유 메소</label>
+        <div class="ctl"><button class="btn sm" id="btn-ledger" hidden>장부</button><input type="number" id="in-have" step="1" value="0"><span class="unit">억</span></div>
+      </div>
+      <div class="field">
+        <label for="in-goal">목표 메소</label>
+        <div class="ctl"><input type="number" id="in-goal" step="1" value="781.25"><span class="unit">억</span></div>
+      </div>
+      <div class="field">
+        <label for="in-target">목표 날짜</label>
+        <div class="ctl"><input type="date" id="in-target"></div>
+      </div>
+    </section>
+
+    <div class="grid2">
+      <section class="card">
+        <h3>일회성 <small id="once-sum"></small></h3>
         <div id="once"></div>
-        <div class="btnrow">
-          <button class="btn" id="btn-once-add">항목 추가</button>
-        </div>
-        <div class="subh" style="margin:12px 0 0">이벤트 보상이나 아이템 판매처럼 특정 날짜에 한 번 들어오는 돈. 큐브·스타포스 같은 지출은 음수로 넣으면 그날 잔고에서 빠짐.</div>
+        <button class="btn sm dashed" id="btn-once-add" style="margin-top:12px">+ 추가</button>
       </section>
-
-      <section class="panel">
-        <h2>정기 지출 <em id="recur-sum">—</em></h2>
-        <div class="xhead"><span>내용</span><span>억</span><span>주기</span><span></span></div>
+      <section class="card">
+        <h3>정기 지출 <small id="recur-sum"></small></h3>
         <div id="recur"></div>
-        <div class="btnrow">
-          <button class="btn" id="btn-recur-add">지출 추가</button>
-        </div>
-        <div class="subh" style="margin:12px 0 0">재획비·큐브처럼 주기적으로 나가는 돈. 매주는 목요일에, 매월은 1일에 잔고에서 빠지고 월 평균 수익에서도 차감됨.</div>
+        <button class="btn sm dashed" id="btn-recur-add" style="margin-top:12px">+ 추가</button>
       </section>
     </div>
 
-    <div>
-      <section class="panel chartbox">
-        <h2>누적 잔고</h2>
-        <div id="chart"></div>
-        <div class="legend">
-          <span><i class="swatch" style="background:var(--gold)"></i>주간보스 (목)</span>
-          <span><i class="swatch" style="background:var(--rose)"></i>월간보스 (1일)</span>
-          <span><i class="swatch" style="background:var(--violet)"></i>사냥</span>
-          <span><i class="swatch" style="background:var(--mint)"></i>목표선</span>
-          <span id="legend-once" hidden><i class="swatch" style="background:var(--sky)"></i>일회성</span>
-          <span id="legend-expense" hidden><i class="swatch" style="background:var(--orange)"></i>지출</span>
-        </div>
-      </section>
+    <section class="card">
+      <h3>누적 잔고</h3>
+      <div class="chart calc-chart" id="c-chart"></div>
+      <div class="legend">
+        <span><i class="sw" style="background:var(--gold)"></i>주간보스 (목)</span>
+        <span><i class="sw" style="background:var(--rose)"></i>월간보스 (1일)</span>
+        <span><i class="sw" style="background:var(--violet)"></i>사냥</span>
+        <span id="legend-once" hidden><i class="sw" style="background:var(--sky)"></i>일회성</span>
+        <span id="legend-expense" hidden><i class="sw" style="background:var(--orange)"></i>지출</span>
+        <span><i class="sw" style="background:var(--mint)"></i>목표선</span>
+      </div>
+    </section>
 
-      <section class="panel">
-        <h2>사냥 시간별 시나리오 <em id="scen-goal">—</em></h2>
-        <table class="scen">
-          <thead>
-            <tr>
-              <th>일 사냥</th>
-              <th class="inc">월수익</th>
-              <th>도달</th>
-              <th>현재 대비</th>
-              <th title="사냥 1시간을 더 늘릴 때 당겨지는 일수">1h당</th>
-            </tr>
-          </thead>
-          <tbody id="scen"></tbody>
-        </table>
-      </section>
+    <section class="card">
+      <h3>사냥 시간별 시나리오 <small id="scen-goal"></small></h3>
+      <table class="tbl scen">
+        <thead><tr><th>하루 사냥</th><th class="wide">월수익</th><th>도달</th><th>지금 대비</th><th title="사냥 1시간을 더 늘릴 때 당겨지는 일수">1h당</th></tr></thead>
+        <tbody id="scen"></tbody>
+      </table>
+    </section>
 
-      <section class="panel">
-        <h2>민감도 <em id="sens-base">—</em></h2>
-        <div class="subh">수입원을 ±10% 흔들면 도달일이 얼마나 움직이나 (마지막 줄만 켜고 끔)</div>
-        <div id="tor"></div>
-        <div class="hint" id="tor-hint" hidden></div>
-        <div class="subh mt">도달을 하루 당기려면 각각 얼마가 필요한가</div>
-        <table class="scen">
-          <thead>
-            <tr><th>레버</th><th>필요 증가분</th><th>월 환산</th></tr>
-          </thead>
-          <tbody id="cost"></tbody>
-        </table>
-      </section>
+    <section class="card">
+      <h3>민감도 <small id="sens-base"></small></h3>
+      <div class="subh">수입원을 ±10% 흔들면 도달일이 얼마나 움직이나 (마지막 줄만 켜고 끔)</div>
+      <div id="tor"></div>
+      <div class="callout" id="tor-hint" hidden></div>
+      <div class="subh mt">도달을 하루 당기려면 각각 얼마가 필요한가</div>
+      <table class="tbl scen">
+        <thead><tr><th>레버</th><th>필요 증가분</th><th>월 환산</th></tr></thead>
+        <tbody id="cost"></tbody>
+      </table>
+    </section>
 
+    <div class="btns stretch">
+      <button class="btn" id="btn-share" title="계산기 설정과 캐릭터가 담긴 링크">링크 복사</button>
+      <button class="btn" id="btn-image" title="도달 날짜·월 수익이 담긴 결과 카드">이미지 저장</button>
     </div>
-  </div>
+  </main>
 
-  <footer class="foot">
-    <span>입력값은 이 브라우저에만 저장됨. 링크 복사를 쓰면 설정이 주소에 실려서 다른 기기로 넘어감.</span>
-    <a href="https://maplescouter.com/ko/boss-income" target="_blank" rel="noopener">maplescouter 보스 정산 &rarr;</a>
-  </footer>
+  <!-- ===================== 캐릭터 ===================== -->
+  <main class="view" id="v-chars" hidden>
+    <section class="card">
+      <h3>캐릭터 <small id="ch-sum"></small></h3>
+      <div class="list" id="ch-list"></div>
+    </section>
+    <div class="btns stretch">
+      <button class="btn" id="ch-add">+ 직접 추가</button>
+      <button class="btn" id="ch-paste-btn" aria-expanded="false" aria-controls="ch-paste-box">정산표 붙여넣기</button>
+      <button class="btn" id="ch-api-btn">Open API로 불러오기</button>
+    </div>
+    <section class="card" id="ch-paste-box" hidden>
+      <h3>maplescouter 정산표 <a href="https://maplescouter.com/ko/boss-income" target="_blank" rel="noopener">열기 ↗</a></h3>
+      <p class="note">보스 정산 페이지의 캐릭터 목록을 통째로 드래그해 붙여넣으면, 같은 이름은 주보·월보만 갱신하고 없는 캐릭터는 추가함.</p>
+      <textarea id="paste" aria-label="maplescouter 캐릭터 목록 붙여넣기" style="margin-top:10px" placeholder="#1제네시스 2차 해방&#10;베라&#10;호야시치&#10;Lv.289 소마&#10;주간수익&#10;2,131,700,000&#10;월간수익&#10;665,000,000"></textarea>
+      <div class="parsemsg" id="parsemsg"></div>
+    </section>
+    <p class="note">주보·월보는 maplescouter 정산값 그대로(한 달 = 4주 환산 전 원본). 계산기와 장부의 보스 수입 · 홈의 보스 체크가 전부 여기 값을 씀.</p>
+  </main>
+
+  <!-- ===================== 설정 ===================== -->
+  <main class="view" id="v-settings" hidden>
+    <div class="vhead"><h2>설정</h2></div>
+
+    <section class="card">
+      <h3>테마</h3>
+      <div class="seg" id="theme-seg" role="group" aria-label="테마">
+        <button data-theme="system" aria-pressed="false">시스템</button>
+        <button data-theme="light" aria-pressed="false">라이트</button>
+        <button data-theme="dark" aria-pressed="false">다크</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>넥슨 Open API <small id="api-state">키 없음</small></h3>
+      <p class="note">키를 넣으면 <b>잠재능력 · 에디셔널 재설정</b> 지출이 날짜 · 캐릭터별로 장부에 자동 기록되고, 캐릭터 탭에서 계정 캐릭터를 불러올 수 있음. 재설정 금액은 비용표 추정치(≈)라 강화 전후로 잔고 확인을 해 두면 오차가 미기록으로 드러남.</p>
+      <div class="field" style="margin-top:8px">
+        <label for="api-key">API 키<small>이 기기에만 저장 · 백업에 안 실림</small></label>
+        <div class="ctl"><input type="password" id="api-key" autocomplete="off" spellcheck="false" placeholder="test_…"></div>
+      </div>
+      <div class="field" id="r-api-from">
+        <label for="api-from">처음 가져올 날짜<small>첫 동기화만 · 2024-01-25부터</small></label>
+        <div class="ctl"><input type="date" id="api-from"></div>
+      </div>
+      <div class="btns" style="margin-top:10px">
+        <button class="btn primary" id="api-sync">지금 동기화</button>
+        <button class="btn danger" id="api-forget">키 지우기</button>
+        <a class="btn" href="https://openapi.nexon.com/ko/my-application/" target="_blank" rel="noopener">키 발급 ↗</a>
+      </div>
+      <div class="apilog" id="api-log" aria-live="polite"></div>
+    </section>
+
+    <section class="card">
+      <h3>데이터</h3>
+      <p class="note">전부 이 브라우저에만 저장됨. 기기를 바꾸거나 캐시를 지우기 전에 백업해 둘 것. 백업 한 파일에 장부 · 계산기 · 캐릭터가 다 들어감.</p>
+      <div class="btns" style="margin-top:12px">
+        <button class="btn" id="btn-backup">백업 (JSON)</button>
+        <button class="btn" id="btn-restore">백업 불러오기</button>
+        <button class="btn" id="btn-csv">장부 CSV</button>
+      </div>
+      <input type="file" id="file" accept="application/json,.json" hidden>
+    </section>
+
+    <section class="card">
+      <h3>계산기</h3>
+      <p class="note">계산기 입력(시급 · 기간 · 목표 · 일회성 · 정기 지출)만 기본값으로 되돌림. 장부와 캐릭터는 그대로.</p>
+      <div class="btns" style="margin-top:12px"><button class="btn danger" id="btn-calc-reset">계산기 초기화</button></div>
+    </section>
+
+    <p class="foot">Data based on NEXON Open API<br><a href="https://github.com/yh-yeop/meso_calcul" target="_blank" rel="noopener">GitHub</a></p>
+  </main>
 </div>
 
-<script id="meso-core">
-/* 순수 계산 로직. DOM을 만지지 않는다.
-   test/core.test.js 가 이 <script> 블록을 그대로 추출해 Node에서 검사한다.
-   브라우저에서는 전역 MesoCore 로, Node에서는 module.exports 로 노출된다. */
-var MesoCore = (function(){
-  "use strict";
-
-  var WEEK_PER_MONTH = 365.2425 / 12 / 7;
-  var DAYS_PER_MONTH = 365.2425 / 12;
-  var MAX_DAYS = 3650;
-
-  /* ---------- paste parser ----------
-     maplescouter 캐릭터 목록을 통째로 긁으면 캐릭터마다 이런 블록이 나옴:
-
-       #1제네시스 2차 해방
-       베라
-       호야시치            <- 이름 (Lv. 줄 바로 위)
-       Lv.289 소마
-       57,101
-       주간수익
-       2,131,700,000       <- 원 단위 메소
-       월간수익
-       665,000,000
-       🪙 12 / sole 1.51 / de 16   <- 뒤에 붙는 잡다한 숫자
-
-     그래서 #N 으로 블록을 자르고, 블록 안에서 주간수익/월간수익 라벨
-     바로 뒤 숫자만 읽는다. 앞뒤 UI 텍스트는 자연스럽게 버려짐.       */
-
-  // "2,131,700,000"(원) / "21억 3170만" / "21.317"(억) 을 전부 억 단위로
-  function parseMeso(s){
-    s = String(s).trim();
-    var me = s.match(/([\d,]+(?:\.\d+)?)\s*억/);
-    var mm = s.match(/([\d,]+(?:\.\d+)?)\s*만/);
-    if (me || mm){
-      return (me ? parseFloat(me[1].replace(/,/g,"")) : 0) +
-             (mm ? parseFloat(mm[1].replace(/,/g,"")) : 0) / 10000;
-    }
-    var plain = s.match(/^([\d,]+(?:\.\d+)?)$/);
-    if (!plain) return null;
-    var v = parseFloat(plain[1].replace(/,/g,""));
-    if (!isFinite(v)) return null;
-    // 사이트는 메소를 원 단위로 찍음. 주 수익이 1만억일 리도, 1만 메소일 리도 없음
-    return v >= 10000 ? v / 1e8 : v;
-  }
-
-  // from 부터 몇 줄 안에서 처음 나오는 숫자
-  function nextMeso(lines, from){
-    for (var i = from; i < lines.length && i < from + 3; i++){
-      var v = parseMeso(lines[i]);
-      if (v !== null) return v;
-    }
-    return 0;
-  }
-
-  function readBlock(block){
-    var name = "", weekly = 0, monthly = 0;
-    for (var i = 0; i < block.length; i++){
-      var l = block[i];
-      if (!name && i > 0 && /^Lv\.?\s*\d+/i.test(l)) name = block[i-1];
-      if (/주간\s*수익/.test(l))      weekly  = nextMeso(block, i+1);
-      else if (/월간\s*수익/.test(l)) monthly = nextMeso(block, i+1);
-    }
-    if (!name) name = block[2] || block[1] || "";
-    return {name:name.replace(/^#\d+\s*/, ""), weekly:weekly, monthly:monthly};
-  }
-
-  // 라벨-값 쌍만 있는 형식 (정산표 일부만 긁었을 때)
-  function readPairs(lines){
-    var chars = [], pend = {}, mode = null;
-    lines.forEach(function(line){
-      if (/합계/.test(line)){ mode = null; return; }
-      if (/주간/.test(line) && /수익/.test(line)){ mode = "weekly";  return; }
-      if (/월간/.test(line) && /수익/.test(line)){ mode = "monthly"; return; }
-      if (!mode) return;
-      var v = parseMeso(line);
-      if (v === null) return;
-      pend[mode] = v;
-      mode = null;
-      if (pend.weekly !== undefined && pend.monthly !== undefined){
-        chars.push({name:"", weekly:pend.weekly, monthly:pend.monthly});
-        pend = {};
-      }
-    });
-    return chars;
-  }
-
-  function parsePaste(text){
-    var lines = text.split(/\r?\n/).map(function(l){ return l.trim(); }).filter(Boolean);
-
-    var starts = [];
-    lines.forEach(function(l, i){ if (/^#\d+/.test(l)) starts.push(i); });
-
-    if (starts.length){
-      return starts.map(function(s, k){
-        return readBlock(lines.slice(s, k + 1 < starts.length ? starts[k+1] : lines.length));
-      }).filter(function(c){ return c.weekly > 0 || c.monthly > 0; });
-    }
-    return readPairs(lines);
-  }
-
-  /* parsePaste 가 빈 배열을 돌려줬을 때, 텍스트에서 어떤 단서를 찾았는지.
-     사이트 형식이 바뀌면 어디서 막혔는지 바로 보이게 한다. */
-  function diagnosePaste(text){
-    var lines = String(text || "").split(/\r?\n/).map(function(l){ return l.trim(); }).filter(Boolean);
-    var d = {lines:lines.length, blocks:0, weeklyLabels:0, monthlyLabels:0,
-             weeklyValues:0, monthlyValues:0, levelLines:0, numbers:0, hints:[]};
-    lines.forEach(function(l, i){
-      if (/^#\d+/.test(l)) d.blocks++;
-      if (/^Lv\.?\s*\d+/i.test(l)) d.levelLines++;
-      if (parseMeso(l) !== null) d.numbers++;
-      var w = /주간\s*수익/.test(l), m = !w && /월간\s*수익/.test(l);
-      if (w){ d.weeklyLabels++;  if (hasMesoAfter(lines, i+1)) d.weeklyValues++; }
-      if (m){ d.monthlyLabels++; if (hasMesoAfter(lines, i+1)) d.monthlyValues++; }
-    });
-    var h = d.hints;
-    if (!d.lines){
-      h.push("빈 텍스트");
-    } else if (!d.weeklyLabels && !d.monthlyLabels){
-      h.push("'주간수익'·'월간수익' 라벨이 없음 — 캐릭터 목록이 아닌 곳을 긁은 듯함" +
-             (d.numbers ? " (숫자 줄 " + d.numbers + "개는 있음)" : ""));
-    } else {
-      if (d.weeklyLabels && !d.weeklyValues)
-        h.push("'주간수익' 라벨 " + d.weeklyLabels + "개 뒤 3줄 안에서 숫자를 못 읽음 — 라벨과 값이 같은 줄에 있거나 형식이 바뀐 듯함");
-      if (d.monthlyLabels && !d.monthlyValues)
-        h.push("'월간수익' 라벨 " + d.monthlyLabels + "개 뒤 3줄 안에서 숫자를 못 읽음");
-      if (d.weeklyValues && !d.monthlyLabels)
-        h.push("'월간수익' 라벨이 없어 주간·월간 쌍을 못 만듦 — 월간보스가 0이어도 라벨까지 같이 긁어야 함");
-      if (d.blocks && d.weeklyValues + d.monthlyValues > 0)
-        h.push("#N 블록 " + d.blocks + "개는 찾았지만 수익이 전부 0 — 0인 캐릭터는 제외됨");
-      else if (!d.blocks && d.weeklyValues && d.monthlyValues)
-        h.push("#N 블록 없이 라벨-값 쌍만 있는데 짝이 안 맞음 — 주간·월간이 번갈아 나와야 함");
-    }
-    d.summary = "#N 블록 " + d.blocks + "개 · '주간수익' " + d.weeklyLabels + "개(값 " + d.weeklyValues +
-                ") · '월간수익' " + d.monthlyLabels + "개(값 " + d.monthlyValues + ") · Lv 줄 " + d.levelLines + "개";
-    return d;
-  }
-  function hasMesoAfter(lines, from){
-    for (var i = from; i < lines.length && i < from + 3; i++) if (parseMeso(lines[i]) !== null) return true;
-    return false;
-  }
-
-  function fmtEok(v){
-    if (!isFinite(v)) return "—";
-    var neg = v < 0; v = Math.abs(v); var out;
-    if (v >= 10000){
-      var jo = Math.floor(v/10000), rest = Math.round(v - jo*10000);
-      out = jo + "조" + (rest > 0 ? " " + rest.toLocaleString("ko-KR") + "억" : "");
-    } else {
-      out = v.toLocaleString("ko-KR", {maximumFractionDigits: v < 100 ? 1 : 0}) + "억";
-    }
-    return (neg ? "-" : "") + out;
-  }
-  function fmtShort(v){
-    if (v >= 10000) return (v/10000).toFixed(1) + "조";
-    return Math.round(v).toLocaleString("ko-KR");
-  }
-  var DOW = ["일","월","화","수","목","금","토"];
-  function parseDate(str){
-    if (!str) return null;
-    var p = str.split("-"); if (p.length !== 3) return null;
-    var d = new Date(+p[0], +p[1]-1, +p[2]);
-    // 2026-13-99 같은 값은 Date가 다음 해로 넘겨 버리므로 되돌려 확인한다
-    if (isNaN(d.getTime()) || d.getMonth() !== +p[1]-1 || d.getDate() !== +p[2]) return null;
-    return d;
-  }
-  function toISO(d){
-    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" +
-           String(d.getDate()).padStart(2,"0");
-  }
-  function addDays(d,n){ var x = new Date(d.getTime()); x.setDate(x.getDate()+n); return x; }
-  function dayOffset(start, d){ return Math.round((d - start) / 86400000); }
-
-  // 시작일 이후(당일 포함) 다가오는 목요일 n개
-  function nextThursdays(start, n){
-    var out = [], d = new Date(start.getTime());
-    d.setDate(d.getDate() + ((4 - d.getDay()) + 7) % 7);
-    for (var i = 0; i < n; i++){ out.push(d); d = addDays(d, 7); }
-    return out;
-  }
-  // 건너뛸 주(ISO 날짜 배열)를 simulate 가 쓰는 {dayOffset:true} 집합으로. 시작일 이전은 버림
-  function skipOffsets(start, isoList){
-    var map = null;
-    (isoList || []).forEach(function(iso){
-      var d = parseDate(iso); if (!d) return;
-      var off = dayOffset(start, d);
-      if (off < 0 || off >= MAX_DAYS) return;
-      if (!map) map = {};
-      map[off] = true;
-    });
-    return map;
-  }
-
-  // 정기 지출 [{label, amount(억), every:"w"|"m"}] 을 주기별 합계로
-  function recurTotals(list){
-    var w = 0, m = 0;
-    (list || []).forEach(function(r){
-      var a = parseFloat(r.amount);
-      if (!isFinite(a) || a <= 0) return;
-      if (r.every === "m") m += a; else w += a;
-    });
-    return {weekly:w, monthly:m};
-  }
-
-  /* ---------- simulation ----------
-     cfg: weekly, monthly, rate, hours, skipThu, have, goal, start
-          once       {dayOffset: 억}    일회성 (음수 = 지출)
-          skipWeeks  {dayOffset: true}  그 목요일의 주보를 0으로 (skipThu 와 별개)
-          expWeekly  억                 매주 목요일 나가는 정기 지출
-          expMonthly 억                 매월 1일 나가는 정기 지출                  */
-  // light = 그래프용 배열을 안 만들고 도달 시점에서 바로 끊음 (시나리오 표에서 8번 돌아서)
-  function simulate(cfg, days, light){
-    var pts = light ? null : [{x:0, y:cfg.have, kind:"start"}];
-    var daily = [], run = cfg.have, hit = -1;
-    var expW = cfg.expWeekly || 0, expM = cfg.expMonthly || 0;
-    var d = new Date(cfg.start.getTime());
-    for (var i = 0; i < days; i++){
-      var isThu = d.getDay() === 4, isFirst = d.getDate() === 1;
-      var skipped = isThu && cfg.skipWeeks && cfg.skipWeeks[i];
-      if (isThu && cfg.weekly !== 0 && !skipped){ run += cfg.weekly; if (pts) pts.push({x:i,y:run,kind:"weekly"}); }
-      if (isFirst && cfg.monthly !== 0){ run += cfg.monthly; if (pts) pts.push({x:i,y:run,kind:"monthly"}); }
-      // 일회성 항목: 시작일 기준 i일째에 들어오는(또는 나가는) 돈. cfg.once = {dayOffset: 억}
-      if (cfg.once && cfg.once[i]){ run += cfg.once[i]; if (pts) pts.push({x:i,y:run,kind:"once"}); }
-      var exp = (isThu ? expW : 0) + (isFirst ? expM : 0);
-      if (exp){ run -= exp; if (pts) pts.push({x:i,y:run,kind:"expense"}); }
-      run += (isThu && cfg.skipThu) ? 0 : cfg.rate * cfg.hours;
-      if (pts) pts.push({x:i+1, y:run, kind:"hunt"});
-      if (!light) daily.push(run);
-      if (hit < 0 && run >= cfg.goal){
-        hit = i;
-        if (light) return {pts:null, daily:daily, hitIndex:hit, end:run};
-      }
-      d = addDays(d, 1);
-    }
-    return {pts:pts, daily:daily, hitIndex:hit, end:run};
-  }
-
-  function findGoal(cfg){
-    var perDay = cfg.weekly/7 + cfg.monthly/DAYS_PER_MONTH +
-                 cfg.rate*cfg.hours*(cfg.skipThu ? 6/7 : 1) -
-                 (cfg.expWeekly || 0)/7 - (cfg.expMonthly || 0)/DAYS_PER_MONTH;
-    if (cfg.have >= cfg.goal) return {days:0};
-    var hasOnce = false;
-    if (cfg.once) for (var k in cfg.once) if (cfg.once[k] > 0){ hasOnce = true; break; }
-    if (perDay <= 0 && !hasOnce) return {days:-1};
-    var est = perDay > 0 ? Math.ceil((cfg.goal - cfg.have)/perDay) + 40 : MAX_DAYS;
-    var span = Math.min(MAX_DAYS, Math.max(est, 60));
-    var sim = simulate(cfg, span, true);
-    if (sim.hitIndex < 0 && span < MAX_DAYS) sim = simulate(cfg, MAX_DAYS, true);
-    return sim.hitIndex < 0 ? {days:-1} : {days:sim.hitIndex + 1};
-  }
-
-  // expense 는 양수(나가는 크기), total 은 그걸 뺀 순수익
-  function monthIncome(cfg){
-    var inc = {
-      weekly:  cfg.weekly * WEEK_PER_MONTH,
-      monthly: cfg.monthly,
-      hunt:    cfg.rate * cfg.hours * DAYS_PER_MONTH * (cfg.skipThu ? 6/7 : 1),
-      expense: (cfg.expWeekly || 0) * WEEK_PER_MONTH + (cfg.expMonthly || 0)
-    };
-    inc.total = inc.weekly + inc.monthly + inc.hunt - inc.expense;
-    return inc;
-  }
-
-  // cfg 복사본에서 키 하나만 바꾼다 (once 같은 부가 필드도 그대로 따라감)
-  function withCfg(cfg, key, val){
-    var c = {};
-    for (var k in cfg) c[k] = cfg[k];
-    c[key] = val;
-    return c;
-  }
-
-  // 잔고 곡선은 어느 입력에 대해서도 단조라 도달일도 단조. 이분 탐색이 성립함
-  function costFor1Day(cfg, key, baseDays){
-    if (!(baseDays > 1)) return null;
-    var cur = cfg[key];
-    var hi = Math.max(Math.abs(cur), 1) * 0.02, lo = 0, n = 0;
-    while (findGoal(withCfg(cfg, key, cur + hi)).days > baseDays - 1){
-      lo = hi; hi *= 2;
-      if (++n > 30) return null;          // 아무리 올려도 안 줄면 무의미한 레버
-    }
-    for (var i = 0; i < 26; i++){
-      var mid = (lo + hi) / 2;
-      if (findGoal(withCfg(cfg, key, cur + mid)).days <= baseDays - 1) hi = mid; else lo = mid;
-    }
-    return hi;
-  }
-
-  function fmtFine(v){
-    if (v >= 0.1) return (+v.toFixed(2)) + "억";
-    return Math.round(v * 10000).toLocaleString("ko-KR") + "만";
-  }
-
-
-  function b64e(str){
-    var bytes = new TextEncoder().encode(str), bin = "";
-    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-    return btoa(bin).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
-  }
-  function b64d(str){
-    str = str.replace(/-/g,"+").replace(/_/g,"/");
-    var bin = atob(str), bytes = new Uint8Array(bin.length);
-    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    return new TextDecoder().decode(bytes);
-  }
-
-
-  return {
-    WEEK_PER_MONTH: WEEK_PER_MONTH, DAYS_PER_MONTH: DAYS_PER_MONTH, MAX_DAYS: MAX_DAYS,
-    parseMeso: parseMeso, parsePaste: parsePaste, diagnosePaste: diagnosePaste,
-    fmtEok: fmtEok, fmtShort: fmtShort, fmtFine: fmtFine,
-    DOW: DOW, parseDate: parseDate, toISO: toISO, addDays: addDays, dayOffset: dayOffset,
-    nextThursdays: nextThursdays, skipOffsets: skipOffsets, recurTotals: recurTotals,
-    simulate: simulate, findGoal: findGoal, monthIncome: monthIncome,
-    withCfg: withCfg, costFor1Day: costFor1Day,
-    b64e: b64e, b64d: b64d
-  };
-})();
-if (typeof module === "object" && module.exports) module.exports = MesoCore;
-</script>
-<script>
-(function(){
-  "use strict";
-
-  var WEEK_PER_MONTH = MesoCore.WEEK_PER_MONTH, DAYS_PER_MONTH = MesoCore.DAYS_PER_MONTH, MAX_DAYS = MesoCore.MAX_DAYS;
-  var parseMeso = MesoCore.parseMeso, parsePaste = MesoCore.parsePaste, diagnosePaste = MesoCore.diagnosePaste;
-  var fmtEok = MesoCore.fmtEok, fmtShort = MesoCore.fmtShort, fmtFine = MesoCore.fmtFine, DOW = MesoCore.DOW;
-  var parseDate = MesoCore.parseDate, toISO = MesoCore.toISO, addDays = MesoCore.addDays;
-  var simulate = MesoCore.simulate, findGoal = MesoCore.findGoal, monthIncome = MesoCore.monthIncome;
-  var withCfg = MesoCore.withCfg, costFor1Day = MesoCore.costFor1Day, b64e = MesoCore.b64e, b64d = MesoCore.b64d;
-  var dayOffset = MesoCore.dayOffset, nextThursdays = MesoCore.nextThursdays, skipOffsets = MesoCore.skipOffsets;
-  var recurTotals = MesoCore.recurTotals;
-
-  var STORE_KEY = "meso-calc-v1";
-  var SKIP_CHIPS = 8;
-  var $ = function(id){ return document.getElementById(id); };
-
-  var roster = [
-    {name:"본캐",  weekly:34.8012, monthly:13.3},
-    {name:"부캐 1", weekly:14.2580, monthly:6.65}
-  ];
-  var booting = true;
-
-  // 일회성 항목: {date:"YYYY-MM-DD", label, amount(억, 음수면 지출)}
-  var once = [];
-  // 정기 지출: {label, amount(억, 양수), every:"w"(매주 목요일)|"m"(매월 1일)}
-  var recur = [];
-  // 주보를 건너뛸 주: 그 주 목요일의 ISO 날짜 배열
-  var skipWeeks = [];
-
-  /* ---------- recurring expenses ---------- */
-  function renderRecur(){
-    var box = $("recur");
-    box.innerHTML = "";
-    if (!recur.length){
-      box.innerHTML = '<div class="oempty">없음</div>';
-      return;
-    }
-    recur.forEach(function(x, idx){
-      var r = document.createElement("div");
-      r.className = "xrow";
-      r.innerHTML =
-        '<input type="text" data-xf="label" data-xi="'+idx+'" placeholder="내용" aria-label="내용">' +
-        '<input type="number" step="0.01" min="0" data-xf="amount" data-xi="'+idx+'" aria-label="금액 (억)">' +
-        '<select data-xf="every" data-xi="'+idx+'" aria-label="주기">' +
-          '<option value="w">매주 목요일</option><option value="m">매월 1일</option></select>' +
-        '<button class="del" data-xdel="'+idx+'" title="삭제" aria-label="지출 삭제">&times;</button>';
-      r.querySelector('[data-xf=label]').value = x.label;
-      r.querySelector('[data-xf=amount]').value = x.amount;
-      r.querySelector('[data-xf=every]').value = x.every;
-      box.appendChild(r);
-    });
-  }
-
-  $("recur").addEventListener("input", function(e){
-    var t = e.target;
-    if (t.dataset.xf === undefined) return;
-    var i = +t.dataset.xi, f = t.dataset.xf;
-    if (f === "amount") recur[i].amount = Math.max(0, parseFloat(t.value) || 0);
-    else recur[i][f] = t.value;
-    render();
-  });
-  $("recur").addEventListener("change", function(e){
-    if (e.target.dataset.xf === "every") render();
-  });
-
-  $("recur").addEventListener("click", function(e){
-    var d = e.target.closest("[data-xdel]");
-    if (!d) return;
-    recur.splice(+d.dataset.xdel, 1);
-    renderRecur(); render();
-  });
-
-  $("btn-recur-add").addEventListener("click", function(){
-    recur.push({label: "", amount: 0, every: "w"});
-    renderRecur(); render();
-    var last = $("recur").querySelector(".xrow:last-child [data-xf=label]");
-    if (last) last.focus();
-  });
-
-  /* ---------- skipped weeks ---------- */
-  // 시작일 이후 목요일 8개를 칩으로. 그 밖의 날짜는 상태에서도 지운다 (보이는 것만 적용되게)
-  function renderSkipChips(start){
-    var thus = nextThursdays(start, SKIP_CHIPS).map(toISO);
-    skipWeeks = skipWeeks.filter(function(iso){ return thus.indexOf(iso) >= 0; });
-    $("skip-chips").innerHTML = thus.map(function(iso){
-      var on = skipWeeks.indexOf(iso) >= 0, p = iso.split("-");
-      return '<button class="chip" type="button" data-skip="'+iso+'" aria-pressed="'+(on ? "true" : "false")+
-             '" title="'+iso+' 주간보스 '+(on ? "건너뜀" : "포함")+'">'+(+p[1])+'/'+(+p[2])+'</button>';
-    }).join("");
-    $("skip-sum").textContent = skipWeeks.length ? skipWeeks.length + "주 건너뜀" : "—";
-  }
-
-  $("skip-chips").addEventListener("click", function(e){
-    var b = e.target.closest("[data-skip]");
-    if (!b) return;
-    var iso = b.dataset.skip, i = skipWeeks.indexOf(iso);
-    if (i >= 0) skipWeeks.splice(i, 1); else skipWeeks.push(iso);
-    skipWeeks.sort();
-    render();
-    var nb = $("skip-chips").querySelector('[data-skip="'+iso+'"]');
-    if (nb) nb.focus();
-  });
-
-  /* ---------- roster ---------- */
-  function renderRoster(){
-    var box = $("roster");
-    box.innerHTML = "";
-    roster.forEach(function(c, idx){
-      var r = document.createElement("div");
-      r.className = "rrow";
-      var lock = roster.length <= 1 ? " disabled" : "";
-      r.innerHTML =
-        '<input type="text" value="" data-f="name" data-i="'+idx+'" placeholder="이름" aria-label="캐릭터 이름">' +
-        '<input type="number" step="0.0001" data-f="weekly" data-i="'+idx+'" aria-label="주간보스 수익 (억)">' +
-        '<input type="number" step="0.0001" data-f="monthly" data-i="'+idx+'" aria-label="월간보스 수익 (억)">' +
-        '<button class="del" data-del="'+idx+'" title="삭제" aria-label="캐릭터 삭제"'+lock+'>&times;</button>';
-      r.querySelector('[data-f=name]').value = c.name;
-      r.querySelector('[data-f=weekly]').value = c.weekly;
-      r.querySelector('[data-f=monthly]').value = c.monthly;
-      box.appendChild(r);
-    });
-  }
-
-  function rosterTotals(){
-    var w = 0, m = 0;
-    roster.forEach(function(c){
-      w += (isFinite(c.weekly) ? c.weekly : 0);
-      m += (isFinite(c.monthly) ? c.monthly : 0);
-    });
-    return {weekly:w, monthly:m};
-  }
-
-  $("roster").addEventListener("input", function(e){
-    var t = e.target;
-    if (t.dataset.f === undefined) return;
-    var i = +t.dataset.i, f = t.dataset.f;
-    roster[i][f] = (f === "name") ? t.value : (parseFloat(t.value) || 0);
-    render();
-  });
-
-  $("roster").addEventListener("click", function(e){
-    var d = e.target.closest("[data-del]");
-    if (!d) return;
-    if (roster.length <= 1) return;
-    roster.splice(+d.dataset.del, 1);
-    renderRoster(); render();
-  });
-
-  $("btn-add").addEventListener("click", function(){
-    roster.push({name:"부캐 " + roster.length, weekly:0, monthly:0});
-    renderRoster(); render();
-  });
-
-  /* ---------- one-off items ---------- */
-  function renderOnce(){
-    var box = $("once");
-    box.innerHTML = "";
-    if (!once.length){
-      box.innerHTML = '<div class="oempty">없음</div>';
-      return;
-    }
-    once.forEach(function(o, idx){
-      var r = document.createElement("div");
-      r.className = "orow";
-      r.innerHTML =
-        '<input type="date" data-of="date" data-oi="'+idx+'" aria-label="날짜">' +
-        '<input type="text" data-of="label" data-oi="'+idx+'" placeholder="내용" aria-label="내용">' +
-        '<input type="number" step="0.01" data-of="amount" data-oi="'+idx+'" placeholder="+수입 −지출" aria-label="금액 (억)">' +
-        '<button class="del" data-odel="'+idx+'" title="삭제" aria-label="항목 삭제">&times;</button>';
-      r.querySelector('[data-of=date]').value = o.date;
-      r.querySelector('[data-of=label]').value = o.label;
-      var a = r.querySelector('[data-of=amount]');
-      a.value = o.amount;
-      if (o.amount < 0) a.classList.add("neg");
-      box.appendChild(r);
-    });
-  }
-
-  $("once").addEventListener("input", function(e){
-    var t = e.target;
-    if (t.dataset.of === undefined) return;
-    var i = +t.dataset.oi, f = t.dataset.of;
-    if (f === "amount"){ once[i].amount = parseFloat(t.value) || 0; t.classList.toggle("neg", once[i].amount < 0); }
-    else once[i][f] = t.value;
-    render();
-  });
-
-  $("once").addEventListener("click", function(e){
-    var d = e.target.closest("[data-odel]");
-    if (!d) return;
-    once.splice(+d.dataset.odel, 1);
-    renderOnce(); render();
-  });
-
-  $("btn-once-add").addEventListener("click", function(){
-    var start = parseDate($("in-start").value) || new Date();
-    once.push({date: toISO(addDays(start, 7)), label: "", amount: 0});
-    renderOnce(); render();
-    var last = $("once").querySelector(".orow:last-child [data-of=label]");
-    if (last) last.focus();
-  });
-
-  // 시작일 기준 며칠째에 얼마가 들어오는지 — simulate()가 쓰는 형태로 바꾼다
-  function onceByDay(start){
-    var map = {}, any = false;
-    once.forEach(function(o){
-      var d = parseDate(o.date);
-      if (!d || !o.amount) return;
-      var off = dayOffset(start, d);
-      if (off < 0 || off >= MAX_DAYS) return;
-      map[off] = (map[off] || 0) + o.amount;
-      any = true;
-    });
-    return any ? map : null;
-  }
-
-  $("btn-paste").addEventListener("click", function(){
-    var ta = $("paste"), open = ta.classList.toggle("open");
-    this.setAttribute("aria-expanded", open ? "true" : "false");
-    if (open) ta.focus();
-  });
-
-
-  $("paste").addEventListener("input", function(){
-    var msg = $("parsemsg");
-    var txt = this.value;
-    if (!txt.trim()){ msg.textContent = ""; msg.className = "parsemsg"; return; }
-
-    var found = parsePaste(txt);
-    if (!found.length){
-      var dg = diagnosePaste(txt);
-      msg.innerHTML = "캐릭터를 못 찾았음. 캐릭터 목록을 통째로 드래그해서 붙여봐." +
-        '<span class="diag">' + dg.summary + (dg.hints.length ? "<br>" + dg.hints.join("<br>") : "") + '</span>';
-      msg.className = "parsemsg bad";
-      return;
-    }
-
-    roster = found.map(function(c, i){
-      return {name: c.name || (i === 0 ? "본캐" : "부캐 " + i),
-              weekly: c.weekly, monthly: c.monthly};
-    });
-    renderRoster(); render();
-
-    var names = roster.map(function(c){ return c.name; }).slice(0, 4).join(", ");
-    msg.textContent = "캐릭터 " + found.length + "개 불러옴 — " + names +
-                      (found.length > 4 ? " 외 " + (found.length - 4) + "명" : "");
-    msg.className = "parsemsg";
-  });
-
-  /* ---------- helpers ---------- */
-  function num(id){ var v = parseFloat($(id).value); return isFinite(v) ? v : 0; }
-
-
-
-  /* ---------- chart ---------- */
-  var chart = null;   // 마지막으로 그린 그래프의 좌표계와 날짜별 항목 (hover 툴팁용)
-  var KIND_NAME = {weekly:"주간보스", monthly:"월간보스", hunt:"사냥", once:"일회성", expense:"지출"};
-  var KIND_COLOR = {weekly:"var(--gold)", monthly:"var(--rose)", hunt:"var(--violet)", once:"var(--sky)", expense:"var(--orange)"};
-
-  function drawChart(cfg, sim, days, goalIdx){
-    var W = 760, H = 300, padL = 62, padR = 18, padT = 18, padB = 30;
-    var iw = W - padL - padR, ih = H - padT - padB;
-    var maxY = Math.max(sim.end, cfg.goal, cfg.have, 1) * 1.08;
-    function sx(x){ return padL + (x/days)*iw; }
-    function sy(y){ return padT + ih - (y/maxY)*ih; }
-
-    // 날짜별로 그날 들어온(나간) 항목을 모은다. 점프는 x=i 에, 사냥은 x=i+1 에 찍혀 있음
-    var events = [];
-    for (var e = 0; e < days; e++) events.push([]);
-    sim.pts.forEach(function(p, i){
-      if (i === 0) return;
-      var day = p.kind === "hunt" ? p.x - 1 : p.x, amt = p.y - sim.pts[i-1].y;
-      if (day >= 0 && day < days && amt !== 0) events[day].push({kind:p.kind, amt:amt});
-    });
-    chart = {W:W, padL:padL, iw:iw, days:days, start:cfg.start, daily:sim.daily, events:events, sx:sx, sy:sy};
-
-    var s = ['<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="누적 메소 그래프">'];
-    for (var t = 0; t <= 4; t++){
-      var val = maxY*t/4, y = sy(val);
-      s.push('<line x1="'+padL+'" y1="'+y.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+y.toFixed(1)+'" style="stroke:var(--line-soft)" stroke-width="1"/>');
-      s.push('<text x="'+(padL-10)+'" y="'+(y+4).toFixed(1)+'" text-anchor="end" style="fill:var(--muted-2)" font-size="11.5" font-family="monospace">'+fmtShort(val)+'</text>');
-    }
-    if (cfg.goal > 0 && cfg.goal <= maxY){
-      var gy = sy(cfg.goal);
-      s.push('<line x1="'+padL+'" y1="'+gy.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+gy.toFixed(1)+'" style="stroke:var(--mint)" stroke-width="1.2" stroke-dasharray="5 4" opacity=".8"/>');
-    }
-    var pts = sim.pts;
-    var area = "M " + sx(pts[0].x).toFixed(1) + " " + sy(pts[0].y).toFixed(1), segs = [];
-    for (var i = 1; i < pts.length; i++){
-      var a = pts[i-1], b = pts[i];
-      var x1 = sx(a.x), y1 = sy(a.y), x2 = sx(b.x), y2 = sy(b.y);
-      area += " L " + x2.toFixed(1) + " " + y2.toFixed(1);
-      var col = KIND_COLOR[b.kind] || KIND_COLOR.hunt;
-      segs.push('<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y2.toFixed(1)+'" style="stroke:'+col+'" stroke-width="'+(b.kind==="hunt"?1.5:2.2)+'" stroke-linecap="round"/>');
-    }
-    s.push('<defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" style="stop-color:var(--violet)" stop-opacity=".26"/><stop offset="100%" style="stop-color:var(--violet)" stop-opacity="0"/></linearGradient></defs>');
-    s.push('<path d="'+area+' L '+sx(pts[pts.length-1].x).toFixed(1)+' '+sy(0).toFixed(1)+' L '+sx(0).toFixed(1)+' '+sy(0).toFixed(1)+' Z" fill="url(#ag)"/>');
-    s.push(segs.join(""));
-    if (goalIdx >= 0 && goalIdx < days){
-      var mx = sx(goalIdx+1);
-      s.push('<line x1="'+mx.toFixed(1)+'" y1="'+padT+'" x2="'+mx.toFixed(1)+'" y2="'+(padT+ih)+'" style="stroke:var(--mint)" stroke-width="1" opacity=".45"/>');
-      s.push('<circle cx="'+mx.toFixed(1)+'" cy="'+sy(sim.daily[goalIdx]).toFixed(1)+'" r="4.5" style="fill:var(--ink-2);stroke:var(--mint)" stroke-width="2"/>');
-    }
-    s.push('<line x1="'+padL+'" y1="'+(padT+ih)+'" x2="'+(W-padR)+'" y2="'+(padT+ih)+'" style="stroke:var(--line)" stroke-width="1"/>');
-    for (var k = 0; k <= 5; k++){
-      var dn = Math.round(days*k/5);
-      s.push('<text x="'+sx(dn).toFixed(1)+'" y="'+(padT+ih+18)+'" text-anchor="'+(k === 0 ? "start" : "middle")+
-             '" style="fill:var(--muted-2)" font-size="11.5" font-family="monospace">'+(dn === 0 ? "시작" : dn+"일")+'</text>');
-    }
-    s.push('<g id="guide" hidden><line y1="'+padT+'" y2="'+(padT+ih)+'" style="stroke:var(--muted-2)" stroke-width="1" stroke-dasharray="3 3"/>' +
-           '<circle r="4" style="fill:var(--ink-2);stroke:var(--text)" stroke-width="1.5"/></g>');
-    s.push('</svg><div class="tip" id="tip" hidden></div>');
-    $("chart").innerHTML = s.join("");
-  }
-
-  /* ---------- chart hover ----------
-     svg 는 render 마다 다시 만들어지므로 이벤트는 #chart 에 위임한다.
-     터치는 touch-action:pan-y 라서 세로 스크롤은 살리고 가로로 문지르면 날짜를 훑는다. */
-  function labelsFor(kind, date){
-    var iso = toISO(date), out = [];
-    if (kind === "once") once.forEach(function(o){ if (o.date === iso && o.amount && o.label) out.push(o.label); });
-    if (kind === "expense"){
-      var thu = date.getDay() === 4, first = date.getDate() === 1;
-      recur.forEach(function(x){ if (x.amount > 0 && x.label && ((x.every === "m" && first) || (x.every !== "m" && thu))) out.push(x.label); });
-    }
-    return out.join(", ");
-  }
-
-  function showTip(clientX, clientY){
-    var svg = $("chart").querySelector("svg"), tip = $("tip"), guide = $("guide");
-    if (!chart || !svg || !tip || !guide) return;
-    var rect = svg.getBoundingClientRect(), box = $("chart").getBoundingClientRect();
-    var vx = (clientX - rect.left) / rect.width * chart.W;
-    var i = Math.round((vx - chart.padL) / chart.iw * chart.days) - 1;
-    i = Math.max(0, Math.min(chart.days - 1, i));
-    var date = addDays(chart.start, i), bal = chart.daily[i];
-
-    var gx = chart.sx(i + 1), gy = chart.sy(bal);
-    var line = guide.firstChild, dot = guide.lastChild;
-    line.setAttribute("x1", gx.toFixed(1)); line.setAttribute("x2", gx.toFixed(1));
-    dot.setAttribute("cx", gx.toFixed(1)); dot.setAttribute("cy", gy.toFixed(1));
-    guide.removeAttribute("hidden");   // SVG 요소엔 .hidden 프로퍼티가 없음
-
-    var items = chart.events[i];
-    tip.innerHTML = '<b>' + (date.getMonth()+1) + '.' + date.getDate() + ' (' + DOW[date.getDay()] + ')' +
-      '<small>' + (i + 1) + '일째</small></b>' +
-      '<div class="tbal">잔고 ' + fmtEok(bal) + '</div>' +
-      (items.length ? '<ul>' + items.map(function(ev){
-        var lab = labelsFor(ev.kind, date);
-        return '<li><i class="swatch" style="background:' + KIND_COLOR[ev.kind] + '"></i>' + KIND_NAME[ev.kind] +
-               ' ' + (ev.amt > 0 ? '+' : '−') + fmtFine(Math.abs(ev.amt)) + (lab ? ' <em>' + lab + '</em>' : '') + '</li>';
-      }).join("") + '</ul>' : '<div class="none">들어온 항목 없음</div>');
-    tip.hidden = false;
-
-    // 가이드선 왼쪽/오른쪽 중 공간이 있는 쪽에, 세로는 포인터 근처
-    var px = (gx / chart.W) * rect.width + (rect.left - box.left);
-    var tw = tip.offsetWidth, th = tip.offsetHeight;
-    var left = px + 14;
-    if (left + tw > box.width) left = Math.max(0, px - 14 - tw);
-    var top = clientY - box.top + 16;
-    if (top + th > box.height) top = Math.max(0, clientY - box.top - th - 12);
-    tip.style.left = left + "px";
-    tip.style.top = top + "px";
-  }
-
-  function hideTip(){
-    var tip = $("tip"), guide = $("guide");
-    if (tip) tip.hidden = true;
-    if (guide) guide.setAttribute("hidden", "");
-  }
-
-  $("chart").addEventListener("pointermove", function(e){ showTip(e.clientX, e.clientY); });
-  $("chart").addEventListener("pointerdown", function(e){ showTip(e.clientX, e.clientY); });
-  $("chart").addEventListener("pointerleave", hideTip);
-  $("chart").addEventListener("pointercancel", hideTip);
-
-  /* ---------- scenarios ---------- */
-  function renderScenarios(cfg, baseDays){
-    var hours = [0,1,2,3,4,5,6];
-    if (hours.indexOf(cfg.hours) < 0 && cfg.hours > 0 && cfg.hours <= 24){
-      hours.push(cfg.hours);
-      hours.sort(function(a,b){ return a - b; });
-    }
-
-    var prev = null;
-    $("scen").innerHTML = hours.map(function(h){
-      var c = withCfg(cfg, "hours", h);
-      var mTot = monthIncome(c).total;
-      var g = cfg.goal > 0 ? findGoal(c) : {days:-1};
-
-      var days = "—", delta = "", eff = "—";
-      if (g.days === 0){ days = "달성"; }
-      else if (g.days > 0){
-        days = g.days + "일";
-        if (baseDays > 0){
-          var d = baseDays - g.days;
-          delta = d === 0 ? '<span class="d-0">기준</span>'
-                : d > 0  ? '<span class="d-up">&minus;' + d + '일</span>'
-                         : '<span class="d-dn">+' + (-d) + '일</span>';
-        }
-        // 직전 구간의 한계 효용 — 사냥 1시간을 더 넣을 때 당겨지는 일수
-        if (prev && prev.days > 0 && h > prev.h){
-          var per = (prev.days - g.days) / (h - prev.h);
-          eff = per > 0 ? '&minus;' + (per >= 10 ? per.toFixed(0) : per.toFixed(1)) + '일' : '—';
-        }
-      }
-      if (g.days > 0) prev = {h:h, days:g.days};
-
-      var isNow = Math.abs(h - cfg.hours) < 1e-9;
-      return '<tr' + (isNow ? ' class="now"' : '') + '>' +
-             '<td>' + (h % 1 === 0 ? h : h.toFixed(1)) + 'h</td>' +
-             '<td class="inc">' + fmtEok(mTot) + '</td>' +
-             '<td>' + days + '</td>' +
-             '<td>' + delta + '</td>' +
-             '<td>' + eff + '</td></tr>';
-    }).join("");
-
-    $("scen-goal").textContent = cfg.goal > 0 ? "목표 " + fmtEok(cfg.goal) : "목표 미입력";
-  }
-
-  /* ---------- 민감도 ----------
-     같은 입력에서 파생되는 두 가지 질문에 답한다.
-       (1) 어느 수입원이 도달일을 크게 움직이나  -> ±10% 토네이도
-       (2) 도달을 하루 당기는 데 각각 얼마가 드나 -> 이분 탐색            */
-
-  function renderSensitivity(cfg, baseDays, over){
-    var tor = $("tor"), cost = $("cost"), hint = $("tor-hint");
-
-    if (!(baseDays > 0)){
-      $("sens-base").textContent = "—";
-      tor.innerHTML = '<div class="subh" style="margin:0">도달 가능한 목표가 있어야 계산됨.</div>';
-      cost.innerHTML = "";
-      hint.hidden = true;
-      return;
-    }
-    $("sens-base").textContent = baseDays + "일 기준";
-
-    function d(key, val){ return findGoal(withCfg(cfg, key, val)).days; }
-
-    var rows = [
-      {name:"주간보스", sub:"±" + fmtFine(cfg.weekly * 0.1) + "/주",
-       up:d("weekly",  cfg.weekly  * 1.1), dn:d("weekly",  cfg.weekly  * 0.9)},
-      {name:"사냥",     sub:"±" + (cfg.hours * 6).toFixed(0) + "분/일",
-       up:d("hours",   cfg.hours   * 1.1), dn:d("hours",   cfg.hours   * 0.9)},
-      {name:"월간보스", sub:"±" + fmtFine(cfg.monthly * 0.1) + "/월",
-       up:d("monthly", cfg.monthly * 1.1), dn:d("monthly", cfg.monthly * 0.9)}
-    ];
-    // 목요일 사냥은 켜고 끄는 값이라 한쪽 방향만 존재
-    var thuDays = findGoal(withCfg(cfg, "skipThu", !cfg.skipThu)).days;
-    rows.push({name:"목요일 사냥", sub: cfg.skipThu ? "지금 쉼" : "지금 함",
-               up: cfg.skipThu ? thuDays : baseDays,
-               dn: cfg.skipThu ? baseDays : thuDays});
-
-    var span = 0, anyGain = false;
-    rows.forEach(function(r){
-      r.gain = r.up > 0 ? baseDays - r.up : 0;   // 당겨지는 일수 (+)
-      r.loss = r.dn > 0 ? r.dn - baseDays : 0;   // 밀리는 일수 (+)
-      if (r.gain > 0) anyGain = true;
-      span = Math.max(span, Math.abs(r.gain), Math.abs(r.loss));
-    });
-    if (span <= 0) span = 1;
-
-    /* 결승선이 목요일 주보 점프에 걸려 있으면 초과분만큼 여유가 생겨서
-       수익을 늘려도 날짜가 안 바뀐다. 그때 막대가 전부 0으로 나오는데,
-       설명이 없으면 "늘려도 소용없다"로 읽혀서 반대로 오해된다. */
-    if (!anyGain && over > 0){
-      hint.innerHTML = "지금 결승선을 <b>목표 +" + fmtEok(over) + "</b>으로 넘김. " +
-        "그 여유 안에서는 수익을 더 올려도 도달 날짜가 안 바뀌어서 위 막대가 전부 0으로 나옴. " +
-        "소용없다는 뜻이 아니라 한 칸을 당기려면 아래 표만큼이 한꺼번에 필요하다는 뜻임.";
-      hint.hidden = false;
-    } else {
-      hint.hidden = true;
-    }
-
-    tor.innerHTML = rows.map(function(r){
-      var g = Math.max(0, r.gain) / span * 50, b = Math.max(0, r.loss) / span * 50;
-      var val = (r.gain > 0 ? '<b>&minus;' + r.gain + '</b>' : "") +
-                (r.gain > 0 && r.loss > 0 ? " / " : "") +
-                (r.loss > 0 ? '<s>+' + r.loss + '</s>' : "") +
-                (r.gain <= 0 && r.loss <= 0 ? '<em>영향 없음</em>' : "일");
-      return '<div class="tor-row"><div class="tor-name">' + r.name +
-             '<i>' + r.sub + '</i></div>' +
-             '<div class="tor-track">' +
-               '<div class="tor-bar good" style="right:50%;width:' + g.toFixed(1) + '%"></div>' +
-               '<div class="tor-bar bad" style="left:50%;width:' + b.toFixed(1) + '%"></div>' +
-             '</div><div class="tor-val">' + val + '</div></div>';
-    }).join("");
-
-    var huntFactor = DAYS_PER_MONTH * (cfg.skipThu ? 6/7 : 1);
-    var levers = [
-      {name:"사냥 시간", key:"hours",
-       unit:function(v){ return v < 1 ? "+" + (v*60).toFixed(1) + "분/일" : "+" + v.toFixed(2) + "시간/일"; },
-       month:function(v){ return cfg.rate * v * huntFactor; }},
-      {name:"재획 시급", key:"rate",
-       unit:function(v){ return "+" + fmtFine(v) + "/시간"; },
-       month:function(v){ return v * cfg.hours * huntFactor; }},
-      {name:"주간보스", key:"weekly",
-       unit:function(v){ return "+" + fmtFine(v) + "/주"; },
-       month:function(v){ return v * WEEK_PER_MONTH; }},
-      {name:"월간보스", key:"monthly",
-       unit:function(v){ return "+" + fmtFine(v) + "/월"; },
-       month:function(v){ return v; }}
-    ];
-
-    var results = levers.map(function(l){
-      var v = costFor1Day(cfg, l.key, baseDays);
-      return {name:l.name, v:v, unit:v === null ? null : l.unit(v), m:v === null ? null : l.month(v)};
-    });
-    var best = null;
-    results.forEach(function(r){ if (r.m !== null && (best === null || r.m < best)) best = r.m; });
-
-    cost.innerHTML = results.map(function(r){
-      if (r.v === null){
-        return '<tr><td>' + r.name + '</td><td colspan="2" style="color:var(--muted-2)">이 목표에선 못 움직임</td></tr>';
-      }
-      var cheap = best !== null && r.m <= best * 1.02;
-      return '<tr' + (cheap ? ' class="cheap"' : '') + '><td>' + r.name + '</td>' +
-             '<td>' + r.unit + '</td>' +
-             '<td>' + fmtEok(r.m) + '/월</td></tr>';
-    }).join("");
-  }
-
-  /* ---------- 저장 / 복원 ---------- */
-  var FIELDS = ["in-rate","in-hours","in-have","in-goal","in-start","in-target"];
-
-  function snapshot(){
-    var s = {v:1, skip:$("in-skip").checked ? 1 : 0,
-             r:roster.map(function(c){ return [c.name, c.weekly, c.monthly]; })};
-    if (once.length) s.o = once.map(function(o){ return [o.date, o.label, o.amount]; });
-    if (recur.length) s.e = recur.map(function(x){ return [x.label, x.amount, x.every]; });
-    if (skipWeeks.length) s.k = skipWeeks.slice();
-    FIELDS.forEach(function(id){ s[id.slice(3)] = $(id).value; });
-    return s;
-  }
-
-  function applyState(s){
-    if (!s || typeof s !== "object") return false;
-    if (Array.isArray(s.r) && s.r.length){
-      roster = s.r.map(function(c, i){
-        return {name: String(c[0] != null ? c[0] : "캐릭 " + (i+1)),
-                weekly: parseFloat(c[1]) || 0,
-                monthly: parseFloat(c[2]) || 0};
-      });
-    }
-    if (Array.isArray(s.o)){
-      once = s.o.filter(function(o){ return Array.isArray(o); }).map(function(o){
-        return {date: String(o[0] || ""), label: String(o[1] != null ? o[1] : ""), amount: parseFloat(o[2]) || 0};
-      });
-    }
-    if (Array.isArray(s.e)){
-      recur = s.e.filter(function(x){ return Array.isArray(x); }).map(function(x){
-        return {label: String(x[0] != null ? x[0] : ""), amount: Math.max(0, parseFloat(x[1]) || 0),
-                every: x[2] === "m" ? "m" : "w"};
-      });
-    }
-    if (Array.isArray(s.k)){
-      skipWeeks = s.k.filter(function(k){ return typeof k === "string" && parseDate(k); }).sort();
-    }
-    FIELDS.forEach(function(id){
-      var k = id.slice(3);
-      if (s[k] !== undefined && s[k] !== "") $(id).value = s[k];
-    });
-    if (s.skip !== undefined) $("in-skip").checked = !!s.skip;
-    return true;
-  }
-
-  function save(){
-    if (booting) return;
-    try{ localStorage.setItem(STORE_KEY, JSON.stringify(snapshot())); } catch(e){}
-  }
-
-  function restore(){
-    var h = location.hash.match(/[#&]s=([A-Za-z0-9\-_]+)/);
-    if (h){
-      try{ if (applyState(JSON.parse(b64d(h[1])))) return "link"; } catch(e){}
-    }
-    try{
-      var raw = localStorage.getItem(STORE_KEY);
-      if (raw && applyState(JSON.parse(raw))) return "local";
-    } catch(e){}
-    return null;
-  }
-
-  function flash(btn, text){
-    var old = btn.dataset.label || btn.textContent;
-    btn.dataset.label = old;
-    btn.textContent = text;
-    btn.classList.add("ok");
-    setTimeout(function(){ btn.textContent = old; btn.classList.remove("ok"); }, 1600);
-  }
-
-  $("btn-share").addEventListener("click", function(){
-    var btn = this;
-    var url = location.origin + location.pathname + "#s=" + b64e(JSON.stringify(snapshot()));
-    history.replaceState(null, "", url);
-    if (navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(url).then(function(){ flash(btn, "복사됨"); },
-                                              function(){ flash(btn, "주소창 확인"); });
-    } else {
-      flash(btn, "주소창 확인");
-    }
-  });
-
-  /* ---------- 결과 카드 이미지 ----------
-     마지막 render 결과를 캔버스에 그려 PNG 로 내보낸다. 테마와 무관하게 다크 카드로 고정 */
-  var last = null;   // render 가 채움: {hitDate, days, goal, inc, skipN, pushed}
-  var CARD = {ink:"#141220", panel:"#1C1930", line:"#332D52", text:"#EFECF8", dim:"#948DB4", faint:"#8880AB",
-              gold:"#E9B949", goldDim:"#8A6E2C", violet:"#9C7BF0", rose:"#E8639B", mint:"#4FD1AA", orange:"#F2784B"};
-  var SANS = '"Pretendard",-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif';
-  var MONO = '"SF Mono",ui-monospace,"JetBrains Mono",Menlo,Consolas,"D2Coding",monospace';
-
-  function roundRect(ctx, x, y, w, h, r){
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
-  }
-  function fitText(ctx, text, maxW, size, family, weight){
-    var sz = size;
-    do {
-      ctx.font = (weight || "400") + " " + sz + "px " + family;
-      if (ctx.measureText(text).width <= maxW) break;
-      sz -= 2;
-    } while (sz > 18);
-    return sz;
-  }
-
-  function renderCard(r){
-    var W = 1080, H = 760, P = 80;
-    var cv = document.createElement("canvas");
-    cv.width = W; cv.height = H;
-    var ctx = cv.getContext("2d");
-    ctx.fillStyle = CARD.ink; ctx.fillRect(0, 0, W, H);
-    ctx.textBaseline = "alphabetic";
-
-    // eyebrow + 선
-    var eb = "메소 적립 계산기 · 목표 도달";
-    ctx.fillStyle = CARD.gold; ctx.font = "500 24px " + MONO;
-    ctx.fillText(eb, P, P + 22);
-    var ebW = ctx.measureText(eb).width;
-    var g = ctx.createLinearGradient(P + ebW + 20, 0, W - P, 0);
-    g.addColorStop(0, CARD.goldDim); g.addColorStop(1, "rgba(138,110,44,0)");
-    ctx.fillStyle = g; ctx.fillRect(P + ebW + 20, P + 13, W - P * 2 - ebW - 20, 2);
-
-    // 도달 날짜
-    var d = r.hitDate;
-    var dateStr = d.getFullYear() + "." + String(d.getMonth()+1).padStart(2,"0") + "." + String(d.getDate()).padStart(2,"0");
-    ctx.fillStyle = CARD.text;
-    var ds = fitText(ctx, dateStr + " (목)", W - P * 2, 108, MONO, "600");
-    ctx.fillText(dateStr, P, P + 150);
-    var dw = ctx.measureText(dateStr).width;
-    ctx.fillStyle = d.getDay() === 4 ? CARD.gold : CARD.dim;
-    ctx.font = "500 " + Math.round(ds * 0.42) + "px " + MONO;
-    ctx.fillText("(" + DOW[d.getDay()] + ")", P + dw + 14, P + 150);
-
-    var sub = r.days + "일 뒤 · 목표 " + fmtEok(r.goal) +
-              (r.skipN ? " · 건너뛴 주 " + r.skipN + "개로 +" + r.pushed + "일" : "");
-    ctx.fillStyle = CARD.dim;
-    fitText(ctx, sub, W - P * 2, 32, SANS, "400");
-    ctx.fillText(sub, P, P + 206);
-
-    // 월 평균 수익 박스
-    var by = P + 268, bh = 260, bw = W - P * 2;
-    ctx.save(); roundRect(ctx, P, by, bw, bh, 22); ctx.fillStyle = CARD.panel; ctx.fill(); ctx.restore();
-    ctx.fillStyle = CARD.dim; ctx.font = "500 26px " + SANS;
-    ctx.fillText("월 평균 수익", P + 40, by + 58);
-    var inc = r.inc, gross = inc.weekly + inc.monthly + inc.hunt;
-    ctx.fillStyle = CARD.text;
-    var vs = fitText(ctx, fmtEok(inc.total), bw - 80, 76, MONO, "600");
-    ctx.fillText(fmtEok(inc.total), P + 40, by + 140);
-    if (inc.expense){
-      var vw = ctx.measureText(fmtEok(inc.total)).width;
-      ctx.fillStyle = CARD.orange; ctx.font = "400 " + Math.round(vs * 0.36) + "px " + MONO;
-      ctx.fillText("지출 −" + fmtEok(inc.expense) + " 차감", P + 40 + vw + 18, by + 140);
-    }
-    // 구성 막대
-    var barY = by + 176, barH = 14, barW = bw - 80, x = P + 40;
-    var parts = [{v:inc.weekly, c:CARD.gold, n:"주보"}, {v:inc.hunt, c:CARD.violet, n:"사냥"}, {v:inc.monthly, c:CARD.rose, n:"월보"}];
-    ctx.save(); roundRect(ctx, x, barY, barW, barH, 7); ctx.clip();
-    ctx.fillStyle = CARD.line; ctx.fillRect(x, barY, barW, barH);
-    parts.forEach(function(pt){
-      var w = gross > 0 ? barW * pt.v / gross : 0;
-      ctx.fillStyle = pt.c; ctx.fillRect(x, barY, w, barH); x += w;
-    });
-    ctx.restore();
-    var lx = P + 40, ly = barY + 52;
-    ctx.font = "400 24px " + SANS;
-    parts.forEach(function(pt){
-      var pc = gross > 0 ? Math.round(pt.v / gross * 100) : 0;
-      ctx.fillStyle = pt.c; ctx.beginPath(); ctx.arc(lx + 8, ly - 8, 7, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = CARD.dim;
-      var t = pt.n + " " + pc + "% · " + fmtEok(pt.v);
-      ctx.fillText(t, lx + 26, ly);
-      lx += 26 + ctx.measureText(t).width + 34;
-    });
-
-    // 하단 주소
-    ctx.fillStyle = CARD.faint; ctx.font = "400 22px " + MONO;
-    ctx.fillText(r.url, P, H - P + 14);
-    return new Promise(function(res){ cv.toBlob(res, "image/png"); });
-  }
-
-  $("btn-image").addEventListener("click", function(){
-    var btn = this;
-    if (!last){ flash(btn, "도달 날짜가 있어야 함"); return; }
-    renderCard(last).then(function(blob){
-      if (!blob){ flash(btn, "실패"); return; }
-      var name = "meso-" + toISO(last.hitDate) + ".png";
-      var file = null;
-      try{ file = new File([blob], name, {type:"image/png"}); } catch(e){}
-      // 모바일은 공유 시트, 그 외는 다운로드
-      if (file && matchMedia("(pointer:coarse)").matches && navigator.canShare && navigator.canShare({files:[file]})){
-        navigator.share({files:[file]}).then(function(){ flash(btn, "공유됨"); },
-                                             function(err){ if (err && err.name !== "AbortError") download(blob, name, btn); });
-        return;
-      }
-      download(blob, name, btn);
-    });
-  });
-  function download(blob, name, btn){
-    var a = document.createElement("a");
-    a.href = URL.createObjectURL(blob); a.download = name;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
-    flash(btn, "저장됨");
-  }
-  // 스모크 테스트에서 카드를 꺼내 보기 위한 훅
-  window.__meso = {renderCard: function(){ return last ? renderCard(last) : Promise.resolve(null); }};
-
-  /* ---------- theme ---------- */
-  function currentTheme(){
-    var t = document.documentElement.dataset.theme;
-    if (t === "light" || t === "dark") return t;
-    return matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
-  }
-  function syncThemeColor(){
-    var m = document.querySelector('meta[name="theme-color"]');
-    if (m) m.setAttribute("content", currentTheme() === "light" ? "#F4F2FA" : "#141220");
-  }
-  $("btn-theme").addEventListener("click", function(){
-    var next = currentTheme() === "dark" ? "light" : "dark";
-    document.documentElement.dataset.theme = next;
-    try{ localStorage.setItem("meso-theme", next); } catch(e){}
-    syncThemeColor();
-  });
-  syncThemeColor();
-  if (window.matchMedia) matchMedia("(prefers-color-scheme: light)").addEventListener("change", syncThemeColor);
-
-  $("btn-reset").addEventListener("click", function(){
-    try{ localStorage.removeItem(STORE_KEY); } catch(e){}
-    location.replace(location.origin + location.pathname);
-  });
-
-  $("btn-today").addEventListener("click", function(){
-    $("in-start").value = toISO(new Date());
-    render();
-  });
-
-  /* ---------- 장부 연동 ----------
-     ledger.html 이 같은 출처 localStorage 에 요약(sum)을 남겨 둠.
-     잔고는 마지막 기록일 마감 기준이라 시작일은 그 다음 날로 잡는다. */
-  function ledgerSum(){
-    try{
-      var s = JSON.parse(localStorage.getItem("meso-ledger-v1"));
-      return s && s.sum && s.sum.asOf ? s.sum : null;
-    } catch(e){ return null; }
-  }
-
-  function wireLedger(){
-    var sum = ledgerSum();
-    if (!sum) return;
-    var d = parseDate(sum.asOf);
-    var b = $("btn-ledger");
-    b.hidden = false;
-    b.title = "장부 잔고 " + fmtEok(sum.bal) + " (" + sum.asOf + " 마감) — 시작일은 다음 날로";
-    b.addEventListener("click", function(){
-      $("in-have").value = +(+sum.bal).toFixed(4);
-      if (d) $("in-start").value = toISO(addDays(d, 1));
-      render();
-    });
-    if (sum.rate > 0){
-      var r = $("btn-ledger-rate");
-      r.hidden = false;
-      r.title = "장부 최근 28일 실측 시급 " + fmtFine(sum.rate);
-      r.addEventListener("click", function(){
-        $("in-rate").value = +(+sum.rate).toFixed(2);
-        render();
-      });
-    }
-  }
-
-  /* ---------- render ---------- */
-  function render(){
-    var start = parseDate($("in-start").value);
-    var target = parseDate($("in-target").value);
-    if (!start) return;
-
-    var tot = rosterTotals();
-    // 입력 확인용이라 반올림하지 않는다 (19.95 를 20억으로 보여주면 안 됨)
-    $("roster-sum").textContent = "주 " + fmtFine(tot.weekly) + " · 월 " + fmtFine(tot.monthly);
-
-    renderSkipChips(start);
-    var exp = recurTotals(recur);
-    var cfg = {
-      weekly: tot.weekly, monthly: tot.monthly,
-      rate: num("in-rate"),
-      hours: Math.max(0, Math.min(24, num("in-hours"))),
-      skipThu: $("in-skip").checked,
-      have: num("in-have"), goal: num("in-goal"), start: start,
-      once: onceByDay(start),
-      skipWeeks: skipOffsets(start, skipWeeks),
-      expWeekly: exp.weekly, expMonthly: exp.monthly
-    };
-
-    var oIn = 0, oOut = 0;
-    once.forEach(function(o){ if (o.amount > 0) oIn += o.amount; else oOut -= o.amount; });
-    $("once-sum").textContent = once.length
-      ? (oIn ? "+" + fmtFine(oIn) : "") + (oIn && oOut ? " · " : "") + (oOut ? "−" + fmtFine(oOut) : "") || "0"
-      : "—";
-    $("legend-once").hidden = !cfg.once;
-    $("legend-expense").hidden = !(exp.weekly || exp.monthly);
-
-    var inc = monthIncome(cfg);
-    var mWeekly = inc.weekly, mMonthly = inc.monthly, mHunt = inc.hunt;
-    var mGross = mWeekly + mMonthly + mHunt, mTotal = inc.total;
-    $("recur-sum").textContent = recur.length ? (inc.expense ? "월 −" + fmtFine(inc.expense) : "0") : "—";
-
-    $("out-month").textContent = fmtEok(mTotal);
-    var pct = function(v){ return mGross > 0 ? Math.round(v / mGross * 100) : 0; };
-    $("out-day").innerHTML = "일 평균 " + fmtEok(mTotal / DAYS_PER_MONTH) +
-      '<span class="mix">주보 ' + pct(mWeekly) + '% · 사냥 ' + pct(mHunt) +
-      '% · 월보 ' + pct(mMonthly) + '%' +
-      (inc.expense ? ' · 지출 −' + fmtEok(inc.expense) : '') + '</span>';
-
-    var g = cfg.goal > 0 ? findGoal(cfg) : {days:-2};
-
-    var span = (target && target >= start) ? Math.round((target - start)/86400000) + 1 : 0;
-    var chartDays = Math.min(MAX_DAYS, Math.max(span, g.days > 0 ? Math.ceil(g.days*1.12) : 60, 30));
-    var sim = simulate(cfg, chartDays);
-
-    /* 도달은 "며칠"보다 "언제"가 고정값이다. 시작일을 미루면 일수는 줄지만
-       끝나는 날짜는 그대로이거나 오히려 늦어진다. 그래서 날짜를 주역으로 둔다. */
-    var over = 0;
-    last = null;
-    if (g.days === -2){
-      $("out-date").textContent = "—";
-      $("out-days").textContent = "목표 메소를 입력해줘";
-    } else if (g.days === 0){
-      $("out-date").textContent = "이미 달성";
-      $("out-days").textContent = "보유 메소가 목표 이상";
-    } else if (g.days < 0){
-      $("out-date").textContent = "—";
-      $("out-days").textContent = "수익이 없어 도달 불가";
-    } else {
-      var hitDate = addDays(start, g.days - 1);
-      var isThu = hitDate.getDay() === 4 && cfg.weekly > 0;
-      over = sim.daily[g.days - 1] - cfg.goal;
-
-      $("out-date").innerHTML =
-        String(hitDate.getMonth() + 1).padStart(2,"0") + "." + String(hitDate.getDate()).padStart(2,"0") +
-        '<small' + (isThu ? ' class="thu" title="주간보스가 들어오는 날. 그 주에 못 돌면 도달이 일주일 밀림"' : '') +
-        '>(' + DOW[hitDate.getDay()] + ')</small>';
-
-      // 건너뛴 주가 있으면 그게 없을 때와 비교해 며칠 밀렸는지
-      var skipNote = "", pushed = 0;
-      if (cfg.skipWeeks){
-        var g0 = findGoal(withCfg(cfg, "skipWeeks", null)).days, n = Object.keys(cfg.skipWeeks).length;
-        pushed = g0 > 0 ? g.days - g0 : 0;
-        skipNote = '<span class="mix">건너뛴 주 ' + n + '개로 ' + (pushed > 0 ? "+" + pushed + "일 밀림" : "날짜 변동 없음") + '</span>';
-      }
-      last = {hitDate:hitDate, days:g.days, goal:cfg.goal, inc:inc,
-              skipN: cfg.skipWeeks ? Object.keys(cfg.skipWeeks).length : 0, pushed: pushed || 0,
-              url: location.host ? location.host + location.pathname.replace(/index\.html$/, "") : "yh-yeop.github.io/meso_calcul/"};
-      $("out-days").innerHTML = hitDate.getFullYear() + "년 · " + g.days + "일 뒤" +
-        '<span class="mix" title="이만큼 덜 벌어도 같은 날 도달함. 뒤집으면 목표를 이만큼 올려도 도달 날짜는 그대로임">' +
-        "목표 +" + fmtEok(over) + " 넘겨서 도달</span>" + skipNote;
-    }
-
-    if (span > 0){
-      var bal = sim.daily[Math.min(span, sim.daily.length) - 1];
-      $("out-bal").textContent = fmtEok(bal);
-      var diff = bal - cfg.goal;
-      $("out-bal-sub").textContent = span + "일간  ·  목표 대비 " + (diff >= 0 ? "+" : "") + fmtEok(diff);
-    } else {
-      $("out-bal").textContent = "—";
-      $("out-bal-sub").textContent = "목표 날짜를 시작일 이후로";
-    }
-
-    drawChart(cfg, sim, chartDays, g.days > 0 ? g.days - 1 : -1);
-    renderScenarios(cfg, g.days);
-    renderSensitivity(cfg, g.days, over);
-
-    save();
-  }
-
-  /* ---------- init ---------- */
-  var today = new Date();
-  $("in-start").value = toISO(today);
-  $("in-target").value = toISO(addDays(today, 90));
-
-  var from = restore();
-
-  // 다른 계산기(어센틱심볼 계산기 등)에서 목표 메소만 넘겨받는 진입점: #goal=781.25 (억)
-  var goalParam = location.hash.match(/[#&]goal=(\d+(?:\.\d+)?)/);
-  if (goalParam && from !== "link"){
-    $("in-goal").value = parseFloat(goalParam[1]);
-    history.replaceState(null, "", location.pathname + location.search);
-  }
-
-  ["in-rate","in-hours","in-skip","in-start","in-have","in-goal","in-target"].forEach(function(id){
-    $(id).addEventListener("input", render);
-    $(id).addEventListener("change", render);
-  });
-
-  renderRoster();
-  renderOnce();
-  renderRecur();
-  wireLedger();
-  booting = false;
-  render();
-  if (goalParam && from !== "link") $("in-goal").focus();
-
-  // 오프라인 캐시. file:// 로 열었을 땐 서비스 워커가 안 되므로 건너뜀
-  if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
-    window.addEventListener("load", function(){
-      navigator.serviceWorker.register("./sw.js").catch(function(){});
-    });
-  }
-})();
-</script>
+<button class="fab" id="fab" aria-haspopup="dialog">
+  <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>기록
+</button>
+
+<!-- 기록 시트 -->
+<dialog class="sheet" id="sheet" aria-labelledby="sh-title">
+  <form class="sh" id="form" autocomplete="off" novalidate>
+    <div class="sh-grip"></div>
+    <div class="sh-head">
+      <h2 id="sh-title">기록 추가</h2>
+      <button type="button" class="icon-btn" data-close aria-label="닫기"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="seg" id="seg" role="group" aria-label="구분">
+      <button type="button" data-t="in" aria-pressed="true">수입</button>
+      <button type="button" data-t="out" aria-pressed="false">지출</button>
+      <button type="button" data-t="bal" aria-pressed="false">잔고 확인</button>
+    </div>
+    <div id="r-presets">
+      <div class="sh-lbl">최근 기록 다시 넣기</div>
+      <div class="presets" id="presets"></div>
+    </div>
+    <div id="r-cats">
+      <div class="sh-lbl">어디서</div>
+      <div class="cats" id="cats" role="group" aria-label="항목"></div>
+    </div>
+    <div>
+      <div class="sh-lbl" id="amt-label">얼마</div>
+      <label class="amt-box"><input type="text" id="f-amt" inputmode="decimal" placeholder="0" enterkeyhint="done" aria-labelledby="amt-label"><span>억</span></label>
+      <div class="amt-prev" id="amt-prev"></div>
+      <div class="quick" id="quick"></div>
+    </div>
+    <div class="frow" id="r-hours">
+      <span class="sh-lbl">사냥</span>
+      <input type="number" id="f-hours" step="0.5" min="0" max="24" placeholder="—" aria-label="사냥 시간">
+      <span class="note">시간</span>
+      <span class="note grow" id="hrs-prev" style="text-align:right"></span>
+    </div>
+    <div class="frow">
+      <span class="sh-lbl">날짜</span>
+      <div class="chips" id="dates">
+        <button type="button" class="chip" data-dd="0">오늘</button>
+        <button type="button" class="chip" data-dd="1">어제</button>
+      </div>
+      <input type="date" id="f-date" aria-label="날짜">
+    </div>
+    <div class="frow" id="r-char">
+      <span class="sh-lbl">캐릭터</span>
+      <div class="charrow grow">
+        <div class="chips" id="charchips"></div>
+        <input type="text" id="f-char" placeholder="이름 (선택)" aria-label="캐릭터">
+      </div>
+    </div>
+    <div class="frow">
+      <span class="sh-lbl">메모</span>
+      <input type="text" class="grow" id="f-memo" placeholder="선택" aria-label="메모">
+    </div>
+    <div class="api-note" id="api-note" hidden></div>
+    <div class="sh-foot">
+      <button type="button" class="btn danger" id="f-del" hidden>삭제</button>
+      <button type="button" class="btn" id="f-more">저장하고 계속</button>
+      <button type="submit" class="btn primary" id="f-submit">저장</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- 캐릭터 시트 -->
+<dialog class="sheet" id="ch-sheet" aria-labelledby="ch-title">
+  <form class="sh" id="ch-form" autocomplete="off" novalidate>
+    <div class="sh-grip"></div>
+    <div class="sh-head">
+      <h2 id="ch-title">캐릭터</h2>
+      <button type="button" class="icon-btn" data-close aria-label="닫기"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div id="ch-stats"></div>
+    <div>
+      <div class="field"><label for="ch-name">이름</label><div class="ctl"><input type="text" id="ch-name" required></div></div>
+      <div class="field"><label for="ch-weekly">주간보스 수익<small>한 주 합계</small></label><div class="ctl"><input type="number" id="ch-weekly" step="0.0001" min="0" inputmode="decimal"><span class="unit">억</span></div></div>
+      <div class="field"><label for="ch-monthly">월간보스 수익</label><div class="ctl"><input type="number" id="ch-monthly" step="0.0001" min="0" inputmode="decimal"><span class="unit">억</span></div></div>
+      <label class="check" style="border-top:0"><input type="checkbox" id="ch-main">본캐</label>
+      <div class="note" id="ch-meta"></div>
+    </div>
+    <div class="sh-foot">
+      <button type="button" class="btn danger" id="ch-del">삭제</button>
+      <button type="submit" class="btn primary" id="ch-save">저장</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Open API 캐릭터 불러오기 -->
+<dialog class="sheet" id="imp-sheet" aria-labelledby="imp-title">
+  <form class="sh" id="imp-form" novalidate>
+    <div class="sh-grip"></div>
+    <div class="sh-head">
+      <h2 id="imp-title">계정 캐릭터 불러오기</h2>
+      <button type="button" class="icon-btn" data-close aria-label="닫기"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="note" id="imp-msg"></div>
+    <div id="imp-list"></div>
+    <div class="sh-foot">
+      <button type="submit" class="btn primary" id="imp-ok" disabled>불러오기</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" hidden role="status"><span id="toast-msg"></span><button id="toast-undo">되돌리기</button></div>
+
+<script src="rules.js"></script>
+<script src="core.js"></script>
+<script src="store.js"></script>
+<script src="api.js"></script>
+<script src="ledger.js"></script>
+<script src="calc.js"></script>
+<script src="chars.js"></script>
+<script src="home.js"></script>
+<script src="app.js"></script>
 </body>
 </html>

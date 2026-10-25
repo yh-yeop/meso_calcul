@@ -60,9 +60,9 @@ API는 **"무슨 일이 있었나"(강화 시도, 재설정, 보스 클리어, �
 ## 구조
 
 ```
-ledger.html
+index.html (장부 탭 · ⚙ 설정)
   ├─ 설정: API 키 (localStorage "meso-ledger-key", 백업 · CSV · 공유에 절대 안 실림)
-  ├─ sync.js 성격의 모듈 (같은 파일 안 IIFE 또는 별도 api.js)
+  ├─ api.js (클라이언트) + ledger.js (동기화 · upsert)
   │    fetch → 정규화 → 비용 산출 → 장부 기록 upsert
   └─ rules.json  ← 비용 규칙표. 코드와 분리, 버전 · 출처 · 적용 시작일 포함
 ```

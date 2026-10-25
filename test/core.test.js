@@ -1,22 +1,9 @@
 'use strict';
-// index.html 안의 <script id="meso-core"> 블록을 그대로 꺼내 Node에서 돌린다.
-// 페이지는 파일 하나로 유지하면서(file:// 로 열어도 동작) 계산 로직만 검사하기 위한 방식.
+// 계산기 순수 로직(core.js)을 Node에서 그대로 돌린다. 브라우저에선 같은 파일을 <script src>로 씀.
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
-const vm = require('node:vm');
 
-function loadCore() {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  const m = html.match(/<script id="meso-core">([\s\S]*?)<\/script>/);
-  assert.ok(m, 'meso-core 블록이 있어야 한다');
-  // 같은 realm에서 실행해야 deepEqual이 프로토타입 차이로 실패하지 않는다
-  const mod = { exports: {} };
-  vm.runInThisContext('(function(module){' + m[1] + '\n})', { filename: 'index.html#meso-core' })(mod);
-  return mod.exports;
-}
-const M = loadCore();
+const M = require('../core.js');
 const D = (y, m, d) => new Date(y, m - 1, d);
 const base = () => ({ weekly: 20, monthly: 10, rate: 3, hours: 2, skipThu: true, have: 0, goal: 100, start: D(2026, 10, 12) /* 월 */ });
 
