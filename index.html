@@ -130,6 +130,7 @@
   .tool:hover{border-color:var(--gold-dim);color:var(--gold)}
   .tool:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   .tool.ok{border-color:var(--mint);color:var(--mint)}
+  a.tool{text-decoration:none;line-height:1.6}
 
   /* 셀이 3개라 auto-fit 이 2열로 접히면 네 번째 자리가 빈 상자로 남는다.
      3열 아니면 1열, 두 상태만 갖게 고정한다. */
@@ -349,6 +350,7 @@
     <h1>메소 적립 계산기</h1>
     <p>주간보스는 목요일, 월간보스는 매월 1일에 한 번에 들어옴. 사냥만 매일 쌓임. 그래서 잔고는 매끄럽게 늘지 않고 계단으로 올라감.</p>
     <div class="tools">
+      <a class="tool" href="ledger.html" title="실제 수입·지출 기록">장부</a>
       <button class="tool" id="btn-theme" title="라이트/다크 테마 전환" aria-label="테마 전환">◐ 테마</button>
       <button class="tool" id="btn-share" title="현재 설정이 담긴 링크 복사">링크 복사</button>
       <button class="tool" id="btn-image" title="도달 날짜·월 수익이 담긴 결과 카드를 PNG 로 저장">이미지 저장</button>
@@ -395,7 +397,7 @@
         <h2>사냥</h2>
         <div class="row">
           <label for="in-rate">재획 시급 <i>사냥 1시간당</i></label>
-          <div class="field"><input type="number" id="in-rate" step="0.01" value="3"><span class="unit">억</span></div>
+          <div class="field"><button class="mini" id="btn-ledger-rate" hidden>실측</button><input type="number" id="in-rate" step="0.01" value="3"><span class="unit">억</span></div>
         </div>
         <div class="row">
           <label for="in-hours">일 사냥 시간</label>
@@ -418,7 +420,7 @@
         </div>
         <div class="row">
           <label for="in-have">시작 보유 메소</label>
-          <div class="field"><input type="number" id="in-have" step="1" value="0"><span class="unit">억</span></div>
+          <div class="field"><button class="mini" id="btn-ledger" hidden>장부</button><input type="number" id="in-have" step="1" value="0"><span class="unit">억</span></div>
         </div>
         <div class="row">
           <label for="in-goal">목표 메소</label>
@@ -1585,6 +1587,39 @@ if (typeof module === "object" && module.exports) module.exports = MesoCore;
     render();
   });
 
+  /* ---------- 장부 연동 ----------
+     ledger.html 이 같은 출처 localStorage 에 요약(sum)을 남겨 둠.
+     잔고는 마지막 기록일 마감 기준이라 시작일은 그 다음 날로 잡는다. */
+  function ledgerSum(){
+    try{
+      var s = JSON.parse(localStorage.getItem("meso-ledger-v1"));
+      return s && s.sum && s.sum.asOf ? s.sum : null;
+    } catch(e){ return null; }
+  }
+
+  function wireLedger(){
+    var sum = ledgerSum();
+    if (!sum) return;
+    var d = parseDate(sum.asOf);
+    var b = $("btn-ledger");
+    b.hidden = false;
+    b.title = "장부 잔고 " + fmtEok(sum.bal) + " (" + sum.asOf + " 마감) — 시작일은 다음 날로";
+    b.addEventListener("click", function(){
+      $("in-have").value = +(+sum.bal).toFixed(4);
+      if (d) $("in-start").value = toISO(addDays(d, 1));
+      render();
+    });
+    if (sum.rate > 0){
+      var r = $("btn-ledger-rate");
+      r.hidden = false;
+      r.title = "장부 최근 28일 실측 시급 " + fmtFine(sum.rate);
+      r.addEventListener("click", function(){
+        $("in-rate").value = +(+sum.rate).toFixed(2);
+        render();
+      });
+    }
+  }
+
   /* ---------- render ---------- */
   function render(){
     var start = parseDate($("in-start").value);
@@ -1711,6 +1746,7 @@ if (typeof module === "object" && module.exports) module.exports = MesoCore;
   renderRoster();
   renderOnce();
   renderRecur();
+  wireLedger();
   booting = false;
   render();
   if (goalParam && from !== "link") $("in-goal").focus();
