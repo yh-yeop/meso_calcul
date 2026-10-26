@@ -772,6 +772,8 @@ Meso.calc = (function(M){
     // 다른 계산기에서 목표만 넘겨받는 진입점: #goal=781.25 (억)
     applyGoal:function(v){ $("in-goal").value = v; changed(); $("in-goal").focus(); },
     reset:function(){ setDefaults(); renderOnce(); renderRecur(); changed(); },
+    // 다른 기기에서 받은 값으로 다시 읽음 — 저장 · 알림은 안 함 (받은 걸 그대로 다시 올리지 않게)
+    reload:function(){ setDefaults(); applyState(M.read(M.KEYS.calc)); renderOnce(); renderRecur(); render(); },
     getState:function(){ return snapshot(false); },
     setState:function(s){ setDefaults(); applyState(s); renderOnce(); renderRecur(); changed(); },
     renderCard:function(){ return last ? renderCard(last) : Promise.resolve(null); }

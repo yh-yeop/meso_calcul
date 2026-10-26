@@ -1,9 +1,9 @@
 /* 오프라인 캐시.
    프리캐시 + stale-while-revalidate: 캐시가 있으면 바로 주고 뒤에서 새 걸 받아 갈아끼움.
    캐시 이름의 버전을 올리면 activate 에서 옛 캐시를 지움. */
-var VERSION = "meso-calc-v8";
+var VERSION = "meso-calc-v10";
 var ASSETS = ["./", "./index.html", "./app.css", "./core.js", "./store.js", "./api.js", "./ledger.js", "./calc.js",
-              "./chars.js", "./home.js", "./app.js", "./rules.js", "./bosses.js", "./ledger.html", "./icon.svg", "./manifest.json"];
+              "./chars.js", "./home.js", "./firebase-config.js", "./sync.js", "./app.js", "./rules.js", "./bosses.js", "./ledger.html", "./icon.svg", "./manifest.json"];
 
 self.addEventListener("install", function(e){
   // HTTP 캐시를 건너뛰어야 새 버전이 옛 파일을 프리캐시하지 않음

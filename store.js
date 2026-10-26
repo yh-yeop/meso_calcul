@@ -97,6 +97,7 @@ var Meso = (function(){
     var ok = true;
     try{ localStorage.setItem(key, JSON.stringify(v)); } catch(e){ ok = false; }
     if (!ok) emit("storage-error", key);
+    else emit("saved", key);   // 기기 간 동기화가 이걸 보고 올림
     return ok;
   }
 

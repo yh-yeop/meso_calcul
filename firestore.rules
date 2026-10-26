@@ -1,0 +1,9 @@
+rules_version = '2';
+// 기기 간 동기화 — 각자 자기 데이터(users/{자기 uid}/...)만 읽고 쓸 수 있음
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}

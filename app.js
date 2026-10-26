@@ -76,7 +76,58 @@
       b.setAttribute("aria-pressed", b.dataset.theme === pref ? "true" : "false");
     });
     renderPrices();
+    renderSync();
   }
+
+  /* ---------- 계정 · 동기화 ---------- */
+  function ago(t){
+    var s = Math.round((Date.now() - t) / 1000);
+    return s < 60 ? "방금" : s < 3600 ? Math.floor(s / 60) + "분 전" : Math.floor(s / 3600) + "시간 전";
+  }
+  function renderSync(){
+    var y = M.sync.state(), u = y.user, on = !!u && y.status !== "out";
+    var label = {off:"", loading:"연결 중…", out:"", syncing:"동기화 중…", idle:"동기화됨", offline:"오프라인", error:"오류", ask:"선택 필요"}[y.status] || "";
+    $("sync-state").textContent = label;
+    $("sync-note").textContent =
+      y.status === "off" ? "아직 연결 안 됨 — 서버 설정(firebase-config.js)이 비어 있음." :
+      !on ? "로그인하면 폰 · PC 에서 같은 장부 · 캐릭터 · 계산기를 씀. API 키는 기기마다 따로." :
+      (u.email || u.name) + " · " + (
+        y.status === "offline" ? "연결되면 올림" :
+        y.status === "error" ? "동기화 실패 — 이 기기엔 저장됨" :
+        y.status === "ask" ? "이 기기와 클라우드에 둘 다 데이터가 있음" :
+        y.at ? ago(y.at) + " 맞춤" : "맞추는 중");
+    $("sync-login").hidden = on || y.status === "off";
+    $("sync-login").disabled = y.status === "loading";
+    $("sync-now").hidden = !on;
+    $("sync-now").textContent = y.status === "ask" ? "다시 고르기" : "지금 동기화";
+    $("sync-logout").hidden = !on;
+  }
+  function openLink(){
+    var p = M.sync.pending();
+    if (!p) return;
+    $("link-msg").innerHTML = "이 기기: 장부 <b>" + p.lc.n + "</b>건 · 캐릭터 <b>" + p.lc.c + "</b>명<br>" +
+      "클라우드: 장부 <b>" + p.rc.n + "</b>건 · 캐릭터 <b>" + p.rc.c + "</b>명";
+    if (!$("link-sheet").open) $("link-sheet").showModal();
+  }
+  M.on("sync", function(status){
+    if (cur === "settings") renderSync();
+    if (status === "ask") openLink();
+  });
+  $("sync-login").addEventListener("click", function(){ M.sync.login(); });
+  $("sync-logout").addEventListener("click", function(){
+    if (confirm("로그아웃할까? 이 기기 데이터는 그대로 남고 동기화만 멈춤.")) M.sync.logout();
+  });
+  $("sync-now").addEventListener("click", function(){
+    if (M.sync.pending()) openLink(); else M.sync.now();
+  });
+  $("link-sheet").addEventListener("click", function(e){
+    var b = e.target.closest("[data-link]");
+    if (!b) return;
+    var k = b.dataset.link;
+    if (k === "local" && !confirm("클라우드 데이터를 이 기기 것으로 덮어씀. 계속?")) return;
+    $("link-sheet").close();
+    M.sync.choose(k);
+  });
   $("theme-seg").addEventListener("click", function(e){
     var b = e.target.closest("[data-theme]");
     if (!b) return;

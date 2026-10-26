@@ -284,6 +284,16 @@
   <main class="view" id="v-settings" hidden>
     <div class="vhead"><h2>설정</h2></div>
 
+    <section class="card" id="sync-card">
+      <h3>계정 · 동기화 <small id="sync-state"></small></h3>
+      <p class="note" id="sync-note">로그인하면 폰 · PC 에서 같은 장부를 씀.</p>
+      <div class="btns" style="margin-top:10px">
+        <button class="btn primary" id="sync-login" type="button">Google 로 로그인</button>
+        <button class="btn" id="sync-now" type="button" hidden>지금 동기화</button>
+        <button class="btn" id="sync-logout" type="button" hidden>로그아웃</button>
+      </div>
+    </section>
+
     <section class="card">
       <h3>테마</h3>
       <div class="seg" id="theme-seg" role="group" aria-label="테마">
@@ -479,6 +489,21 @@
   </form>
 </dialog>
 
+<dialog class="sheet" id="link-sheet" aria-labelledby="link-title">
+  <div class="sh">
+    <div class="sh-grip"></div>
+    <div class="sh-head">
+      <h2 id="link-title">데이터를 어떻게 맞출까?</h2>
+    </div>
+    <div class="note" id="link-msg"></div>
+    <div class="sh-foot" style="flex-direction:column;align-items:stretch">
+      <button type="button" class="btn primary" data-link="merge">합치기 <small>같은 기록은 하나로</small></button>
+      <button type="button" class="btn" data-link="cloud">클라우드 것으로 바꾸기</button>
+      <button type="button" class="btn" data-link="local">이 기기 것으로 덮어쓰기</button>
+    </div>
+  </div>
+</dialog>
+
 <div class="toast" id="toast" popover="manual" hidden role="status"><span id="toast-msg"></span><button id="toast-undo">되돌리기</button></div>
 
 <script src="rules.js"></script>
@@ -490,6 +515,8 @@
 <script src="calc.js"></script>
 <script src="chars.js"></script>
 <script src="home.js"></script>
+<script src="firebase-config.js"></script>
+<script src="sync.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -302,6 +302,196 @@ var MesoCore = (function(){
     return new TextDecoder().decode(bytes);
   }
 
+  /* ---------- 기기 간 동기화 병합 ----------
+     로컬과 클라우드를 "마지막으로 맞춘 때(base)" 기준 3방향으로 합침. base 는 사본이 아니라 id → 내용 해시라 작음.
+     state = {ledger, chars, calc, prices} — 각각 localStorage 에 저장하는 모양 그대로(없으면 null). */
+  // 키 순서와 상관없이 같은 값이면 같은 문자열
+  function stable(v){
+    if (v === undefined) return "null";
+    if (v === null || typeof v !== "object") return JSON.stringify(v);
+    if (Array.isArray(v)) return "[" + v.map(stable).join(",") + "]";
+    return "{" + Object.keys(v).sort().filter(function(k){ return v[k] !== undefined; })
+      .map(function(k){ return JSON.stringify(k) + ":" + stable(v[k]); }).join(",") + "}";
+  }
+  // FNV-1a 32비트 두 번(시드 다르게) — 기록 수만 건에서도 충돌 걱정 없을 만큼
+  function hash(v){
+    var s = stable(v), a = 0x811c9dc5, b = 0x01000193 ^ 0x5bd1e995;
+    for (var i = 0; i < s.length; i++){
+      var c = s.charCodeAt(i);
+      a = Math.imul(a ^ c, 0x01000193) >>> 0;
+      b = Math.imul(b ^ c, 0x01000193) >>> 0;
+    }
+    return a.toString(36) + "." + b.toString(36);
+  }
+  function noId(e){ var o = {}; for (var k in e) if (k !== "id") o[k] = e[k]; return o; }
+
+  function ledgerMeta(l){ return l ? {budget: l.budget || null, api: l.api || null} : null; }
+  function baseOf(st){
+    var b = {ledger:{e:{}, meta:null}, chars:{c:{}, order:null}, calc:hash(st.calc || null), prices:hash(st.prices || null)};
+    var L = st.ledger, C = st.chars;
+    if (L && L.entries) L.entries.forEach(function(e){ b.ledger.e[e.id] = hash(e); });
+    b.ledger.meta = hash(ledgerMeta(L));
+    if (C && C.list){
+      C.list.forEach(function(c){ b.chars.c[c.id] = hash(c); });
+      b.chars.order = C.list.map(function(c){ return c.id; });   // 순서는 해시 말고 id 목록 (추가 · 삭제와 순서 변경을 구분하려고)
+    }
+    return b;
+  }
+
+  // 한 덩어리: 한쪽만 바뀌면 그쪽, 둘 다 바뀌었거나 base 가 없으면 로컬
+  function pick3(l, r, bh){
+    var hl = hash(l === undefined ? null : l), hr = hash(r === undefined ? null : r);
+    if (hl === hr) return {v:l, from:"same"};
+    if (bh !== undefined && hl === bh) return {v:r, from:"remote"};
+    return {v:l, from:"local"};
+  }
+
+  /* id 단위 병합. base[id] 가 없으면 그 기록은 base 이후에 생긴 것.
+     양쪽에 base 에 없는 같은 id 가 다른 내용으로 있으면 둘 다 새로 만든 것 → 로컬 것을 collide 로 표시해 둘 다 살림 */
+  function mergeList(local, remote, base, dedupe){
+    var L = {}, R = {}, out = [], seen = {};
+    local.forEach(function(x){ L[x.id] = x; });
+    remote.forEach(function(x){ R[x.id] = x; });
+    // 처음 연결해서 합칠 땐 id 만 다르고 내용이 같은 건 같은 기록으로 봄
+    var remoteNew = {};
+    if (dedupe) remote.forEach(function(x){ if (base[x.id] === undefined) remoteNew[hash(noId(x))] = true; });
+    function decide(id){
+      var l = L[id], r = R[id], b = base[id];
+      if (l && r){
+        var hl = hash(l), hr = hash(r);
+        if (hl === hr) return [{v:l, from:"same"}];
+        if (b === undefined){
+          if (dedupe && remoteNew[hash(noId(l))]) return [{v:r, from:"remote"}];
+          return [{v:r, from:"remote"}, {v:l, from:"local", collide:true}];
+        }
+        if (hl === b) return [{v:r, from:"remote"}];
+        return [{v:l, from:"local"}];
+      }
+      if (l){
+        if (b === undefined) return dedupe && remoteNew[hash(noId(l))] ? [] : [{v:l, from:"local"}];
+        return hash(l) === b ? [] : [{v:l, from:"local"}];   // 저쪽에서 지움 / 지웠는데 여기서 고침 → 살림
+      }
+      if (b === undefined) return [{v:r, from:"remote"}];
+      return hash(r) === b ? [] : [{v:r, from:"remote"}];
+    }
+    remote.concat(local).forEach(function(x){
+      if (seen[x.id]) return;
+      seen[x.id] = true;
+      out.push.apply(out, decide(x.id));
+    });
+    return out;
+  }
+
+  // 순서: 로컬에서만 순서를 바꿨으면 로컬 순서, 아니면 클라우드 순서. 없는 건 빼고 빠진 건 뒤에.
+  // 추가 · 삭제는 순서 변경이 아님 — base 에 있던 것끼리의 상대 순서만 봄
+  function moved(ids, baseIds){
+    var inA = {}, inB = {};
+    ids.forEach(function(id){ inA[id] = true; });
+    baseIds.forEach(function(id){ inB[id] = true; });
+    return ids.filter(function(id){ return inB[id]; }).join("\n") !== baseIds.filter(function(id){ return inA[id]; }).join("\n");
+  }
+  function order(items, localIds, remoteIds, baseOrder){
+    var base = Array.isArray(baseOrder) ? baseOrder : null;
+    var pref = base && moved(localIds, base) && !moved(remoteIds, base) ? localIds : base ? remoteIds : localIds;
+    var by = {}, out = [];
+    items.forEach(function(x){ (by[x.v.id] = by[x.v.id] || []).push(x); });
+    pref.forEach(function(id){ if (by[id]){ out.push.apply(out, by[id]); delete by[id]; } });
+    items.forEach(function(x){ if (by[x.v.id]){ out.push.apply(out, by[x.v.id]); delete by[x.v.id]; } });
+    return out;
+  }
+
+  function mergeLedger(l, r, b, dedupe){
+    if (!r) return l;
+    if (!l) return r;
+    // 장부 화면은 늘 날짜 · id 로 정렬해서 저장 순서는 안 맞춰도 됨
+    var items = mergeList(l.entries || [], r.entries || [], b.e || {}, dedupe);
+    var maxId = Math.max(l.seq || 0, r.seq || 0);
+    items.forEach(function(x){ if (!x.collide && x.v.id > maxId) maxId = x.v.id; });
+    // 같은 보스 체크(src 같음)가 양쪽에서 따로 생기면 로컬 것 하나만
+    var bySrc = {};
+    items.forEach(function(x){ if (x.v.src && /^chk:/.test(x.v.src)) (bySrc[x.v.src] = bySrc[x.v.src] || []).push(x); });
+    var drop = [];
+    Object.keys(bySrc).forEach(function(s){
+      var g = bySrc[s];
+      if (g.length < 2) return;
+      var keep = g.filter(function(x){ return x.from !== "remote"; })[0] || g[0];
+      g.forEach(function(x){ if (x !== keep) drop.push(x); });
+    });
+    items = items.filter(function(x){ return drop.indexOf(x) < 0; });
+    var entries = items.map(function(x){
+      if (!x.collide) return x.v;
+      var e = {}; for (var k in x.v) e[k] = x.v[k];
+      e.id = ++maxId;
+      return e;
+    }).sort(function(a, b){ return a.id - b.id; });
+    var meta = pick3(ledgerMeta(l), ledgerMeta(r), b.meta).v || {};
+    var out = {};
+    for (var k in l) out[k] = l[k];
+    out.entries = entries;
+    out.seq = maxId;
+    out.budget = meta.budget || l.budget;
+    out.api = meta.api || l.api;
+    return out;
+  }
+
+  function mergeChars(l, r, b, dedupe){
+    if (!r) return l;
+    if (!l) return r;
+    var ll = l.list || [], rl = r.list || [];
+    var items = mergeList(ll, rl, b.c || {}, dedupe);
+    // 문자열 id 라 충돌은 사실상 없음 — 생기면 로컬 것만
+    items = items.filter(function(x){ return !x.collide; });
+    items = order(items, ll.map(function(c){ return c.id; }), rl.map(function(c){ return c.id; }), b.order);
+    return {v: l.v || r.v || 1, list: items.map(function(x){ return x.v; })};
+  }
+
+  /* local · remote · base → 합친 state. base 가 null 이면 처음 연결(합치기): 내용이 같은 기록은 하나로 */
+  function syncMerge(local, remote, base){
+    var first = !base;
+    base = base || {ledger:{e:{}}, chars:{c:{}}};
+    var st = {
+      ledger: mergeLedger(local.ledger || null, remote.ledger || null, base.ledger || {e:{}}, first),
+      chars: mergeChars(local.chars || null, remote.chars || null, base.chars || {c:{}}, first),
+      calc: pick3(local.calc || null, remote.calc || null, first ? undefined : base.calc).v,
+      prices: pick3(local.prices || null, remote.prices || null, first ? undefined : base.prices).v
+    };
+    return {
+      state: st,
+      // 로컬에 써야 하나 · 클라우드에 써야 하나
+      toLocal: hash(st) !== hash(norm(local)),
+      toRemote: hash(st) !== hash(norm(remote))
+    };
+  }
+  // 비교용 — 장부 기록은 저장 순서가 의미 없어서 id 순으로 맞춰서 비교
+  function norm(s){
+    var l = s.ledger || null;
+    if (l && l.entries){
+      var c = {}; for (var k in l) c[k] = l[k];
+      c.entries = l.entries.slice().sort(function(a, b){ return a.id - b.id; });
+      l = c;
+    }
+    return {ledger:l, chars:s.chars || null, calc:s.calc || null, prices:s.prices || null};
+  }
+
+  // 장부는 클라우드 문서 1MB 제한 때문에 해마다 나눠 저장
+  function splitLedger(l){
+    var meta = {}, years = {};
+    for (var k in l) if (k !== "entries") meta[k] = l[k];
+    (l.entries || []).forEach(function(e){
+      var y = /^\d{4}/.test(e.d || "") ? e.d.slice(0, 4) : "0000";
+      (years[y] = years[y] || []).push(e);
+    });
+    return {meta: meta, years: years};
+  }
+  function joinLedger(meta, years){
+    var out = {};
+    for (var k in meta) out[k] = meta[k];
+    var all = [];
+    Object.keys(years).sort().forEach(function(y){ all.push.apply(all, years[y]); });
+    out.entries = all.sort(function(a, b){ return a.id - b.id; });
+    return out;
+  }
+
 
   return {
     WEEK_PER_MONTH: WEEK_PER_MONTH, DAYS_PER_MONTH: DAYS_PER_MONTH, MAX_DAYS: MAX_DAYS,
@@ -311,7 +501,8 @@ var MesoCore = (function(){
     nextThursdays: nextThursdays, skipOffsets: skipOffsets, recurTotals: recurTotals,
     simulate: simulate, findGoal: findGoal, monthIncome: monthIncome,
     withCfg: withCfg, costFor1Day: costFor1Day,
-    b64e: b64e, b64d: b64d
+    b64e: b64e, b64d: b64d,
+    sync: {hash: hash, baseOf: baseOf, merge: syncMerge, splitLedger: splitLedger, joinLedger: joinLedger}
   };
 })();
 if (typeof module === "object" && module.exports) module.exports = MesoCore;

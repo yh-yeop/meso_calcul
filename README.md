@@ -108,7 +108,7 @@ Data based on NEXON Open API.
 
 ## 저장되는 값
 
-전부 브라우저 안에만 있음. 서버로 아무것도 안 감 — 애초에 서버가 없음.
+브라우저 localStorage 가 원본. ⚙ **계정 · 동기화**에서 Google 로 로그인하면 아래 장부 · 캐릭터 · 계산기 · 결정석 가격이 Firestore 의 내 계정 칸에도 올라가서 다른 기기와 맞춰짐(로그인 안 하면 서버로 아무것도 안 감). API 키 · 테마는 기기마다 따로.
 
 - `localStorage["meso-chars-v1"]` — 캐릭터(이름 · 보스 루틴 · 직접 입력 주보/월보 · 본캐 · 월드/직업/레벨). 없으면 예전 계산기 저장값의 로스터(`r`)에서 한 번 옮겨 옴
 - `localStorage["meso-boss-prices"]` — ⚙에서 고친 결정석 가격 (`"보스:난이도": 메소`)
@@ -118,9 +118,21 @@ Data based on NEXON Open API.
 - `localStorage["meso-theme"]` — 테마 버튼으로 고정한 값(`light`/`dark`). 없으면 시스템 설정
 - URL의 `#s=...` — `링크 복사`로 만든 공유 링크(Base64URL): 계산기 입력 + 캐릭터. 열면 한 번 적용하고 주소를 `#calc`로 바꿈
 - URL의 `#goal=...` — 목표 메소(억)만 적용하고 주소를 `#calc`로
-- 서비스 워커 캐시 `meso-calc-v5` — 화면 · 스크립트 · 아이콘 전부. 열 때마다 뒤에서 새로 받아 갈아끼움
+- `localStorage["meso-sync-base"]` — 마지막으로 클라우드와 맞춘 때의 기록별 해시(3방향 병합 기준), `meso-sync-on` — 다음에 열 때 로그인 이어가기
+- 서비스 워커 캐시 `meso-calc-v9` — 화면 · 스크립트 · 아이콘 전부. 열 때마다 뒤에서 새로 받아 갈아끼움
 
 ⚙ 백업은 장부 · 계산기 · 캐릭터 · 고친 결정석 가격을 한 JSON 파일로(API 키 제외). 예전 장부 전용 백업도 그대로 복원됨. ⚙ `계산기 초기화`는 계산기 입력만 기본값으로.
+
+## 기기 간 동기화 (Firebase)
+
+로그인 · 저장은 Firebase(Google 로그인 + Firestore, 무료 요금제)가 맡음. 처음 한 번 콘솔에서:
+
+1. [Firebase 콘솔](https://console.firebase.google.com)에서 프로젝트 만들기 → **웹 앱 추가** → 나오는 `firebaseConfig` 값을 `firebase-config.js`의 `window.MESO_FIREBASE`에 넣기 (공개돼도 되는 값)
+2. **Authentication** → 로그인 방법 → **Google** 사용 설정, 설정 → 승인된 도메인에 `yh-yeop.github.io` 추가 (`localhost`는 기본으로 있음)
+3. **Firestore Database** 만들기 (위치 `asia-northeast3` 서울) → 규칙 탭에 [`firestore.rules`](firestore.rules) 붙여넣고 게시
+
+구조: `users/{uid}/meta/state`(캐릭터 · 계산기 · 가격 · 장부 메타 · 연도 목록) + `users/{uid}/ledger/{연도}`(그해 기록). 값은 JSON 문자열 — Firestore 는 배열 안 배열을 못 넣고 문서당 1MB 라 장부를 해마다 나눔. 쓰기는 `rev` 를 확인하는 트랜잭션이라 두 기기가 동시에 써도 하나가 다시 받아 합침.
+병합은 기록 단위 3방향(`core.js` `MesoCore.sync`, 테스트 `test/sync.test.js`): 한쪽만 바뀐 건 그쪽, 둘 다 고친 건 이 기기, 양쪽에서 같은 번호로 새로 만든 기록은 둘 다 살림. 처음 연결하는 기기에 데이터가 양쪽 다 있으면 합치기 · 클라우드 것 · 이 기기 것 중에 고름.
 
 ## GitHub Pages 배포
 
