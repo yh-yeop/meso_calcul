@@ -814,7 +814,9 @@ Meso.ledger = (function(M){
       $("f-amt").focus();
       return;
     }
-    var e = {id: ui.edit || ++st.seq, d:d, t:ui.t, a:round(a, 6)};
+    // 시트를 연 사이 다른 기기가 그 기록을 지웠을 수 있음 → 수정이 아니라 새 기록으로 넣음
+    var gone = !!ui.edit && !findEntry(ui.edit);
+    var e = {id: ui.edit && !gone ? ui.edit : ++st.seq, d:d, t:ui.t, a:round(a, 6)};
     if (ui.t !== "bal"){
       e.c = ui.c[ui.t];
       var ch = $("f-char").value.trim();
@@ -828,7 +830,7 @@ Meso.ledger = (function(M){
     var m = $("f-memo").value.trim();
     if (m) e.m = m;
     var label = (e.t === "bal" ? "잔고 확인 " : cat(e.t, e.c).n + " ") + fmtMan(e.a), undo;
-    if (ui.edit){
+    if (ui.edit && !gone){
       var old = findEntry(ui.edit);
       if (old && old.src){
         e.src = old.src;
@@ -845,7 +847,7 @@ Meso.ledger = (function(M){
     } else {
       st.entries.push(e);
       undo = function(){ st.entries = st.entries.filter(function(x){ return x.id !== e.id; }); changed(); };
-      label += " 기록함";
+      label += gone ? " — 다른 기기에서 지운 기록이라 새로 넣음" : " 기록함";
     }
     // 마지막 모드는 수입/지출만 기억 (잔고 확인이 + 버튼 기본이 되면 안 됨)
     if (e.t !== "bal") ui.lastT = e.t;

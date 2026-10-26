@@ -385,6 +385,14 @@ var Meso = (function(){
     toRoster: function(){ return chars.map(function(c){ return [c.name, charWeekly(c), charMonthly(c)]; }); },
     all: function(){ return chars; },
     load: loadChars,
+    // 동기화가 클라우드 값을 정제할 때 — 저장은 안 하고 load 와 같은 정리만
+    sanitize: function(o){
+      var list = cleanList(o && o.list), seen = false;
+      // load 와 같게 본캐는 하나만, 없으면 맨 앞 (fixMain 은 전역 chars 를 건드려서 여기선 직접)
+      list.forEach(function(c){ if (c.main){ if (seen) c.main = false; seen = true; } });
+      if (!seen && list.length) list[0].main = true;
+      return {v:1, list:list};
+    },
     setAll: function(list){ chars = cleanList(list); saveChars(); }
   };
 
@@ -429,6 +437,10 @@ var Meso = (function(){
     // 되돌리기는 누를 시간을 더 줌
     toastTimer = setTimeout(hideToast, undoFn ? 8000 : 5000);
   }
+  // 대기 중인 되돌리기 취소 — 원격 변경이 들어와 옛 상태로 돌리면 다른 기기 변경을 지우게 될 때 (실행은 안 함)
+  function dropUndo(){
+    if (undoFn) hideToast();
+  }
   function runUndo(){
     var f = undoFn;
     hideToast();
@@ -466,6 +478,7 @@ var Meso = (function(){
       emit("change", "prices");
     },
     setOverrides: function(o){ priceOver = cleanPrices(o); write(KEYS.prices, priceOver); emit("change", "prices"); },
+    sanitizePrices: function(o){ return cleanPrices(o); },
     reloadPrices: function(){ priceOver = cleanPrices(read(KEYS.prices)); }
   };
 
@@ -478,7 +491,7 @@ var Meso = (function(){
     weekStart:weekStart, today:today, coarse:coarse,
     esc:esc, fmtEok:fmtEok, fmtSigned:fmtSigned, fmtMan:fmtMan, fmtFine:fmtFine, fmtShort:fmtShort,
     round:round, signCls:signCls, parseAmount:parseAmount,
-    chars:charsApi, bosses:bossApi, toast:toast, runUndo:runUndo,
+    chars:charsApi, bosses:bossApi, toast:toast, runUndo:runUndo, dropUndo:dropUndo,
     themePref:themePref, setTheme:setTheme, applyTheme:applyTheme
   };
 })();

@@ -325,12 +325,28 @@ var MesoCore = (function(){
   }
   function noId(e){ var o = {}; for (var k in e) if (k !== "id") o[k] = e[k]; return o; }
 
-  function ledgerMeta(l){ return l ? {budget: l.budget || null, api: l.api || null} : null; }
-  function baseOf(st){
-    var b = {ledger:{e:{}, meta:null}, chars:{c:{}, order:null}, calc:hash(st.calc || null), prices:hash(st.prices || null)};
+  // base 형식 버전 — 저장된 base 의 v 가 다르면 없는 걸로 보고 첫 연결 경로로 감 (2: 예산 · api 따로, rev 추가)
+  var BASE_V = 2;
+
+  // "데이터 없음" 판정 — 첫 연결에서 빈 쪽 값이 있는 쪽을 덮지 않게 함
+  function keysOf(o){ return o && typeof o === "object" ? Object.keys(o) : []; }
+  function budgetEmpty(b){ return !b || (!b.total && !keysOf(b.cats).length); }
+  function apiEmpty(a){ return !a || (!keysOf(a.last).length && !keysOf(a.skip).length && !a.run); }
+  function pricesClean(p){ return keysOf(p).length ? p : null; }   // {} 도 null 과 같은 "없음"
+  function empty(s){
+    var L = s.ledger, C = s.chars;
+    return !(L && L.entries && L.entries.length) && budgetEmpty(L && L.budget) && apiEmpty(L && L.api) &&
+           !(C && C.list && C.list.length) && !s.calc && !pricesClean(s.prices);
+  }
+
+  // rev: 이 상태가 대응하는 클라우드 rev (없을 수 있음)
+  function baseOf(st, rev){
+    var b = {v:BASE_V, rev:rev, ledger:{e:{}, budget:null, skip:[]}, chars:{c:{}, order:null},
+             calc:hash(st.calc || null), prices:hash(pricesClean(st.prices))};
     var L = st.ledger, C = st.chars;
     if (L && L.entries) L.entries.forEach(function(e){ b.ledger.e[e.id] = hash(e); });
-    b.ledger.meta = hash(ledgerMeta(L));
+    b.ledger.budget = hash(L && L.budget || null);
+    b.ledger.skip = keysOf(L && L.api && L.api.skip).sort();   // 지운 API 기록 목록만 — 3방향 집합 병합용
     if (C && C.list){
       C.list.forEach(function(c){ b.chars.c[c.id] = hash(c); });
       b.chars.order = C.list.map(function(c){ return c.id; });   // 순서는 해시 말고 id 목록 (추가 · 삭제와 순서 변경을 구분하려고)
@@ -352,23 +368,36 @@ var MesoCore = (function(){
     var L = {}, R = {}, out = [], seen = {};
     local.forEach(function(x){ L[x.id] = x; });
     remote.forEach(function(x){ R[x.id] = x; });
-    // 처음 연결해서 합칠 땐 id 만 다르고 내용이 같은 건 같은 기록으로 봄
-    var remoteNew = {};
-    if (dedupe) remote.forEach(function(x){ if (base[x.id] === undefined) remoteNew[hash(noId(x))] = true; });
+    // 처음 연결해서 합칠 땐 id 만 다르고 내용이 같은 건 같은 기록으로 봄.
+    // 같은 내용이 여러 건이면 개수까지 맞춤 — 내용별로 max(로컬 개수, 클라우드 개수) 건이 남음
+    if (dedupe){
+      var buckets = {};
+      remote.forEach(function(x){
+        var l = L[x.id];
+        if (l && hash(l) === hash(x)) return;        // id 까지 같으면 decide 가 하나로 합침
+        var h = hash(noId(x));
+        (buckets[h] = buckets[h] || []).push(x);
+      });
+      local.forEach(function(x){
+        if (L[x.id] !== x) return;
+        var r = R[x.id];
+        if (r && hash(r) === hash(x)) return;
+        var bk = buckets[hash(noId(x))];
+        if (bk && bk.length){ bk.shift(); delete L[x.id]; }   // 클라우드의 같은 내용 한 건과 짝 → 클라우드 쪽을 씀
+      });
+    }
     function decide(id){
       var l = L[id], r = R[id], b = base[id];
+      if (!l && !r) return [];
       if (l && r){
         var hl = hash(l), hr = hash(r);
         if (hl === hr) return [{v:l, from:"same"}];
-        if (b === undefined){
-          if (dedupe && remoteNew[hash(noId(l))]) return [{v:r, from:"remote"}];
-          return [{v:r, from:"remote"}, {v:l, from:"local", collide:true}];
-        }
+        if (b === undefined) return [{v:r, from:"remote"}, {v:l, from:"local", collide:true}];
         if (hl === b) return [{v:r, from:"remote"}];
         return [{v:l, from:"local"}];
       }
       if (l){
-        if (b === undefined) return dedupe && remoteNew[hash(noId(l))] ? [] : [{v:l, from:"local"}];
+        if (b === undefined) return [{v:l, from:"local"}];
         return hash(l) === b ? [] : [{v:l, from:"local"}];   // 저쪽에서 지움 / 지웠는데 여기서 고침 → 살림
       }
       if (b === undefined) return [{v:r, from:"remote"}];
@@ -400,16 +429,41 @@ var MesoCore = (function(){
     return out;
   }
 
-  function mergeLedger(l, r, b, dedupe){
+  // API 상태: skip 은 3방향 집합(합집합 − 한쪽이 base 에서 지운 것), last 는 키별 최댓값(ISO 날짜), run 은 더 최근 것
+  function mergeApi(la, ra, baseSkip){
+    if (!la) return ra || undefined;
+    if (!ra) return la;
+    if (hash(la) === hash(ra)) return la;
+    var bs = {}; (baseSkip || []).forEach(function(k){ bs[k] = true; });
+    var ls = la.skip || {}, rs = ra.skip || {}, skip = {};
+    Object.keys(ls).concat(Object.keys(rs)).forEach(function(k){
+      var both = ls[k] && rs[k];
+      if (both || ((ls[k] || rs[k]) && !bs[k])) skip[k] = 1;   // 한쪽에서 base 의 항목을 지웠으면 지움, 새로 생긴 건 살림
+    });
+    var last = {}, ll = la.last || {}, rl = ra.last || {};
+    Object.keys(ll).concat(Object.keys(rl)).forEach(function(k){
+      var a = ll[k], b = rl[k];
+      last[k] = typeof a !== "string" ? b : typeof b !== "string" ? a : a >= b ? a : b;
+    });
+    var ta = Date.parse(la.run), tb = Date.parse(ra.run), run;
+    if (!isNaN(ta) && !isNaN(tb)) run = tb > ta ? ra.run : la.run;
+    else run = !isNaN(tb) ? ra.run : la.run != null ? la.run : null;
+    var out = {};
+    for (var k in la) out[k] = la[k];
+    out.skip = skip; out.last = last; out.run = run == null ? null : run;
+    return out;
+  }
+
+  function mergeLedger(l, r, b, first){
     if (!r) return l;
     if (!l) return r;
     // 장부 화면은 늘 날짜 · id 로 정렬해서 저장 순서는 안 맞춰도 됨
-    var items = mergeList(l.entries || [], r.entries || [], b.e || {}, dedupe);
+    var items = mergeList(l.entries || [], r.entries || [], b.e || {}, first);
     var maxId = Math.max(l.seq || 0, r.seq || 0);
     items.forEach(function(x){ if (!x.collide && x.v.id > maxId) maxId = x.v.id; });
-    // 같은 보스 체크(src 같음)가 양쪽에서 따로 생기면 로컬 것 하나만
+    // 같은 src(보스 체크 · API 기록)가 양쪽에서 따로 생기면 로컬 것 하나만
     var bySrc = {};
-    items.forEach(function(x){ if (x.v.src && /^chk:/.test(x.v.src)) (bySrc[x.v.src] = bySrc[x.v.src] || []).push(x); });
+    items.forEach(function(x){ if (x.v.src) (bySrc[x.v.src] = bySrc[x.v.src] || []).push(x); });
     var drop = [];
     Object.keys(bySrc).forEach(function(s){
       var g = bySrc[s];
@@ -424,14 +478,36 @@ var MesoCore = (function(){
       e.id = ++maxId;
       return e;
     }).sort(function(a, b){ return a.id - b.id; });
-    var meta = pick3(ledgerMeta(l), ledgerMeta(r), b.meta).v || {};
+    // 예산 · API 는 따로: 첫 연결은 빈 쪽을 없는 걸로 보고, 아니면 바뀐 쪽
+    var lb = l.budget || null, rb = r.budget || null;
+    var bud = first ? (budgetEmpty(lb) && rb ? rb : lb || rb) : pick3(lb, rb, b.budget).v;
     var out = {};
     for (var k in l) out[k] = l[k];
     out.entries = entries;
     out.seq = maxId;
-    out.budget = meta.budget || l.budget;
-    out.api = meta.api || l.api;
+    if (bud) out.budget = bud;
+    var api = mergeApi(l.api, r.api, b.skip);
+    if (api) out.api = api;
     return out;
+  }
+
+  // 본캐는 하나만 — 둘 이상이면 이 기기에서 바꾼 쪽, 없으면 앞쪽. 하나도 없으면 그대로(store 가 고침)
+  function oneMain(list, ll, bc){
+    var mains = [];
+    list.forEach(function(c, i){ if (c.main) mains.push(i); });
+    if (mains.length < 2) return list;
+    var lid = {}; ll.forEach(function(c){ lid[c.id] = c; });
+    var win = mains[0];
+    for (var i = 0; i < mains.length; i++){
+      var c = list[mains[i]], lc = lid[c.id];
+      if (lc && hash(lc) !== bc[c.id]){ win = mains[i]; break; }
+    }
+    return list.map(function(c, i){
+      if (!c.main || i === win) return c;
+      var o = {}; for (var k in c) o[k] = c[k];
+      o.main = false;
+      return o;
+    });
   }
 
   function mergeChars(l, r, b, dedupe){
@@ -442,24 +518,36 @@ var MesoCore = (function(){
     // 문자열 id 라 충돌은 사실상 없음 — 생기면 로컬 것만
     items = items.filter(function(x){ return !x.collide; });
     items = order(items, ll.map(function(c){ return c.id; }), rl.map(function(c){ return c.id; }), b.order);
-    return {v: l.v || r.v || 1, list: items.map(function(x){ return x.v; })};
+    var list = oneMain(items.map(function(x){ return x.v; }), ll, b.c || {});
+    return {v: l.v || r.v || 1, list: list};
   }
 
-  /* local · remote · base → 합친 state. base 가 null 이면 처음 연결(합치기): 내용이 같은 기록은 하나로 */
+  /* local · remote · base → 합친 state. base 가 null 이면 처음 연결(합치기): 내용이 같은 기록은 하나로,
+     빈 쪽(calc null · prices 없음 · 예산 0 · api 비어 있음)은 상대 쪽을 씀 */
   function syncMerge(local, remote, base){
+    if (base && base.v !== BASE_V) base = null;
     var first = !base;
-    base = base || {ledger:{e:{}}, chars:{c:{}}};
-    var st = {
-      ledger: mergeLedger(local.ledger || null, remote.ledger || null, base.ledger || {e:{}}, first),
-      chars: mergeChars(local.chars || null, remote.chars || null, base.chars || {c:{}}, first),
-      calc: pick3(local.calc || null, remote.calc || null, first ? undefined : base.calc).v,
-      prices: pick3(local.prices || null, remote.prices || null, first ? undefined : base.prices).v
-    };
+    var lc = local.calc || null, rc = remote.calc || null, lp = pricesClean(local.prices), rp = pricesClean(remote.prices);
+    var st;
+    if (first && empty(local)){
+      // 이 기기에 데이터가 없으면 클라우드를 그대로 (없는 덩어리만 로컬)
+      st = {ledger: remote.ledger || local.ledger || null, chars: remote.chars || local.chars || null,
+            calc: rc || lc, prices: rp || lp};
+    } else {
+      var bs = base || {ledger:{e:{}}, chars:{c:{}}};
+      st = {
+        ledger: mergeLedger(local.ledger || null, remote.ledger || null, bs.ledger || {e:{}}, first),
+        chars: mergeChars(local.chars || null, remote.chars || null, bs.chars || {c:{}}, first),
+        calc: first ? (lc || rc) : pick3(lc, rc, bs.calc).v,
+        prices: first ? (lp || rp) : pick3(lp, rp, bs.prices).v
+      };
+    }
+    var hs = hash(norm(st));
     return {
       state: st,
       // 로컬에 써야 하나 · 클라우드에 써야 하나
-      toLocal: hash(st) !== hash(norm(local)),
-      toRemote: hash(st) !== hash(norm(remote))
+      toLocal: hs !== hash(norm(local)),
+      toRemote: hs !== hash(norm(remote))
     };
   }
   // 비교용 — 장부 기록은 저장 순서가 의미 없어서 id 순으로 맞춰서 비교
@@ -470,7 +558,7 @@ var MesoCore = (function(){
       c.entries = l.entries.slice().sort(function(a, b){ return a.id - b.id; });
       l = c;
     }
-    return {ledger:l, chars:s.chars || null, calc:s.calc || null, prices:s.prices || null};
+    return {ledger:l, chars:s.chars || null, calc:s.calc || null, prices:pricesClean(s.prices)};
   }
 
   // 장부는 클라우드 문서 1MB 제한 때문에 해마다 나눠 저장
@@ -502,7 +590,7 @@ var MesoCore = (function(){
     simulate: simulate, findGoal: findGoal, monthIncome: monthIncome,
     withCfg: withCfg, costFor1Day: costFor1Day,
     b64e: b64e, b64d: b64d,
-    sync: {hash: hash, baseOf: baseOf, merge: syncMerge, splitLedger: splitLedger, joinLedger: joinLedger}
+    sync: {hash: hash, norm: norm, baseOf: baseOf, merge: syncMerge, empty: empty, BASE_V: BASE_V, splitLedger: splitLedger, joinLedger: joinLedger}
   };
 })();
 if (typeof module === "object" && module.exports) module.exports = MesoCore;

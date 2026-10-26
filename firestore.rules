@@ -1,9 +1,32 @@
 rules_version = '2';
-// 기기 간 동기화 — 각자 자기 데이터(users/{자기 uid}/...)만 읽고 쓸 수 있음
+// 기기 간 동기화 — 각자 자기 데이터(users/{자기 uid}/...)만 읽고 쓸 수 있음.
+// 쓰는 경로는 둘뿐: meta/state(rev 가 1씩 오르는 메타) · ledger/{연도}(장부 한 해치 JSON 문자열 + 해시).
+// 다른 경로는 전부 막힘. 규칙을 고치면 Firebase 콘솔 > Firestore > 규칙에서 다시 게시해야 적용됨.
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{uid}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // 메타 문서 — rev 는 정수, 새로 만들 땐 1, 고칠 땐 지금 값 + 1 (두 기기가 같은 rev 로 덮어쓰는 것을 서버에서도 막음).
+    // rev 가 없던 옛 문서는 0 으로 보고 1 로 올릴 수 있게 get 으로 읽음
+    match /users/{uid}/meta/{doc} {
+      allow read, delete: if isOwner(uid);
+      allow create: if isOwner(uid)
+        && request.resource.data.rev is int
+        && request.resource.data.rev == 1;
+      allow update: if isOwner(uid)
+        && request.resource.data.rev is int
+        && request.resource.data.rev == resource.data.get('rev', 0) + 1;
+    }
+
+    // 장부 연도 문서 — data(JSON 문자열) · h(해시 문자열)
+    match /users/{uid}/ledger/{year} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && request.resource.data.data is string
+        && request.resource.data.h is string;
     }
   }
 }

@@ -123,6 +123,8 @@ Meso.charsView = (function(M){
     if (!c && !M.coarse()) $("ch-name").focus();
   }
 
+  var revived = false;   // 마지막 commitChar 가 지워진 캐릭터를 새로 추가했는지
+  var GONE_CHAR = "다른 기기에서 지운 캐릭터라 새로 추가함";
   // 저장하고 저장된 캐릭터를 돌려줌 (실패하면 null)
   function commitChar(){
     var name = $("ch-name").value.trim();
@@ -132,7 +134,10 @@ Meso.charsView = (function(M){
     var patch = {name:name, main:$("ch-main").checked};
     if (!$("ch-weekly").disabled) patch.weekly = parseFloat($("ch-weekly").value) || 0;
     if (!$("ch-monthly").disabled) patch.monthly = parseFloat($("ch-monthly").value) || 0;
-    var c = editId ? M.chars.update(editId, patch) : M.chars.add(patch);
+    var c = editId ? M.chars.update(editId, patch) : null;
+    // 시트를 연 사이 다른 기기가 지운 캐릭터면 update 가 null → 새 캐릭터로 추가
+    revived = !!editId && !c;
+    if (!c) c = M.chars.add(patch);
     editId = c.id;
     delete $("ch-sheet").dataset.dirty;
     return c;
@@ -143,7 +148,17 @@ Meso.charsView = (function(M){
     var isNew = !editId, c = commitChar();
     if (!c) return;
     $("ch-sheet").close();
-    M.toast(c.name + (isNew ? " 추가함" : " 저장함"));
+    M.toast(revived ? c.name + " — " + GONE_CHAR : c.name + (isNew ? " 추가함" : " 저장함"));
+  }
+
+  // 보스 시트를 연 사이 다른 기기가 캐릭터를 지웠으면 더 진행하지 않고 닫음 (c 가 null 이라 TypeError 나는 것 방지)
+  function bossChar(){
+    var c = M.chars.get(bossId);
+    if (!c){
+      if ($("boss-sheet").open) $("boss-sheet").close();
+      M.toast("다른 기기에서 지운 캐릭터라 보스를 저장 못 함");
+    }
+    return c;
   }
 
   function deleteChar(){
@@ -169,6 +184,7 @@ Meso.charsView = (function(M){
     }).join("");
     renderBossSheet();
     $("boss-sheet").showModal();
+    if (revived) M.toast(c.name + " — " + GONE_CHAR);
   }
 
   function bossRows(kind, routine){
@@ -217,7 +233,7 @@ Meso.charsView = (function(M){
   }
 
   function setBoss(kind, id, d, p){
-    var c = M.chars.get(bossId);
+    var c = bossChar();
     if (!c) return;
     var list = ((kind === "m" ? c.mbosses : c.bosses) || []).filter(function(r){ return r.id !== id; });
     var prev = ((kind === "m" ? c.mbosses : c.bosses) || []).filter(function(r){ return r.id === id; })[0];
@@ -319,17 +335,21 @@ Meso.charsView = (function(M){
   $("boss-sheet").addEventListener("change", function(e){
     var sel = e.target.closest("select.bs-p");
     if (!sel) return;
-    var c = M.chars.get(bossId), k = sel.dataset.k;
+    var c = bossChar(), k = sel.dataset.k;
+    if (!c) return;
     var r = ((k === "m" ? c.mbosses : c.bosses) || []).filter(function(x){ return x.id === sel.dataset.b; })[0];
     if (r) setBoss(k, r.id, r.d, +sel.value);
   });
   $("boss-copy-btn").addEventListener("click", function(){
     var from = $("boss-copy").value;
     if (!from) return;
-    var c = M.chars.get(bossId), before = {w:c.bosses || [], m:c.mbosses || []};
+    var c = bossChar(), src = M.chars.get(from);
+    if (!c) return;
+    if (!src){ M.toast("복사할 캐릭터가 다른 기기에서 지워짐"); return; }
+    var before = {w:c.bosses || [], m:c.mbosses || []};
     M.chars.copyRoutine(from, bossId);
     renderBossSheet();
-    M.toast(M.chars.get(from).name + " 루틴을 복사함", function(){
+    M.toast(src.name + " 루틴을 복사함", function(){
       M.chars.setRoutine(bossId, "w", before.w);
       M.chars.setRoutine(bossId, "m", before.m);
       if ($("boss-sheet").open) renderBossSheet();

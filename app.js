@@ -28,7 +28,14 @@
     if (v === "settings") $("btn-settings").setAttribute("aria-current", "page"); else $("btn-settings").removeAttribute("aria-current");
     $("fab").hidden = !(v === "home" || v === "ledger");
     if (changed) window.scrollTo(0, 0);
+    if (calcWaiting && v !== "calc") flushCalc();   // 계산기 화면을 떠났는데 focusout 이 안 온 경우
     render();
+  }
+
+  // 로그인 중이면 이 기기 변경이 클라우드로 올라가 다른 기기에도 퍼짐 — 덮어쓰기 확인에 한 줄 덧붙임
+  function syncNote(){
+    var y = M.sync && M.sync.state && M.sync.state();
+    return y && y.user ? "\n로그인 중이라 모든 기기에 반영됨" : "";
   }
 
   // 공유 링크는 캐릭터(보스 루틴 포함)를 통째로 갈아끼우므로 먼저 읽어보고, 덮어쓸 땐 묻고, 되돌리기를 줌
@@ -39,7 +46,7 @@
     var mine = M.chars.all().length, theirs = Array.isArray(s.r) ? s.r.length : 0, takeChars = true;
     if (theirs && mine){
       // 어느 쪽이든 계산기 설정은 바뀜 — 캐릭터만 확인/취소로 갈림
-      takeChars = confirm("공유 링크에 캐릭터 " + theirs + "명이 들어 있음.\n확인: 지금 캐릭터 " + mine + "명을 링크 것으로 바꿈 (이름이 같은 캐릭터는 보스 루틴 · 본캐 유지)\n취소: 캐릭터는 그대로, 계산기 설정만 불러옴");
+      takeChars = confirm("공유 링크에 캐릭터 " + theirs + "명이 들어 있음.\n확인: 지금 캐릭터 " + mine + "명을 링크 것으로 바꿈 (이름이 같은 캐릭터는 보스 루틴 · 본캐 유지)\n취소: 캐릭터는 그대로, 계산기 설정만 불러옴" + syncNote());
     }
     var before = {calc:M.calc.getState(), chars:JSON.parse(JSON.stringify(M.chars.all()))}, ok = false;
     try{ ok = M.calc.applyShare(s, takeChars) !== false; } catch(e){}
@@ -190,7 +197,7 @@
           !confirm("백업으로 덮어씀\n지금 장부 " + nowL + "건 → 백업 " + ledger.entries.length + "건" +
                    (chars ? "\n지금 캐릭터 " + nowC + "명 → 백업 " + chars.length + "명" : "") +
                    (calc || prices ? "\n" + what[what.length - 1] + "도 바뀜" : "") +
-                   (dropNote ? "\n(" + dropNote + ")" : "") + "\n진행?")) return;
+                   (dropNote ? "\n(" + dropNote + ")" : "") + syncNote() + "\n진행?")) return;
       var before = {ledger:M.ledger.getState(), calc:M.calc.getState(),
                     chars:JSON.parse(JSON.stringify(M.chars.all())), prices:M.bosses.overrides()};
       function restore(b){
@@ -316,7 +323,30 @@
   });
   window.addEventListener("hashchange", route);
 
-  // 다른 탭에서 바꾼 장부 · 캐릭터 · 테마를 따라감 (계산기 입력은 이 탭 것을 유지)
+  // 다른 탭에서 바뀐 계산기 읽기. 여기서 입력 중이면 다시 그리다 타이핑이 날아가므로, 포커스가 계산기 화면
+  // 밖으로 나갈 때까지 미룸 (칸 사이 Tab 이동에는 안 풀림 — sync 와 같은 규칙)
+  var calcWaiting = false;
+  function calcBusy(){
+    var v = $("v-calc"), ae = document.activeElement;
+    return !!(v && !v.hidden && ae && v.contains(ae) && /INPUT|SELECT|TEXTAREA/.test(ae.tagName));
+  }
+  // 한 틱 뒤에 확인 — focusout 시점엔 아직 activeElement 가 바뀌기 전
+  function flushCalc(){
+    setTimeout(function(){
+      if (!calcWaiting || calcBusy()) return;   // 같은 화면 안에서 칸만 옮긴 것이면 계속 기다림
+      calcWaiting = false;
+      $("v-calc").removeEventListener("focusout", flushCalc);
+      M.calc.reload(); render("calc");
+    }, 0);
+  }
+  function reloadCalc(){
+    if (calcWaiting) return;      // 이미 기다리는 중이면 나중 값까지 한 번에 읽음
+    if (!calcBusy()){ M.calc.reload(); render("calc"); return; }
+    calcWaiting = true;
+    $("v-calc").addEventListener("focusout", flushCalc);
+  }
+
+  // 다른 탭에서 바꾼 장부 · 캐릭터 · 계산기 · 테마를 따라감
   window.addEventListener("storage", function(e){
     if (e.key === M.KEYS.ledger){ M.ledger.reload(); render(); }
     if (e.key === M.KEYS.chars){ M.chars.load(); render(); }
@@ -326,6 +356,7 @@
       var ae = document.activeElement;
       renderPrices(!(ae && $("price-list").contains(ae) && ae !== $("price-list")));
     }
+    if (e.key === M.KEYS.calc) reloadCalc();
     if (e.key === M.KEYS.theme){ M.applyTheme(); if (cur === "settings") renderSettings(); }
   });
   if (window.matchMedia) matchMedia("(prefers-color-scheme: light)").addEventListener("change", M.applyTheme);
