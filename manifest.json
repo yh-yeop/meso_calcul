@@ -1,6 +1,6 @@
 {
-  "name": "메소 | 장부·계산기",
-  "short_name": "메소",
+  "name": "메소 계산기",
+  "short_name": "메소 계산기",
   "description": "메이플스토리 메소 장부, 목표 도달일 계산기, 캐릭터별 보스 수익.",
   "lang": "ko",
   "start_url": "./",
