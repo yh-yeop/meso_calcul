@@ -36,7 +36,7 @@ Meso.api = (function(M){
         throw err;
       });
     }, function(){
-      var err = new Error(location.protocol === "file:" ? "파일로 열면 API를 못 부름 — GitHub Pages 주소에서 열어줘" : "네트워크 오류");
+      var err = new Error(location.protocol === "file:" ? "파일로 열면 API를 못 부름. GitHub Pages 주소에서 열 것" : "네트워크 오류");
       err.code = "NET";
       throw err;
     });

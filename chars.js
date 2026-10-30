@@ -15,25 +15,25 @@ Meso.charsView = (function(M){
     if (c.world) p.push(esc(c.world));
     if (c.cls) p.push(esc(c.cls));
     if (c.level) p.push("Lv." + c.level);
-    return p.join(" · ");
+    return p.join(", ");
   }
   function routineText(c){
     var n = c.bosses ? c.bosses.length : 0, m = c.mbosses ? c.mbosses.length : 0;
     if (!n && !m) return "보스 미설정";
-    return "보스 " + n + "/" + B.data.weeklyLimit + (m ? " · 월간 " + m : "");
+    return "보스 " + n + "/" + B.data.weeklyLimit + (m ? ", 월간 " + m : "");
   }
 
   function render(){
     var list = M.chars.all(), tot = M.chars.totals(), box = $("ch-list");
-    $("ch-sum").textContent = list.length ? list.length + "명 · 주 " + fmtFine(tot.weekly) + " · 월 " + fmtFine(tot.monthly) : "";
+    $("ch-sum").textContent = list.length ? list.length + "명, 주 " + fmtFine(tot.weekly) + ", 월 " + fmtFine(tot.monthly) : "";
     // 월드당 주 90개 판매 제한
     var wc = M.chars.worldCounts(), over = Object.keys(wc).filter(function(w){ return wc[w] > B.data.worldLimit; });
     $("ch-warn").hidden = !over.length;
     if (over.length) $("ch-warn").innerHTML = over.map(function(w){
-      return "<b>" + esc(w) + "</b> 월드 루틴이 주 " + wc[w] + "개 — 월드당 " + B.data.worldLimit + "개까지만 팔 수 있어서 계산보다 덜 받음";
+      return "<b>" + esc(w) + "</b> 월드 루틴이 주 " + wc[w] + "개. 월드당 " + B.data.worldLimit + "개까지만 팔 수 있어 계산보다 덜 받음";
     }).join("<br>");
     if (!list.length){
-      box.innerHTML = '<div class="empty"><h4>아직 캐릭터가 없음</h4>도는 보스를 고르면 주 · 월 수익이 자동 계산됨' +
+      box.innerHTML = '<div class="empty"><h4>아직 캐릭터가 없음</h4>도는 보스를 고르면 주·월 수익이 자동 계산됨' +
         '<div><button type="button" class="btn" data-add>+ 캐릭터 추가</button></div></div>';
       return;
     }
@@ -43,7 +43,7 @@ Meso.charsView = (function(M){
         '<button class="open" data-cid="' + c.id + '">' +
           '<span class="avatar' + (c.main ? ' is-main' : '') + '">' + initial(c.name) + '</span>' +
           '<span class="main"><span class="t1">' + esc(c.name) + (c.main ? '<span class="badge main">본캐</span>' : '') + '</span>' +
-          '<span class="t2">' + (manual ? "직접 입력" : routineText(c)) + (meta ? " · " + meta : "") + '</span></span>' +
+          '<span class="t2">' + (manual ? "직접 입력" : routineText(c)) + (meta ? ", " + meta : "") + '</span></span>' +
           '<span class="vals">주 ' + money(M.chars.weekly(c)) + '<small>월 ' + money(M.chars.monthly(c)) + '</small></span>' +
         '</button></div>';
     }).join("");
@@ -62,7 +62,7 @@ Meso.charsView = (function(M){
         '<div class="kpi"><small>이번 달 지출</small><b class="neg">' + fmtEok(mon.out) + '</b></div>' +
         '<div class="kpi"><small>전체 순익</small><b class="' + M.signCls(all.inc - all.out) + '">' + fmtSigned(all.inc - all.out) + '</b></div>' +
       '</div>' +
-      (top.length ? '<div class="note" style="margin-top:8px">수입 상위: ' + top.join(" · ") + '</div>' : '') +
+      (top.length ? '<div class="note" style="margin-top:8px">수입 상위: ' + top.join(", ") + '</div>' : '') +
       '<div class="list" style="margin-top:12px;border:1px solid var(--line-soft);border-radius:12px">' +
         recent.map(M.ledger.entryRow).join("") + '</div>';
   }
@@ -111,7 +111,7 @@ Meso.charsView = (function(M){
     $("ch-weekly").value = c ? c.weekly || "" : "";
     $("ch-monthly").value = c ? c.monthly || "" : "";
     $("ch-main").checked = c ? c.main : !M.chars.all().length;
-    $("ch-meta").innerHTML = c && metaText(c) ? metaText(c) + (c.ocid ? " · Open API 연결됨" : "") : "";
+    $("ch-meta").innerHTML = c && metaText(c) ? metaText(c) + (c.ocid ? ", Open API 연결됨" : "") : "";
     $("ch-stats").innerHTML = c ? statsHtml(c) : "";
     $("ch-stats").hidden = !c;
     $("ch-del").hidden = !c;
@@ -148,7 +148,7 @@ Meso.charsView = (function(M){
     var isNew = !editId, c = commitChar();
     if (!c) return;
     $("ch-sheet").close();
-    M.toast(revived ? c.name + " — " + GONE_CHAR : c.name + (isNew ? " 추가함" : " 저장함"));
+    M.toast(revived ? c.name + ": " + GONE_CHAR : c.name + (isNew ? " 추가함" : " 저장함"));
   }
 
   // 보스 시트를 연 사이 다른 기기가 캐릭터를 지웠으면 더 진행하지 않고 닫음 (c 가 null 이라 TypeError 나는 것 방지)
@@ -184,7 +184,7 @@ Meso.charsView = (function(M){
     }).join("");
     renderBossSheet();
     $("boss-sheet").showModal();
-    if (revived) M.toast(c.name + " — " + GONE_CHAR);
+    if (revived) M.toast(c.name + ": " + GONE_CHAR);
   }
 
   function bossRows(kind, routine){
@@ -216,10 +216,10 @@ Meso.charsView = (function(M){
     if (!c) return;
     var w = c.bosses || [], m = c.mbosses || [], lim = B.data.weeklyLimit;
     $("boss-title").textContent = c.name + " 보스";
-    $("boss-sum").innerHTML = '주간 <b class="' + (w.length > lim ? "neg" : "") + '">' + w.length + "/" + lim + '</b> · 주 <b>' +
-      fmtFine(M.chars.weekly(c)) + '</b>' + (m.length ? ' · 월 <b>' + fmtFine(M.chars.monthly(c)) + '</b>' : '') +
-      (w.length > lim ? '<br><span class="neg">주간 보스는 캐릭터당 ' + lim + '마리까지 — ' + (w.length - lim) + '개 빼야 함</span>'
-        : w.length === lim ? '<br>' + lim + '/' + lim + ' · 새 보스는 하나 빼고 고르기' : '');
+    $("boss-sum").innerHTML = '주간 <b class="' + (w.length > lim ? "neg" : "") + '">' + w.length + "/" + lim + '</b>, 주 <b>' +
+      fmtFine(M.chars.weekly(c)) + '</b>' + (m.length ? ', 월 <b>' + fmtFine(M.chars.monthly(c)) + '</b>' : '') +
+      (w.length > lim ? '<br><span class="neg">주간 보스는 캐릭터당 ' + lim + '마리까지. ' + (w.length - lim) + '개 빼야 함</span>'
+        : w.length === lim ? '<br>' + lim + '/' + lim + '. 새 보스는 하나 빼고 고르기' : '');
     var views = {mine: "고른 보스 " + (w.length + m.length), all: "전체 " + (B.list("w").length + B.list("m").length)};
     Array.prototype.forEach.call($("boss-view").querySelectorAll("[data-v]"), function(btn){
       var on = btn.dataset.v === bossView;
@@ -255,7 +255,7 @@ Meso.charsView = (function(M){
   /* ---------- Open API 불러오기 ---------- */
   function openImport(){
     if (!M.api.key()){
-      M.toast("⚙ 설정에서 넥슨 Open API 키를 먼저 넣어줘");
+      M.toast("설정에서 넥슨 Open API 키를 먼저 넣을 것");
       location.hash = "#settings";
       return;
     }
@@ -267,12 +267,12 @@ Meso.charsView = (function(M){
     M.api.characterList().then(function(list){
       apiList = list.slice().sort(function(a, b){ return (b.character_level || 0) - (a.character_level || 0); });
       if (!apiList.length){ $("imp-msg").textContent = "이 키의 계정에 캐릭터가 없음."; return; }
-      $("imp-msg").textContent = "보스 도는 캐릭터만 골라. 이미 등록된 이름은 월드 · 직업 · 레벨만 채움.";
+      $("imp-msg").textContent = "보스 도는 캐릭터만 고를 것. 이미 등록된 이름은 월드·직업·레벨만 채움.";
       $("imp-list").innerHTML = apiList.map(function(a, i){
         var have = !!M.chars.byName(a.character_name);
         return '<label class="pick"><input type="checkbox" data-i="' + i + '"' + (have ? ' checked' : '') + '>' +
           '<span class="main"><b>' + esc(a.character_name) + '</b>' + (have ? ' <span class="badge">등록됨</span>' : '') +
-          '<small>' + esc(a.world_name || "") + ' · ' + esc(a.character_class || "") + ' · Lv.' + (a.character_level || "?") + '</small></span></label>';
+          '<small>' + esc(a.world_name || "") + ', ' + esc(a.character_class || "") + ', Lv.' + (a.character_level || "?") + '</small></span></label>';
       }).join("");
       syncImportBtn();
     }, function(err){
@@ -290,7 +290,7 @@ Meso.charsView = (function(M){
     if (!picked.length) return;
     var r = M.chars.mergeApi(picked);
     $("imp-sheet").close();
-    M.toast("추가 " + r.added + " · 정보 갱신 " + r.updated + (r.added ? " — 캐릭터를 눌러 도는 보스를 골라줘" : ""));
+    M.toast("추가 " + r.added + ", 정보 갱신 " + r.updated + (r.added ? ". 캐릭터를 눌러 도는 보스를 고를 것" : ""));
   }
 
   /* ---------- events ---------- */
@@ -359,7 +359,7 @@ Meso.charsView = (function(M){
     ev.preventDefault();
     $("boss-sheet").close();
     var c = M.chars.get(bossId);
-    if (c) M.toast(c.name + " · " + routineText(c) + " · 주 " + fmtFine(M.chars.weekly(c)));
+    if (c) M.toast(c.name + ": " + routineText(c) + ", 주 " + fmtFine(M.chars.weekly(c)));
   });
 
   $("ch-api-btn").addEventListener("click", openImport);

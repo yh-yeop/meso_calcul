@@ -245,7 +245,7 @@ Meso.ledger = (function(M){
             (e.t === "in" ? "+" : "−") + fmtMan(e.a) + '</div>';
     }
     if (e.ch) sub.push(esc(e.ch));
-    if (e.h > 0) sub.push(e.h + "시간 · 시급 " + fmtFine(e.a / e.h));
+    if (e.h > 0) sub.push(e.h + "시간, 시급 " + fmtFine(e.a / e.h));
     if (e.m) sub.push(esc(e.m));
     var badge = isApi(e) ? '<span class="badge' + (e.lock ? ' lock' : '') + '">' + (e.lock ? "직접 고침" : "API") + '</span>' : "";
     var tip = isApi(e) && e.x && e.x.items ? e.x.items.map(function(it){
@@ -255,7 +255,7 @@ Meso.ledger = (function(M){
            (tip ? ' title="' + esc(tip) + '"' : '') + '>' +
            '<span class="dot" style="--c:' + info.c + '"></span>' +
            '<span class="main"><span class="t1">' + info.n + badge + '</span>' +
-           (sub.length ? '<span class="t2">' + sub.join(" · ") + '</span>' : '') + '</span>' + amt + '</button>';
+           (sub.length ? '<span class="t2">' + sub.join(", ") + '</span>' : '') + '</span>' + amt + '</button>';
   }
   // 최근 n개 (기록일 → 입력 순 역순)
   function recentRows(L, n, ch){
@@ -280,13 +280,13 @@ Meso.ledger = (function(M){
     var monthRows = L.rows.filter(function(r){ return r.e.d.slice(0, 7) === ui.month; });
     var ms = sumRange({rows:monthRows});
     $("m-sum").innerHTML = monthRows.length
-      ? '수입 <b class="pos">' + fmtEok(ms.inc) + '</b> · 지출 <b class="neg">' + fmtEok(ms.out) + '</b> · 순 <b>' + fmtSigned(ms.inc - ms.out) + '</b>'
+      ? '수입 <b class="pos">' + fmtEok(ms.inc) + '</b>, 지출 <b class="neg">' + fmtEok(ms.out) + '</b>, 순 <b>' + fmtSigned(ms.inc - ms.out) + '</b>'
       : "";
 
     var box = $("list");
     if (!st.entries.length){
-      box.innerHTML = '<div class="card empty" style="margin-top:16px"><h4>잔고 확인부터 해 봐</h4>' +
-        '인벤토리 + 창고 메소를 한 번 넣으면 그다음부터는 벌고 쓴 것만 적으면 됨.' +
+      box.innerHTML = '<div class="card empty" style="margin-top:16px"><h4>잔고 확인부터</h4>' +
+        '인벤토리와 창고 메소를 한 번 넣으면, 이후엔 벌고 쓴 것만 적으면 됨.' +
         '<div><button class="btn primary" data-open="bal">잔고 확인하기</button></div></div>';
       return;
     }
@@ -348,7 +348,7 @@ Meso.ledger = (function(M){
     var big = s.outs.slice().sort(function(a, b){ return b.a - a.a; }).slice(0, 5);
     $("b-big").innerHTML = big.length ? '<table class="tbl"><tbody>' + big.map(function(e){
       return '<tr><td class="wrap">' + cat("out", e.c).n + '<div class="note">' + md(parseDate(e.d)) +
-             (e.m ? " · " + esc(e.m) : "") + '</div></td><td class="neg">' + fmtEok(e.a) + '</td></tr>';
+             (e.m ? ", " + esc(e.m) : "") + '</div></td><td class="neg">' + fmtEok(e.a) + '</td></tr>';
     }).join("") + '</tbody></table>' : '<div class="note">아직 없음</div>';
 
     renderGoal(L, ws, cfg);
@@ -360,15 +360,15 @@ Meso.ledger = (function(M){
   function goalHtml(g, ws){
     var planTxt = g.planD ? "계산기 계획 <b>" + md(g.planD) + "</b>" : "계산기 계획으론 도달 불가";
     var h;
-    if (g.state === "nodata") h = '<div class="note">기록이 생기면 계산함 · ' + planTxt + '</div>';
+    if (g.state === "nodata") h = '<div class="note">기록이 생기면 계산함. ' + planTxt + '</div>';
     else if (g.state === "done") h = '<div class="goal-big">달성<small>목표보다 ' + fmtEok(-g.left) + ' 많음</small></div>';
     else if (g.state === "stall") h = '<div class="goal-big" style="color:var(--rose)">—<small>최근 순수익이 0 이하</small></div>' +
-                                      '<div class="goal-lines">남은 <b>' + fmtEok(g.left) + '</b> · ' + planTxt + '</div>';
+                                      '<div class="goal-lines">남은 <b>' + fmtEok(g.left) + '</b>, ' + planTxt + '</div>';
     else {
-      var diff = g.diff === undefined ? "" : g.diff === 0 ? " · 계획과 같음"
-               : g.diff > 0 ? ' · <b class="neg">' + g.diff + "일 늦음</b>" : ' · <b class="pos">' + (-g.diff) + "일 빠름</b>";
+      var diff = g.diff === undefined ? "" : g.diff === 0 ? ", 계획과 같음"
+               : g.diff > 0 ? ', <b class="neg">' + g.diff + "일 늦음</b>" : ', <b class="pos">' + (-g.diff) + "일 빠름</b>";
       h = '<div class="goal-big">' + mdLong(g.eta) + '<small>' + M.daysText(g.days) + '</small></div>' +
-          '<div class="goal-lines">남은 <b>' + fmtEok(g.left) + '</b> · 최근 ' + ws.days + '일 순수익 페이스 기준<br>' + planTxt + diff + '</div>';
+          '<div class="goal-lines">남은 <b>' + fmtEok(g.left) + '</b>, 최근 ' + ws.days + '일 순수익 페이스 기준<br>' + planTxt + diff + '</div>';
     }
     /* 계산기의 정기 지출은 예상치고, 이건 실제 기록 기준. 실제 지출 페이스가 목표를 얼마나 미루는지 따로 보여준다. */
     if (ws && ws.outDay > 0 && g.left > 0 && ws.incDay > 0){
@@ -385,7 +385,7 @@ Meso.ledger = (function(M){
     var g = goalInfo(L, ws, cfg);
     if (!g){
       $("goal-sub").textContent = "";
-      $("goal").innerHTML = '<div class="note">계산기에서 목표 메소를 정하면, 실제로 버는 속도로 언제 닿는지 여기서 보여줌.</div>' +
+      $("goal").innerHTML = '<div class="note">계산기에서 목표를 정하면 실제 수입 속도로 도달 시점을 보여줌.</div>' +
                             '<div class="btns" style="margin-top:12px"><a class="btn sm" href="#calc">계산기 열기</a></div>';
       return;
     }
@@ -422,7 +422,7 @@ Meso.ledger = (function(M){
     var p = [];
     if (s.inc) p.push("수입 " + fmtEok(s.inc));
     if (s.out) p.push("지출 " + fmtEok(s.out));
-    return p.length ? '<span class="cell-sub ph-only">' + p.join(" · ") + '</span>' : "";
+    return p.length ? '<span class="cell-sub ph-only">' + p.join(", ") + '</span>' : "";
   }
 
   function renderWeeks(L){
@@ -434,7 +434,7 @@ Meso.ledger = (function(M){
       if (ws < first) break;
       var we = addDays(ws, 6), s = sumRange(L, toISO(ws), toISO(we)), net = s.inc - s.out;
       var endBal = balAt(L, toISO(we > t ? t : we));
-      out.push('<tr' + (w === 0 ? ' class="now"' : '') + '><td>' + md(ws) + ' ~ ' + md(we) + (w === 0 ? ' · 이번 주' : '') + weekSub(s) + '</td>' +
+      out.push('<tr' + (w === 0 ? ' class="now"' : '') + '><td>' + md(ws) + ' ~ ' + md(we) + (w === 0 ? ' (이번 주)' : '') + weekSub(s) + '</td>' +
                '<td class="wide">' + (s.inc ? fmtEok(s.inc) : '<span class="dim">—</span>') + '</td>' +
                '<td class="wide">' + (s.out ? fmtEok(s.out) : '<span class="dim">—</span>') + '</td>' +
                '<td class="' + signCls(net) + '">' + (s.inc || s.out ? fmtSigned(net) : "—") + '</td>' +
@@ -583,7 +583,7 @@ Meso.ledger = (function(M){
                                         fmtEok(m.out / pace) + '</b>.';
       else status = '예산 안. 이번 달 <b>' + fmtEok(tot - m.out) + '</b> 더 쓸 수 있음.';
     } else {
-      status = m.out > 0 ? "이대로면 월말 <b>" + fmtEok(m.out / pace) + "</b>. 예산을 정하면 비교해 줌."
+      status = m.out > 0 ? "이대로면 월말 <b>" + fmtEok(m.out / pace) + "</b>. 예산을 정하면 비교함."
                          : "아직 이번 달 지출 없음.";
     }
     $("bud-status").innerHTML = status;
@@ -657,7 +657,7 @@ Meso.ledger = (function(M){
     $("presets").innerHTML = ps.map(function(e){
       var info = cat(e.t, e.c);
       return '<button type="button" class="preset" data-pid="' + e.id + '"><span>' + info.n +
-             (e.ch ? " · " + esc(e.ch) : "") + (e.h ? " · " + e.h + "시간" : "") + '</span><b>' + fmtMan(e.a) + '</b></button>';
+             (e.ch ? ", " + esc(e.ch) : "") + (e.h ? ", " + e.h + "시간" : "") + '</span><b>' + fmtMan(e.a) + '</b></button>';
     }).join("");
 
     $("r-cats").hidden = isBal;
@@ -701,8 +701,8 @@ Meso.ledger = (function(M){
       var ev = editing.x && editing.x.items ? editing.x.items.map(function(it){
         return esc(it[0]) + " " + it[1] + "회 " + fmtEok(it[2]);
       }).join("<br>") : "";
-      $("api-note").innerHTML = (editing.lock ? "API 기록 · 직접 고쳐서 동기화가 안 덮어씀"
-                                              : "API 기록 · 고치면 동기화가 안 덮어씀") +
+      $("api-note").innerHTML = (editing.lock ? "API 기록. 직접 고쳐서 동기화가 덮어쓰지 않음"
+                                              : "API 기록. 고치면 동기화가 덮어쓰지 않음") +
                                 (ev ? "<br>" + ev : "");
     }
     $("f-del").hidden = !editing;
@@ -745,9 +745,9 @@ Meso.ledger = (function(M){
     var raw = $("f-amt").value, v = readAmt(raw), el = $("amt-prev");
     el.className = "amt-prev";
     if (!raw.trim()){
-      el.textContent = ui.t === "bal" ? "" : ui.unit === "만" ? "3500 = 3,500만 · 0.35억도 됨" : "0.35 = 3,500만 · 3500만도 됨";
+      el.textContent = ui.t === "bal" ? "" : ui.unit === "만" ? "3500 = 3,500만, 0.35억도 됨" : "0.35 = 3,500만, 3500만도 됨";
     } else if (v === null){
-      el.textContent = "못 읽음 — 숫자와 조 · 억 · 만 단위만 쓸 수 있음";
+      el.textContent = "못 읽음. 숫자와 조·억·만 단위만 가능";
       el.className = "amt-prev bad";
     } else {
       var txt = "= " + fmtMan(v), warn = "";
@@ -755,14 +755,14 @@ Meso.ledger = (function(M){
         var prev = balBefore($("f-date").value, ui.edit);
         if (prev !== null){
           var d = v - prev;
-          if (Math.abs(d) < 1e-4){ txt += " · 기록과 일치"; el.className = "amt-prev good"; }
-          else txt += " · 기록에 없는 " + (d > 0 ? "수입 +" + fmtMan(d) : "지출 " + fmtMan(-d));
+          if (Math.abs(d) < 1e-4){ txt += ", 기록과 일치"; el.className = "amt-prev good"; }
+          else txt += ", 기록에 없는 " + (d > 0 ? "수입 +" + fmtMan(d) : "지출 " + fmtMan(-d));
         }
       }
       // 자릿수 실수(3500 을 억으로 읽음 등) 방지: 잔고의 10배가 넘거나, 억 모드에서 단위 없는 1000 이상
       var bal = compute().bal, pn = plainNum(raw);
-      if (bal > 0 && v > bal * 10) warn = " · 잔고의 10배 넘음";
-      else if (ui.unit === "억" && pn !== null && pn >= 1000 && pn < 1e6) warn = " · 억 맞아?";
+      if (bal > 0 && v > bal * 10) warn = ", 잔고의 10배 넘음";
+      else if (ui.unit === "억" && pn !== null && pn >= 1000 && pn < 1e6) warn = ", 억 단위 맞는지 확인";
       if (warn){ txt += warn; el.className = "amt-prev warn"; }
       el.textContent = txt;
     }
@@ -808,7 +808,7 @@ Meso.ledger = (function(M){
       // 못 읽은 이유("못 읽음 …")는 그대로 두고, 빈칸이거나 0 일 때만 안내
       if ($("f-amt").value.trim() && a === null) preview();
       else {
-        $("amt-prev").textContent = $("f-amt").value.trim() ? "0보다 크게 넣어줘" : "금액을 넣어줘";
+        $("amt-prev").textContent = $("f-amt").value.trim() ? "0보다 크게 넣을 것" : "금액 입력 필요";
         $("amt-prev").className = "amt-prev bad";
       }
       $("f-amt").focus();
@@ -847,7 +847,7 @@ Meso.ledger = (function(M){
     } else {
       st.entries.push(e);
       undo = function(){ st.entries = st.entries.filter(function(x){ return x.id !== e.id; }); changed(); };
-      label += gone ? " — 다른 기기에서 지운 기록이라 새로 넣음" : " 기록함";
+      label += gone ? " (다른 기기에서 지운 기록이라 새로 넣음)" : " 기록함";
     }
     // 마지막 모드는 수입/지출만 기억 (잔고 확인이 + 버튼 기본이 되면 안 됨)
     if (e.t !== "bal") ui.lastT = e.t;
@@ -1014,7 +1014,7 @@ Meso.ledger = (function(M){
     if (!M.api.key()){
       location.hash = "#settings";
       $("api-key").focus();
-      apiLog('<span class="bad">API 키를 먼저 넣어줘</span>');
+      apiLog('<span class="bad">API 키 먼저 입력할 것</span>');
       return;
     }
     var t = today(), tISO = toISO(t);
@@ -1060,10 +1060,10 @@ Meso.ledger = (function(M){
       if (tally.updated) parts.push("갱신 " + tally.updated);
       if (tally.locked) parts.push("유지 " + tally.locked + " (직접 고친 기록)");
       if (tally.skip) parts.push("건너뜀 " + tally.skip + " (지운 기록)");
-      var head = range + " 잠재 재설정 " + n + "회" + (n ? " · −" + fmtEok(sum) + " ≈" : "");
+      var head = range + " 잠재 재설정 " + n + "회" + (n ? ", −" + fmtEok(sum) + " ≈" : "");
       apiLog((err ? "" : '<span class="ok">') + esc(head) + (err ? "" : "</span>") +
-             (parts.length ? "\n" + parts.join(" · ") : n ? "\n바뀐 기록 없음" : "") +
-             (err ? '\n<span class="bad">중단: ' + esc(err.message) + (st.api.last.pot ? " — " + md(parseDate(st.api.last.pot)) + "까지 반영됨" : "") + "</span>" : ""));
+             (parts.length ? "\n" + parts.join(", ") : n ? "\n바뀐 기록 없음" : "") +
+             (err ? '\n<span class="bad">중단: ' + esc(err.message) + (st.api.last.pot ? " (" + md(parseDate(st.api.last.pot)) + "까지 반영됨)" : "") + "</span>" : ""));
       if (err) M.toast("동기화 중단: " + err.message);
       else if (tally.added || tally.updated) M.toast("잠재 재설정 " + (tally.added + tally.updated) + "건 반영");
       else M.toast("새로 들어온 기록 없음");
@@ -1075,7 +1075,7 @@ Meso.ledger = (function(M){
     var when = run ? md(run) + " " + String(run.getHours()).padStart(2, "0") + ":" + String(run.getMinutes()).padStart(2, "0") : "";
     $("btn-sync").hidden = !has;
     $("btn-sync").classList.toggle("busy", syncing);
-    $("btn-sync").title = syncing ? "동기화 중…" : "넥슨 Open API 동기화" + (when ? " · 마지막 " + when : "");
+    $("btn-sync").title = syncing ? "동기화 중…" : "넥슨 Open API 동기화" + (when ? " (마지막 " + when + ")" : "");
     $("api-sync").disabled = syncing;
     $("api-sync").textContent = syncing ? "동기화 중…" : "지금 동기화";
     $("api-forget").hidden = !has;
@@ -1236,7 +1236,7 @@ Meso.ledger = (function(M){
     setSyncUI();
   });
   $("api-forget").addEventListener("click", function(){
-    if (!confirm("저장된 API 키를 지울까?")) return;
+    if (!confirm("저장된 API 키 삭제?")) return;
     M.api.setKey("");
     apiLog("키 지움. 가져온 기록은 그대로 남음.");
     setSyncUI();

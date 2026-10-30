@@ -461,7 +461,7 @@ var Meso = (function(){
     if (p === "system") delete document.documentElement.dataset.theme;
     else document.documentElement.dataset.theme = p;
     var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.content = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim() || "#141220";
+    if (meta) meta.content = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim() || "#111112";
   }
 
   var bossApi = {

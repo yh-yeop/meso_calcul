@@ -103,7 +103,7 @@ Meso.calc = (function(M){
   }
   function renderRecur(){
     var box = $("recur");
-    if (!recur.length){ box.innerHTML = '<div class="note">없음 — 매주 · 매월 나가는 돈 (심볼, 경험치 쿠폰 등)</div>'; return; }
+    if (!recur.length){ box.innerHTML = '<div class="note">없음. 매주·매월 나가는 돈 (심볼, 경험치 쿠폰 등)</div>'; return; }
     box.innerHTML = "";
     recur.forEach(function(x, idx){
       var r = document.createElement("div");
@@ -122,7 +122,7 @@ Meso.calc = (function(M){
 
   function renderOnce(){
     var box = $("once");
-    if (!once.length){ box.innerHTML = '<div class="note">없음 — 특정 날 한 번 들어오거나 나가는 돈</div>'; return; }
+    if (!once.length){ box.innerHTML = '<div class="note">없음. 특정 날 한 번 들어오거나 나가는 돈</div>'; return; }
     box.innerHTML = "";
     once.forEach(function(o, idx){
       var r = document.createElement("div");
@@ -150,19 +150,19 @@ Meso.calc = (function(M){
       return '<button class="chip strike" type="button" data-skip="'+iso+'" aria-pressed="'+(on ? "true" : "false")+
              '" title="'+iso+' 주간보스 '+(on ? "건너뜀" : "포함")+'">'+(+p[1])+'/'+(+p[2])+'</button>';
     }).join("");
-    $("skip-sum").textContent = skipWeeks.length ? "· " + skipWeeks.length + "주 건너뜀" : "· 눌러서 건너뜀";
+    $("skip-sum").textContent = skipWeeks.length ? "(" + skipWeeks.length + "주 건너뜀)" : "(눌러서 건너뜀)";
   }
 
   function renderIncome(){
     var list = M.chars.all(), tot = M.chars.totals();
     if (!list.length){
-      $("c-income").innerHTML = '<div class="note">등록한 캐릭터가 없어 보스 수입이 0. 캐릭터 탭에서 등록하면 여기 합산됨.</div>' +
+      $("c-income").innerHTML = '<div class="note">캐릭터 없음. 캐릭터 탭에서 등록하면 보스 수입이 합산됨.</div>' +
         '<div class="btns" style="margin-top:10px"><a class="btn sm primary" href="#chars">캐릭터 등록</a></div>';
       return;
     }
     var names = list.slice(0, 4).map(function(c){ return esc(c.name); }).join(", ") + (list.length > 4 ? " 외 " + (list.length - 4) + "명" : "");
-    $("c-income").innerHTML = '<div class="income"><div><b>주 ' + fmtFine(tot.weekly) + ' · 월 ' + fmtFine(tot.monthly) + '</b>' +
-      '<div class="note">' + list.length + '명 · ' + names + '</div></div></div>';
+    $("c-income").innerHTML = '<div class="income"><div><b>주 ' + fmtFine(tot.weekly) + ', 월 ' + fmtFine(tot.monthly) + '</b>' +
+      '<div class="note">' + list.length + '명 (' + names + ')</div></div></div>';
   }
 
   /* ---------- 그래프 ---------- */
@@ -322,7 +322,7 @@ Meso.calc = (function(M){
       if (g.days > 0) prev = {h:h, days:g.days};
       var isNow = Math.abs(h - c.hours) < 1e-9;
       return '<tr' + (isNow ? ' class="now"' : '') + '>' +
-             '<td>' + (h % 1 === 0 ? h : h.toFixed(1)) + '시간' + (isNow ? ' · 지금' : '') + '</td>' +
+             '<td>' + (h % 1 === 0 ? h : h.toFixed(1)) + '시간' + (isNow ? ' (지금)' : '') + '</td>' +
              '<td>' + fmtEok(mTot) + '</td>' +
              '<td>' + days + (eff !== "—" ? '<span class="cell-sub ph-only">1h당 ' + eff + '</span>' : "") + '</td>' +   // 폰에선 1h당 칸이 숨겨져서 도달 칸 아래 줄로
              '<td>' + delta + '</td><td class="wide">' + eff + '</td></tr>';
@@ -367,8 +367,8 @@ Meso.calc = (function(M){
     /* 결승선이 목요일 주보 점프에 걸려 있으면 초과분만큼 여유가 생겨서 수익을 늘려도 날짜가 안 바뀐다.
        그때 막대가 전부 0으로 나오는데, 설명이 없으면 "늘려도 소용없다"로 읽혀서 반대로 오해된다. */
     if (!anyGain && over > 0){
-      hint.innerHTML = "<b>여유 +" + fmtEok(over) + "</b> — 이만큼 덜 벌어도 같은 날 도달함. " +
-        "그 안에선 수익을 올려도 날짜가 그대로라 '영향 없음'으로 나옴.";
+      hint.innerHTML = "<b>여유 +" + fmtEok(over) + "</b>: 이만큼 덜 벌어도 같은 날 도달함. " +
+        "이 범위에선 수익을 올려도 날짜가 그대로라 '영향 없음'으로 나옴.";
       hint.hidden = false;
     } else {
       hint.hidden = true;
@@ -437,7 +437,7 @@ Meso.calc = (function(M){
     var f = ledgerFacts(), b = $("btn-ledger"), r = $("btn-ledger-rate");
     b.hidden = f.bal === null;
     // 잔고는 마지막 기록일 마감 기준이라 시작일은 그 다음 날 (계산기는 시작일 당일 수익부터 더함)
-    if (f.bal !== null) b.title = "장부 잔고 " + fmtEok(f.bal) + " (" + f.last + " 마감) — 시작일은 다음 날로";
+    if (f.bal !== null) b.title = "장부 잔고 " + fmtEok(f.bal) + " (" + f.last + " 마감). 시작일은 다음 날로";
     r.hidden = !f.rate;
     if (f.rate) r.title = "장부 최근 28일 실측 시급 " + fmtFine(f.rate);
   }
@@ -458,7 +458,7 @@ Meso.calc = (function(M){
     var oIn = 0, oOut = 0;
     once.forEach(function(o){ if (o.amount > 0) oIn += o.amount; else oOut -= o.amount; });
     $("once-sum").textContent = once.length
-      ? (oIn ? "+" + fmtFine(oIn) : "") + (oIn && oOut ? " · " : "") + (oOut ? "−" + fmtFine(oOut) : "") || "0" : "";
+      ? (oIn ? "+" + fmtFine(oIn) : "") + (oIn && oOut ? ", " : "") + (oOut ? "−" + fmtFine(oOut) : "") || "0" : "";
     $("legend-once").hidden = !c.once;
     $("legend-expense").hidden = !(c.expWeekly || c.expMonthly);
 
@@ -466,7 +466,7 @@ Meso.calc = (function(M){
     $("recur-sum").textContent = recur.length ? (inc.expense ? "월 −" + fmtFine(inc.expense) : "0") : "";
     $("out-month").textContent = fmtEok(inc.total);
     var pct = function(v){ return mGross > 0 ? Math.round(v / mGross * 100) : 0; };
-    $("out-day").innerHTML = "주보 " + pct(inc.weekly) + "% · 사냥 " + pct(inc.hunt) + "% · 월보 " + pct(inc.monthly) + "%" +
+    $("out-day").innerHTML = "주보 " + pct(inc.weekly) + "%, 사냥 " + pct(inc.hunt) + "%, 월보 " + pct(inc.monthly) + "%" +
       (inc.expense ? "<br>지출 −" + fmtEok(inc.expense) + " 차감" : "");
 
     var g = c.goal > 0 ? findGoal(c) : {days:-2};
@@ -480,13 +480,13 @@ Meso.calc = (function(M){
     last = null;
     if (g.days === -2){
       $("out-date").textContent = "—";
-      $("out-days").textContent = "목표 메소를 입력해줘";
+      $("out-days").textContent = "목표 메소 입력 필요";
     } else if (g.days === 0){
       $("out-date").textContent = "이미 달성";
       $("out-days").textContent = "보유 메소가 목표 이상";
     } else if (g.days < 0){
       $("out-date").textContent = "—";
-      $("out-days").textContent = M.chars.all().length ? "수익이 없어 도달 불가" : "캐릭터를 등록하거나 사냥 수익을 넣어줘";
+      $("out-days").textContent = M.chars.all().length ? "수익이 없어 도달 불가" : "캐릭터 등록 또는 사냥 수익 입력 필요";
     } else {
       var hitDate = addDays(c.start, g.days - 1);
       var isThu = hitDate.getDay() === 4 && c.weekly > 0;
@@ -499,22 +499,22 @@ Meso.calc = (function(M){
       if (c.skipWeeks){
         var g0 = findGoal(withCfg(c, "skipWeeks", null)).days, n = Object.keys(c.skipWeeks).length;
         pushed = g0 > 0 ? g.days - g0 : 0;
-        skipNote = " · 건너뛴 주 " + n + "개로 " + (pushed > 0 ? "+" + pushed + "일" : "변동 없음");
+        skipNote = ", 건너뛴 주 " + n + "개로 " + (pushed > 0 ? "+" + pushed + "일" : "변동 없음");
       }
       last = {hitDate:hitDate, days:g.days, goal:c.goal, inc:inc,
               skipN: c.skipWeeks ? Object.keys(c.skipWeeks).length : 0, pushed: pushed || 0,
               url: location.host ? location.host + location.pathname.replace(/index\.html$/, "") : "yh-yeop.github.io/meso_calcul/"};
-      $("out-days").innerHTML = "<b>" + g.days + "일 뒤</b> · 목표 " + fmtEok(c.goal) +
-        ' · 여유 +' + fmtEok(over) + skipNote;
+      $("out-days").innerHTML = "<b>" + g.days + "일 뒤</b>, 목표 " + fmtEok(c.goal) +
+        ', 여유 +' + fmtEok(over) + skipNote;
     }
 
     if (span > 0){
       var used = Math.min(span, sim.daily.length), bal = sim.daily[used - 1], diff = bal - c.goal;   // MAX_DAYS 를 넘는 날짜면 실제로 계산된 일수만큼
       $("out-bal").textContent = fmtEok(bal);
-      $("out-bal-sub").textContent = used + "일간 · 목표 대비 " + (diff >= 0 ? "+" : "") + fmtEok(diff);
+      $("out-bal-sub").textContent = used + "일간, 목표 대비 " + (diff >= 0 ? "+" : "") + fmtEok(diff);
     } else {
       $("out-bal").textContent = "—";
-      $("out-bal-sub").textContent = "목표 날짜를 시작일 이후로";
+      $("out-bal-sub").textContent = "목표 날짜는 시작일 이후여야 함";
     }
 
     drawChart(c, sim, chartDays, g.days > 0 ? g.days - 1 : -1);
@@ -522,7 +522,7 @@ Meso.calc = (function(M){
     var cs = $("chart-sum");
     if (cs){
       var sumHit = g.days === 0 ? "이미 달성" : g.days > 0 ? "도달 " + hitStr(addDays(c.start, g.days - 1)) : "도달 불가";
-      cs.textContent = g.days === -2 ? "" : sumHit + (span > 0 ? " · 목표일 잔고 " + fmtEok(sim.daily[Math.min(span, sim.daily.length) - 1]) : "");
+      cs.textContent = g.days === -2 ? "" : sumHit + (span > 0 ? ", 목표일 잔고 " + fmtEok(sim.daily[Math.min(span, sim.daily.length) - 1]) : "");
     }
     renderScenarios(c, g.days);
     renderSensitivity(c, g.days, over);
@@ -533,8 +533,8 @@ Meso.calc = (function(M){
 
   /* ---------- 결과 카드 이미지 ----------
      마지막 render 결과를 캔버스에 그려 PNG 로 내보낸다. 테마와 무관하게 다크 카드로 고정 */
-  var CARD = {ink:"#141220", panel:"#1C1930", line:"#332D52", text:"#EFECF8", dim:"#948DB4", faint:"#8880AB",
-              gold:"#E9B949", goldDim:"#8A6E2C", violet:"#9C7BF0", rose:"#E8639B", mint:"#4FD1AA", orange:"#F2784B"};
+  var CARD = {ink:"#111112", panel:"#19191B", line:"#34343A", text:"#EDEDEF", dim:"#A1A1A8", faint:"#8E8E96",
+              gold:"#E9B949", goldDim:"#8A6E2C", violet:"#9AA6F0", rose:"#E8639B", mint:"#4FD1AA", orange:"#F2784B"};
   var SANS = '"Pretendard",-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif';
   var MONO = '"SF Mono",ui-monospace,"JetBrains Mono",Menlo,Consolas,"D2Coding",monospace';
 
@@ -565,7 +565,7 @@ Meso.calc = (function(M){
     ctx.fillStyle = CARD.ink; ctx.fillRect(0, 0, W, H);
     ctx.textBaseline = "alphabetic";
 
-    var eb = "메소 적립 계산기 · 목표 도달";
+    var eb = "메소 적립 계산기";
     ctx.fillStyle = CARD.gold; ctx.font = "500 24px " + MONO;
     ctx.fillText(eb, P, P + 22);
     var ebW = ctx.measureText(eb).width;
@@ -583,7 +583,7 @@ Meso.calc = (function(M){
     ctx.font = "500 " + Math.round(ds * 0.42) + "px " + MONO;
     ctx.fillText("(" + DOW[d.getDay()] + ")", P + dw + 14, P + 150);
 
-    var sub = r.days + "일 뒤 · 목표 " + fmtEok(r.goal) + (r.skipN ? " · 건너뛴 주 " + r.skipN + "개로 +" + r.pushed + "일" : "");
+    var sub = r.days + "일 뒤, 목표 " + fmtEok(r.goal) + (r.skipN ? ", 건너뛴 주 " + r.skipN + "개로 +" + r.pushed + "일" : "");
     ctx.fillStyle = CARD.dim;
     fitText(ctx, sub, W - P * 2, 32, SANS, "400");
     ctx.fillText(sub, P, P + 206);
@@ -616,7 +616,7 @@ Meso.calc = (function(M){
       var pc = gross > 0 ? Math.round(pt.v / gross * 100) : 0;
       ctx.fillStyle = pt.c; ctx.beginPath(); ctx.arc(lx + 8, ly - 8, 7, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = CARD.dim;
-      var t = pt.n + " " + pc + "% · " + fmtEok(pt.v);
+      var t = pt.n + " " + pc + "%, " + fmtEok(pt.v);
       ctx.fillText(t, lx + 26, ly);
       lx += 26 + ctx.measureText(t).width + 34;
     });
@@ -729,9 +729,9 @@ Meso.calc = (function(M){
     var btn = this;
     var url = location.origin + location.pathname + "#s=" + C.b64e(JSON.stringify(snapshot(true)));
     if (navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(url).then(function(){ flash(btn, "복사됨"); }, function(){ prompt("이 주소를 복사해줘", url); });
+      navigator.clipboard.writeText(url).then(function(){ flash(btn, "복사됨"); }, function(){ prompt("이 주소 복사할 것", url); });
     } else {
-      prompt("이 주소를 복사해줘", url);
+      prompt("이 주소 복사할 것", url);
     }
   });
   $("btn-image").addEventListener("click", function(){

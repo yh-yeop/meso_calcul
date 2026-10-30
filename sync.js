@@ -109,7 +109,7 @@ Meso.sync = (function(M){
             if ((n || 0) < 3) return get((n || 0) + 1);
             throw new Error("클라우드 데이터가 서로 안 맞음");
           }
-          if (broken) throw new Error("클라우드 장부(" + broken + "년) 문서가 깨져 있음 — 동기화 중단");
+          if (broken) throw new Error("클라우드 장부(" + broken + "년) 문서가 깨져 있음. 동기화 중단");
           var lmeta = parse(m.lmeta);
           return {rev: m.rev || 0, sv: m.sv || 0, years: m.years || {}, state: {
             ledger: lmeta ? S.joinLedger(lmeta, years) : null,
@@ -245,7 +245,7 @@ Meso.sync = (function(M){
     } finally { applying = false; }
     if (!ok){
       set({status: "error", err: "이 기기에 저장하지 못함"});
-      M.toast("동기화 실패 — 저장 공간이 부족해 받은 내용을 적용하지 못함");
+      M.toast("동기화 실패: 저장 공간이 부족해 받은 내용을 적용하지 못함");
       return false;
     }
     if (Object.keys(changed).length) M.emit("change", "sync");
@@ -274,7 +274,7 @@ Meso.sync = (function(M){
       watchAlive = false;
       if (unwatch){ try{ unwatch(); } catch(x){} unwatch = null; }
       var off = navigator.onLine === false;
-      if (!running) set({status: off ? "offline" : "error", err: off ? "" : "실시간 연결이 끊김 — " + String(e && (e.message || e.code) || e)});
+      if (!running) set({status: off ? "offline" : "error", err: off ? "" : "실시간 연결이 끊김: " + String(e && (e.message || e.code) || e)});
       if (!off) retryIn(RETRY_MIN);
     });
   }
@@ -307,7 +307,7 @@ Meso.sync = (function(M){
     if (off) return;
     if (!handled && Date.now() - lastErrToast > 30000){
       lastErrToast = Date.now();
-      M.toast("동기화 실패 — 이 기기에는 그대로 저장됨");
+      M.toast("동기화 실패 (이 기기에는 그대로 저장됨)");
     }
     // 새 버전이 있어 멈춘 건 새로고침 전엔 다시 해도 같음
     if (e && e.noRetry) return;
@@ -356,7 +356,7 @@ Meso.sync = (function(M){
       }
     }
     if (remote && remote.sv > SV){
-      var e0 = new Error("새 버전이 있음 — 새로고침");
+      var e0 = new Error("새 버전이 있음. 새로고침 필요");
       e0.noRetry = true;
       throw e0;
     }
@@ -398,7 +398,7 @@ Meso.sync = (function(M){
     }).then(function(next){
       if (g !== gen) return;
       done();
-      var msg = kind === "cloud" ? "클라우드 데이터로 바꿈" : kind === "local" ? "이 기기 데이터로 덮어씀" : "합침 — 장부 " + count(next.state).n + "건";
+      var msg = kind === "cloud" ? "클라우드 데이터로 바꿈" : kind === "local" ? "이 기기 데이터로 덮어씀" : "합침: 장부 " + count(next.state).n + "건";
       M.toast(msg, undoInfo ? function(){ undoChoice(g, undoInfo); } : null);
     }, function(e){
       if (g !== gen) return;
@@ -479,7 +479,7 @@ Meso.sync = (function(M){
     }).catch(function(e){
       set({status: st.user ? "idle" : "out"});
       if (e && /popup-closed|cancelled-popup/.test(e.code)) return;
-      M.toast("로그인 실패 — " + (e && (e.message || e.code) || e));
+      M.toast("로그인 실패: " + (e && (e.message || e.code) || e));
     });
   }
   function logout(){
@@ -488,7 +488,7 @@ Meso.sync = (function(M){
     ad = null;
     if (fb) fb.auth().signOut();
     set({status: CFG ? "out" : "off", user: null});
-    M.toast("로그아웃 — 이 기기 데이터는 그대로 남음");
+    M.toast("로그아웃. 이 기기 데이터는 그대로 남음");
   }
 
   /* ---------- 연결 ---------- */

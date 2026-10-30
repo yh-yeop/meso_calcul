@@ -1,44 +1,44 @@
-/* 메소 — 하나의 디자인 시스템. 다크가 기본, 라이트는 시스템 설정이나 ⚙에서 */
+/* 메소 디자인 토큰. 다크가 기본, 라이트는 시스템 설정이나 ⚙에서 */
 :root{
   color-scheme:dark;
-  --ink:#141220;
-  --ink-2:#1C1930;
-  --surface:#262141;
-  --line:#38315A;
-  --line-soft:#2A2543;
+  --ink:#111112;
+  --ink-2:#19191B;
+  --surface:#232326;
+  --line:#34343A;
+  --line-soft:#26262A;
   --gold:#E9B949;
   --gold-dim:#8A6E2C;
-  --violet:#A88BF5;
+  --violet:#9AA6F0;
   --rose:#F0709F;
   --mint:#4FD1AA;
   --sky:#5AB0F2;
   --orange:#F2784B;
-  --text:#F1EEFA;
-  --muted:#A49DC4;
-  --faint:#958EB8;
+  --text:#EDEDEF;
+  --muted:#A1A1A8;
+  --faint:#8E8E96;
   --on-gold:#1A1406;
-  --scrim:rgba(8,6,16,.62);
-  --shadow:0 10px 30px rgba(0,0,0,.35);
+  --scrim:rgba(0,0,0,.6);
+  --shadow:0 8px 24px rgba(0,0,0,.4);
   --focus:rgba(233,185,73,.22);
-  --radius:16px;
+  --radius:12px;
   --tabh:64px;
   --sans:"Pretendard",-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
 }
 @media (prefers-color-scheme:light){
   :root:not([data-theme="dark"]){
     color-scheme:light;
-    --ink:#F4F2FA; --ink-2:#FFFFFF; --surface:#EFEBF8; --line:#D6D1E8; --line-soft:#E7E3F3;
-    --gold:#8E6300; --gold-dim:#B8933A; --violet:#6240D4; --rose:#C2206A; --mint:#0F7A5A; --sky:#1868B8; --orange:#B5400E;
-    --text:#1D1A2E; --muted:#585275; --faint:#6B6590; --on-gold:#FFFFFF;
-    --scrim:rgba(30,24,60,.38); --shadow:0 10px 30px rgba(40,30,80,.16); --focus:rgba(142,99,0,.18);
+    --ink:#F4F4F3; --ink-2:#FFFFFF; --surface:#EFEFED; --line:#D8D8D5; --line-soft:#E6E6E3;
+    --gold:#8E6300; --gold-dim:#B8933A; --violet:#4453B8; --rose:#C2206A; --mint:#0F7A5A; --sky:#1868B8; --orange:#B5400E;
+    --text:#1B1B1D; --muted:#5A5A61; --faint:#6A6A72; --on-gold:#FFFFFF;
+    --scrim:rgba(0,0,0,.36); --shadow:0 8px 24px rgba(0,0,0,.12); --focus:rgba(142,99,0,.18);
   }
 }
 :root[data-theme="light"]{
   color-scheme:light;
-  --ink:#F4F2FA; --ink-2:#FFFFFF; --surface:#EFEBF8; --line:#D6D1E8; --line-soft:#E7E3F3;
-  --gold:#8E6300; --gold-dim:#B8933A; --violet:#6240D4; --rose:#C2206A; --mint:#0F7A5A; --sky:#1868B8; --orange:#B5400E;
-  --text:#1D1A2E; --muted:#585275; --faint:#6B6590; --on-gold:#FFFFFF;
-  --scrim:rgba(30,24,60,.38); --shadow:0 10px 30px rgba(40,30,80,.16); --focus:rgba(142,99,0,.18);
+  --ink:#F4F4F3; --ink-2:#FFFFFF; --surface:#EFEFED; --line:#D8D8D5; --line-soft:#E6E6E3;
+  --gold:#8E6300; --gold-dim:#B8933A; --violet:#4453B8; --rose:#C2206A; --mint:#0F7A5A; --sky:#1868B8; --orange:#B5400E;
+  --text:#1B1B1D; --muted:#5A5A61; --faint:#6A6A72; --on-gold:#FFFFFF;
+  --scrim:rgba(0,0,0,.36); --shadow:0 8px 24px rgba(0,0,0,.12); --focus:rgba(142,99,0,.18);
 }
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -113,14 +113,14 @@ a{color:inherit}
 .sub b{font-weight:600;color:var(--text)}
 
 /* ---------- 버튼 · 입력 ---------- */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:46px;padding:0 18px;border-radius:12px;
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:46px;padding:0 18px;border-radius:10px;
      border:1px solid var(--line);background:transparent;color:var(--text);font-size:15px;font-weight:550;white-space:nowrap;
      text-decoration:none;transition:background .15s,border-color .15s}
 .btn:hover{border-color:var(--faint)}
 .btn.primary{background:var(--gold);border-color:var(--gold);color:var(--on-gold);font-weight:650}
 .btn.primary:hover{filter:brightness(1.06)}
 .btn.danger{color:var(--rose)}
-.btn.sm{height:36px;padding:0 12px;font-size:14px;border-radius:10px}
+.btn.sm{height:36px;padding:0 12px;font-size:14px;border-radius:8px}
 .btn.dashed{border-style:dashed;color:var(--muted)}
 .btn.ok{border-color:var(--mint);color:var(--mint)}
 .btn:disabled{opacity:.5;cursor:default}
@@ -361,7 +361,7 @@ select{cursor:pointer}
 
 /* ---------- 홈 ---------- */
 .pills{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px;margin-top:16px}
-.pill{min-width:0;display:flex;flex-direction:column;gap:2px;padding:11px 14px;border-radius:14px;background:var(--surface);
+.pill{min-width:0;display:flex;flex-direction:column;gap:2px;padding:11px 14px;border-radius:10px;background:var(--surface);
       border:0;text-align:left;text-decoration:none;transition:filter .15s}
 .pill:hover{filter:brightness(1.08)}
 .pill small{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -410,18 +410,18 @@ select{cursor:pointer}
 
 /* ---------- 기록 버튼 ---------- */
 .fab{position:fixed;z-index:6;right:max(16px,calc(50% - 364px));bottom:calc(var(--tabh) + 16px + env(safe-area-inset-bottom));
-     height:56px;padding:0 22px 0 18px;border-radius:28px;border:0;background:var(--gold);color:var(--on-gold);
+     height:56px;padding:0 22px 0 18px;border-radius:14px;border:0;background:var(--gold);color:var(--on-gold);
      font-size:16px;font-weight:700;display:flex;align-items:center;gap:6px;box-shadow:var(--shadow)}
 .fab svg{width:22px;height:22px;stroke-width:2.4}
 @media (min-width:720px){ .fab{bottom:28px} body{padding-bottom:110px} }
 
 /* ---------- 시트 ---------- */
 dialog.sheet{border:0;padding:0;background:var(--ink-2);color:var(--text);width:100%;max-width:100%;
-             margin:auto 0 0;border-radius:22px 22px 0 0;max-height:94vh;max-height:94dvh;box-shadow:var(--shadow);overflow:auto;overscroll-behavior:contain}
+             margin:auto 0 0;border-radius:16px 16px 0 0;max-height:94vh;max-height:94dvh;box-shadow:var(--shadow);overflow:auto;overscroll-behavior:contain}
 dialog.sheet::backdrop{background:var(--scrim)}
 dialog.sheet[open]{animation:up .22s ease}
 @keyframes up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
-@media (min-width:720px){ dialog.sheet{margin:auto;width:500px;border-radius:22px;max-height:88vh;max-height:88dvh} }
+@media (min-width:720px){ dialog.sheet{margin:auto;width:500px;border-radius:16px;max-height:88vh;max-height:88dvh} }
 .sh{padding:8px 18px calc(16px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px}
 .sh-grip{width:40px;height:4px;border-radius:2px;background:var(--line);margin:4px auto 0}
 @media (min-width:720px){ .sh-grip{display:none} .sh{padding-top:18px} }

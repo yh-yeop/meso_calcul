@@ -80,9 +80,9 @@ Meso.home = (function(M){
       var s = bossState(kind, c), full = fullOf(kind, c), key = kind + ":" + c.id, has = s.routine.length > 0;
       var got = s.e ? s.e.a : 0;
       var check = s.manual || s.lump ? "true" : !s.e ? "false" : has && s.n < s.routine.length ? "mixed" : "true";
-      var sub = s.manual ? "장부에 직접 기록됨 · 장부에서 지우면 체크 가능"
-              : s.lump ? "통째로 기록됨 · " + fmtFine(got)
-              : has ? s.n + "/" + s.routine.length + " · " + (got > 0 ? fmtFine(got) : "0") + " / " + fmtFine(full)
+      var sub = s.manual ? "장부에 직접 기록됨 (지우면 체크 가능)"
+              : s.lump ? "통째로 기록됨, " + fmtFine(got)
+              : has ? s.n + "/" + s.routine.length + ", " + (got > 0 ? fmtFine(got) : "0") + " / " + fmtFine(full)
               : s.e ? md(M.parseDate(s.e.d)) + " 기록" : "";
       var h = '<div class="bgrp">' +
         '<div class="brow2"><button class="boss" role="checkbox" aria-checked="' + check + '" data-kind="' + kind + '" data-cid="' + c.id + '"' +
@@ -114,7 +114,7 @@ Meso.home = (function(M){
     var box = $("h-boss"), ws = M.weekStart(M.today());
     if (!chars.length){
       $("h-boss-sub").textContent = "";
-      box.innerHTML = '<div class="empty">캐릭터와 도는 보스를 등록하면 주마다 잡은 보스만 체크해서 바로 장부에 넣을 수 있음.' +
+      box.innerHTML = '<div class="empty">캐릭터와 도는 보스를 등록하면 주마다 잡은 보스를 체크해서 장부에 넣을 수 있음.' +
         '<div><a class="btn primary" href="#chars">캐릭터 등록</a></div></div>';
       return;
     }
@@ -131,7 +131,7 @@ Meso.home = (function(M){
       done += s.manual || s.lump ? n : s.routine.length ? s.n + ex : (s.e ? 1 : 0);
       if (s.e) got += s.e.a;
     });
-    $("h-boss-sub").textContent = done + "/" + total + (got ? " · +" + fmtFine(got) : "");
+    $("h-boss-sub").textContent = done + "/" + total + (got ? ", +" + fmtFine(got) : "");
     var h = charRows("w", wk);
     if (mo.length) h += '<div class="boss-h">' + (M.today().getMonth() + 1) + '월 월간보스</div>' + charRows("m", mo);
     box.innerHTML = h;
@@ -150,7 +150,7 @@ Meso.home = (function(M){
       if (!r) return;
       if (done[bossId]) delete done[bossId]; else done[bossId] = true;
       undo = writeCheck(kind, c, s, done, false);
-      label = c.name + " · " + M.bosses.label(kind, r) + (done[bossId] ? " 체크" : " 해제");
+      label = c.name + ": " + M.bosses.label(kind, r) + (done[bossId] ? " 체크" : " 해제");
     } else {
       // 캐릭터 체크박스: 루틴이 다 됐으면 기록째 해제, 아니면 안 한 루틴 보스만 현재 값으로 추가 (기존 행 · 뺀 보스는 기록 그대로)
       var all = s.lump ? false : !(s.e && (!s.routine.length || s.n === s.routine.length));
@@ -160,7 +160,7 @@ Meso.home = (function(M){
       label = c.name + (kind === "w" ? " 주간보스 " : " 월간보스 ") + (all ? "전부 체크" : "체크 해제");
     }
     var e = M.ledger.findBySrc(srcFor(kind, c));
-    M.toast(label + (e ? " · 장부 +" + fmtFine(e.a) : " · 장부에서 뺌"), undo);
+    M.toast(label + (e ? ", 장부 +" + fmtFine(e.a) : ", 장부에서 뺌"), undo);
   }
 
   // 기간만 ("3,549일" → "약 9년 9개월")
@@ -183,13 +183,13 @@ Meso.home = (function(M){
       '<div class="bud-status">' + (g.state === "nodata" ? "장부에 잔고를 넣으면 실제 페이스로 계산함" :
         g.state === "stall" ? "최근 순수익이 0 이하라 이 페이스론 못 닿음" :
         g.state === "done" ? "목표보다 " + fmtEok(-g.left) + " 많음" :
-        "남은 " + fmtEok(g.left) + " · " + M.daysText(g.days) + (diff ? " · " + diff : "")) +
+        "남은 " + fmtEok(g.left) + ", " + M.daysText(g.days) + (diff ? ", " + diff : "")) +
         (g.planD ? '<br>계산기 계획 도달 ' + M.mdLong(g.planD) : '') + '</div>';
   }
 
   function renderOnboard(L){
     var steps = [
-      {done: M.chars.all().length > 0, text:"캐릭터 등록 — 도는 보스까지", href:"#chars"},
+      {done: M.chars.all().length > 0, text:"캐릭터와 도는 보스 등록", href:"#chars"},
       {done: L.rows.some(function(r){ return r.e.t === "bal"; }), text:"잔고 넣기", open:"bal"},
       {done: !!M.read(M.KEYS.calc), text:"계산기에서 목표 메소 정하기", href:"#calc"}
     ];
@@ -208,12 +208,12 @@ Meso.home = (function(M){
 
     if (!L.first){
       $("h-bal").textContent = "—";
-      $("h-sub").textContent = "기록 없음 · 오른쪽 아래 + 기록으로 잔고 넣기";
+      $("h-sub").textContent = "기록 없음. 오른쪽 아래 + 기록으로 잔고 넣기";
     } else {
       $("h-bal").textContent = fmtEok(L.bal);
       var lb = L.lastBal, sub = md(M.parseDate(L.last)) + " 기록까지";
       if (lb){
-        sub += " · 마지막 확인 " + md(M.parseDate(lb.e.d));
+        sub += ", 마지막 확인 " + md(M.parseDate(lb.e.d));
         if (!lb.open && Math.abs(lb.adj) >= 1e-4) sub += " (기록 밖 <b>" + fmtSigned(lb.adj) + "</b>)";
       }
       $("h-sub").innerHTML = sub;
@@ -225,7 +225,7 @@ Meso.home = (function(M){
       var left = bud - m.out;
       pills.push({href:"#ledger/budget", k:left >= 0 ? "예산 남음" : "예산 초과", v:fmtEok(Math.abs(left)), cls:left >= 0 ? "" : "neg"});
     } else {
-      pills.push({href:"#ledger/budget", k:"예산", v:"정하기 →", cls:"dim"});
+      pills.push({href:"#ledger/budget", k:"예산", v:"정하기", cls:"dim"});
     }
     $("h-pills").innerHTML = pills.map(function(p){
       return '<a class="pill" href="' + p.href + '"><small>' + esc(p.k) + '</small><b class="' + p.cls + '">' + p.v + '</b></a>';

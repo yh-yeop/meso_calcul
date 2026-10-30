@@ -46,7 +46,7 @@
     var mine = M.chars.all().length, theirs = Array.isArray(s.r) ? s.r.length : 0, takeChars = true;
     if (theirs && mine){
       // 어느 쪽이든 계산기 설정은 바뀜 — 캐릭터만 확인/취소로 갈림
-      takeChars = confirm("공유 링크에 캐릭터 " + theirs + "명이 들어 있음.\n확인: 지금 캐릭터 " + mine + "명을 링크 것으로 바꿈 (이름이 같은 캐릭터는 보스 루틴 · 본캐 유지)\n취소: 캐릭터는 그대로, 계산기 설정만 불러옴" + syncNote());
+      takeChars = confirm("공유 링크에 캐릭터 " + theirs + "명이 들어 있음.\n확인: 지금 캐릭터 " + mine + "명을 링크 것으로 바꿈 (이름이 같으면 보스 루틴·본캐 유지)\n취소: 캐릭터는 그대로, 계산기 설정만 불러옴" + syncNote());
     }
     var before = {calc:M.calc.getState(), chars:JSON.parse(JSON.stringify(M.chars.all()))}, ok = false;
     try{ ok = M.calc.applyShare(s, takeChars) !== false; } catch(e){}
@@ -96,11 +96,11 @@
     var label = {off:"", loading:"연결 중…", out:"", syncing:"동기화 중…", idle:"동기화됨", offline:"오프라인", error:"오류", ask:"선택 필요"}[y.status] || "";
     $("sync-state").textContent = label;
     $("sync-note").textContent =
-      y.status === "off" ? "아직 연결 안 됨 — 서버 설정(firebase-config.js)이 비어 있음." :
-      !on ? "로그인하면 폰 · PC 에서 같은 장부 · 캐릭터 · 계산기를 씀. API 키는 기기마다 따로." :
-      (u.email || u.name) + " · " + (
+      y.status === "off" ? "아직 연결 안 됨. 서버 설정(firebase-config.js)이 비어 있음." :
+      !on ? "로그인하면 폰, PC에서 같은 장부·캐릭터·계산기를 씀. API 키는 기기마다 따로." :
+      (u.email || u.name) + ", " + (
         y.status === "offline" ? "연결되면 올림" :
-        y.status === "error" ? "동기화 실패 — 이 기기엔 저장됨" :
+        y.status === "error" ? "동기화 실패 (이 기기엔 저장됨)" :
         y.status === "ask" ? "이 기기와 클라우드에 둘 다 데이터가 있음" :
         y.at ? ago(y.at) + " 맞춤" : "맞추는 중");
     $("sync-login").hidden = on || y.status === "off";
@@ -112,8 +112,8 @@
   function openLink(){
     var p = M.sync.pending();
     if (!p) return;
-    $("link-msg").innerHTML = "이 기기: 장부 <b>" + p.lc.n + "</b>건 · 캐릭터 <b>" + p.lc.c + "</b>명<br>" +
-      "클라우드: 장부 <b>" + p.rc.n + "</b>건 · 캐릭터 <b>" + p.rc.c + "</b>명";
+    $("link-msg").innerHTML = "이 기기: 장부 <b>" + p.lc.n + "</b>건, 캐릭터 <b>" + p.lc.c + "</b>명<br>" +
+      "클라우드: 장부 <b>" + p.rc.n + "</b>건, 캐릭터 <b>" + p.rc.c + "</b>명";
     if (!$("link-sheet").open) $("link-sheet").showModal();
   }
   M.on("sync", function(status){
@@ -122,7 +122,7 @@
   });
   $("sync-login").addEventListener("click", function(){ M.sync.login(); });
   $("sync-logout").addEventListener("click", function(){
-    if (confirm("로그아웃할까? 이 기기 데이터는 그대로 남고 동기화만 멈춤.")) M.sync.logout();
+    if (confirm("로그아웃 (이 기기 데이터는 그대로 남고 동기화만 멈춤). 계속?")) M.sync.logout();
   });
   $("sync-now").addEventListener("click", function(){
     if (M.sync.pending()) openLink(); else M.sync.now();
@@ -167,7 +167,7 @@
     var now = Date.now();
     if (now - lastStorageToast < 10000) return;
     lastStorageToast = now;
-    M.toast("저장 실패 — 브라우저 저장 공간을 확인해줘 (백업 권장)");
+    M.toast("저장 실패. 브라우저 저장 공간 확인 필요 (백업 권장)");
   });
   $("file").addEventListener("change", function(){
     var f = this.files[0];
@@ -191,7 +191,7 @@
       var prices = full && s.prices && typeof s.prices === "object" ? s.prices : null;
       var what = ["장부 " + ledger.entries.length + "건"];
       if (chars) what.push("캐릭터 " + chars.length + "명");
-      if (calc || prices) what.push((calc ? "계산기" : "") + (calc && prices ? " · " : "") + (prices ? "결정석 가격" : ""));
+      if (calc || prices) what.push((calc ? "계산기" : "") + (calc && prices ? ", " : "") + (prices ? "결정석 가격" : ""));
       var nowL = M.ledger.count(), nowC = M.chars.all().length;
       if ((nowL || nowC) &&
           !confirm("백업으로 덮어씀\n지금 장부 " + nowL + "건 → 백업 " + ledger.entries.length + "건" +
@@ -218,10 +218,10 @@
       } catch(e){ threw = true; }
       if (threw || storageFailed){
         try{ restore(before); } catch(e2){}
-        M.toast(storageFailed ? "복원 실패 — 저장 공간 부족, 이전 상태로 돌려놓음" : "복원 실패 — 이전 상태로 돌려놓음");
+        M.toast(storageFailed ? "복원 실패: 저장 공간 부족. 이전 상태로 돌려놓음" : "복원 실패. 이전 상태로 돌려놓음");
         return;
       }
-      M.toast("복원함 — " + what.join(", ") + (dropNote ? " (" + dropNote + ")" : ""), function(){ restore(before); });
+      M.toast("복원함: " + what.join(", ") + (dropNote ? " (" + dropNote + ")" : ""), function(){ restore(before); });
     };
     rd.readAsText(f);
   });
@@ -246,7 +246,7 @@
   // full: 목록을 처음부터 다시 그림. 입력 중에는 헤더만 고쳐야 포커스가 안 날아감
   function renderPrices(full){
     var B = M.bosses, over = B.overrides(), n = Object.keys(over).length;
-    $("price-sub").textContent = B.data.version + " 기준" + (n ? " · " + n + "개 고침" : "");
+    $("price-sub").textContent = B.data.version + " 기준" + (n ? ", " + n + "개 수정" : "");
     $("price-reset").hidden = !n;
     if (!full || $("price-list").hidden) return;
     var rows = [];
@@ -256,7 +256,7 @@
         Object.keys(b.p).forEach(function(d){
           var key = b.id + ":" + d, cur = B.price(k[0], b.id, d), def = b.p[d], isOver = key in over;
           rows.push('<div class="prow' + (isOver ? ' over' : '') + '"><label for="pr-' + key + '">' + M.esc(b.n) + ' ' + B.data.diffs[d] +
-            '<small>' + k[1] + (isOver ? ' · 기본 ' + M.fmtMan(def / 1e8) : '') + '</small></label>' +
+            '<small>' + k[1] + (isOver ? ' (기본 ' + M.fmtMan(def / 1e8) + ')' : '') + '</small></label>' +
             '<input type="text" inputmode="decimal" id="pr-' + key + '" data-k="' + k[0] + '" data-b="' + b.id + '" data-d="' + d + '"' +
             ' value="' + M.fmtMan(cur / 1e8) + '" aria-label="' + M.esc(b.n) + ' ' + B.data.diffs[d] + ' 가격"></div>');
         });
@@ -268,17 +268,17 @@
     var open = $("price-list").hidden;
     $("price-list").hidden = !open;
     this.setAttribute("aria-expanded", open ? "true" : "false");
-    this.textContent = open ? "닫기" : "가격 보기 · 수정";
+    this.textContent = open ? "닫기" : "가격 보기·수정";
     renderPrices(open);
   });
   $("price-list").addEventListener("change", function(e){
     var i = e.target.closest("input[data-b]");
     if (!i) return;
     var v = i.value.trim() ? M.parseAmount(i.value) : 0;
-    if (v === null){ M.toast("가격을 못 읽음 — 예: 5970만, 0.597억, 59,700,000"); return; }
+    if (v === null){ M.toast("가격을 못 읽음. 예: 5970만, 0.597억, 59,700,000"); return; }
     // 결정석 1개가 100억을 넘는 일은 없음 — 단위 없는 5970(=5,970억) 같은 실수는 저장 전에 되물음
     if (v > 100){
-      M.toast(M.fmtEok(v) + "으로 읽힘 — 만 단위면 '5970만'처럼 써 줘");
+      M.toast(M.fmtEok(v) + "으로 읽힘. 만 단위면 '5970만'처럼 입력");
       i.value = M.fmtMan(M.bosses.price(i.dataset.k, i.dataset.b, i.dataset.d) / 1e8);
       return;
     }
@@ -287,7 +287,7 @@
     var k = i.dataset.k, b = i.dataset.b, d = i.dataset.d, B = M.bosses, row = i.closest(".prow");
     var isOver = (b + ":" + d) in B.overrides(), small = row.querySelector("small");
     row.classList.toggle("over", isOver);
-    small.textContent = (k === "w" ? "주간" : "월간") + (isOver ? " · 기본 " + M.fmtMan(B.defaultPrice(k, b, d) / 1e8) : "");
+    small.textContent = (k === "w" ? "주간" : "월간") + (isOver ? " (기본 " + M.fmtMan(B.defaultPrice(k, b, d) / 1e8) + ")" : "");
     i.value = M.fmtMan(B.price(k, b, d) / 1e8);
     renderPrices();
   });

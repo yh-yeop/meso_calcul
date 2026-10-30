@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>메소 — 장부 · 계산기</title>
-<meta name="description" content="메이플스토리 메소 관리. 어디서 벌고 어디에 썼는지 기록하는 장부, 목표 메소 도달일 계산기, 캐릭터별 보스 수익을 한곳에서.">
-<meta name="theme-color" content="#141220">
+<title>메소 | 장부·계산기</title>
+<meta name="description" content="메이플스토리 메소 장부, 목표 도달일 계산기, 캐릭터별 보스 수익.">
+<meta name="theme-color" content="#111112">
 <meta property="og:type" content="website">
-<meta property="og:title" content="메소 — 장부 · 계산기">
-<meta property="og:description" content="메소 장부, 목표 도달 계산기, 캐릭터별 보스 수익을 한곳에서.">
+<meta property="og:title" content="메소 | 장부·계산기">
+<meta property="og:description" content="메소 장부, 목표 도달일 계산기, 캐릭터별 보스 수익.">
 <meta property="og:locale" content="ko_KR">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
@@ -62,12 +62,12 @@
     </section>
 
     <section class="card" id="h-goal-card">
-      <h3>목표 <a href="#calc">계산기 →</a></h3>
+      <h3>목표 <a href="#calc">계산기</a></h3>
       <div id="h-goal"></div>
     </section>
 
     <section class="card">
-      <h3>최근 기록 <a href="#ledger">전체 →</a></h3>
+      <h3>최근 기록 <a href="#ledger">전체 보기</a></h3>
       <div class="list" id="h-recent"></div>
     </section>
   </main>
@@ -155,7 +155,7 @@
       <section class="card">
         <h3>항목별 <button class="btn sm" id="bud-edit">예산 정하기</button></h3>
         <div id="budget"></div>
-        <div class="note" style="margin-top:12px">막대 위 세로선은 오늘까지 써도 되는 만큼. 막대가 선을 넘으면 이 속도론 월말에 예산을 넘김.</div>
+        <div class="note" style="margin-top:12px">세로선은 오늘까지 쓸 수 있는 금액. 막대가 선을 넘으면 월말에 예산 초과.</div>
       </section>
     </div>
   </main>
@@ -173,7 +173,7 @@
     </section>
 
     <section class="card">
-      <h3>보스 수입 <a href="#chars">캐릭터 관리 →</a></h3>
+      <h3>보스 수입 <a href="#chars">캐릭터 관리</a></h3>
       <div id="c-income"></div>
       <div class="sh-lbl" style="margin-top:16px">주보 건너뛸 주 <span id="skip-sum"></span></div>
       <div class="chips" id="skip-chips" role="group" aria-label="주보 건너뛸 주"></div>
@@ -193,7 +193,7 @@
     </section>
 
     <section class="card">
-      <h3>기간 · 목표</h3>
+      <h3>기간·목표</h3>
       <div class="field">
         <label for="in-start">시작일<small>당일 수익부터 포함</small></label>
         <div class="ctl"><button class="btn sm" id="btn-today">오늘</button><input type="date" id="in-start"></div>
@@ -250,7 +250,7 @@
     <section class="card">
       <h3>민감도 <small id="sens-base"></small></h3>
       <div class="subh">수입원을 ±10% 흔들면 도달일이 얼마나 움직이나 (목요일은 켜고 끔)</div>
-      <div class="tor-legend"><span>← 당겨짐 · 밀림 →</span></div>
+      <div class="tor-legend"><span>← 당겨짐 / 밀림 →</span></div>
       <div id="tor"></div>
       <div class="callout" id="tor-hint" hidden></div>
       <div class="subh mt">도달을 하루 당기려면 각각 얼마가 필요한가</div>
@@ -277,7 +277,7 @@
       <button class="btn" id="ch-add">+ 캐릭터 추가</button>
       <button class="btn" id="ch-api-btn">Open API로 불러오기</button>
     </div>
-    <p class="note">캐릭터를 눌러 <b>보스 설정</b>에서 도는 보스를 고르면 주 · 월 수익이 자동 계산됨. 가격은 ⚙ 설정에서 고침.</p>
+    <p class="note">캐릭터를 눌러 <b>보스 설정</b>에서 보스를 고르면 주·월 수익이 자동 계산됨. 가격은 설정에서 수정.</p>
   </main>
 
   <!-- ===================== 설정 ===================== -->
@@ -285,10 +285,10 @@
     <div class="vhead"><h2>설정</h2></div>
 
     <section class="card" id="sync-card">
-      <h3>계정 · 동기화 <small id="sync-state"></small></h3>
-      <p class="note" id="sync-note">로그인하면 폰 · PC 에서 같은 장부를 씀.</p>
+      <h3>계정·동기화 <small id="sync-state"></small></h3>
+      <p class="note" id="sync-note">로그인하면 폰, PC에서 같은 장부를 씀.</p>
       <div class="btns" style="margin-top:10px">
-        <button class="btn primary" id="sync-login" type="button">Google 로 로그인</button>
+        <button class="btn primary" id="sync-login" type="button">Google로 로그인</button>
         <button class="btn" id="sync-now" type="button" hidden>지금 동기화</button>
         <button class="btn" id="sync-logout" type="button" hidden>로그아웃</button>
       </div>
@@ -305,26 +305,26 @@
 
     <section class="card">
       <h3>넥슨 Open API <small id="api-state">키 없음</small></h3>
-      <p class="note">키를 넣으면 <b>잠재능력 · 에디셔널 재설정</b> 지출이 날짜 · 캐릭터별로 장부에 자동 기록되고, 캐릭터 탭에서 계정 캐릭터를 불러올 수 있음. 재설정 금액은 비용표 추정치(≈)라 강화 전후로 잔고 확인을 해 두면 오차가 미기록으로 드러남.</p>
+      <p class="note">키를 넣으면 <b>잠재능력·에디셔널 재설정</b> 지출이 장부에 자동 기록되고, 캐릭터 탭에서 계정 캐릭터를 불러올 수 있음. 금액은 추정치(≈)라 오차는 잔고 확인 시 미기록으로 드러남.</p>
       <div class="field" style="margin-top:8px">
-        <label for="api-key">API 키<small>이 기기에만 저장 · 백업에 안 실림</small></label>
+        <label for="api-key">API 키<small>이 기기에만 저장, 백업 제외</small></label>
         <div class="ctl"><input type="password" id="api-key" autocomplete="off" spellcheck="false" placeholder="발급받은 키 붙여넣기"></div>
       </div>
       <div class="field" id="r-api-from">
-        <label for="api-from">처음 가져올 날짜<small>첫 동기화만 · 2024-01-25부터</small></label>
+        <label for="api-from">처음 가져올 날짜<small>첫 동기화만, 2024-01-25부터</small></label>
         <div class="ctl"><input type="date" id="api-from"></div>
       </div>
       <div class="btns" style="margin-top:10px">
         <button class="btn primary" id="api-sync">지금 동기화</button>
         <button class="btn danger" id="api-forget">키 지우기</button>
-        <a class="btn" href="https://openapi.nexon.com/ko/my-application/" target="_blank" rel="noopener">키 발급 ↗</a>
+        <a class="btn" href="https://openapi.nexon.com/ko/my-application/" target="_blank" rel="noopener">키 발급</a>
       </div>
       <div class="apilog" id="api-log" aria-live="polite"></div>
     </section>
 
     <section class="card">
       <h3>데이터</h3>
-      <p class="note">전부 이 브라우저에만 저장됨. 기기를 바꾸거나 캐시를 지우기 전에 백업해 둘 것. 백업 한 파일에 장부 · 계산기 · 캐릭터 · 결정석 가격 포함.</p>
+      <p class="note">이 브라우저에 저장됨. 기기를 바꾸거나 캐시를 지우기 전에 백업할 것.</p>
       <div class="btns" style="margin-top:12px">
         <button class="btn" id="btn-backup">백업 (JSON)</button>
         <button class="btn" id="btn-restore">백업 불러오기</button>
@@ -335,9 +335,9 @@
 
     <section class="card">
       <h3>결정석 가격 <small id="price-sub"></small></h3>
-      <p class="note">보스 수익 계산에 쓰는 결정석 판매가. 패치로 가격이 바뀌면 여기서 고치면 바로 반영됨. 고친 값은 금색, 비우면 기본값.</p>
+      <p class="note">보스 수익 계산에 쓰는 결정석 판매가. 고친 값은 금색, 비우면 기본값.</p>
       <div class="btns" style="margin-top:12px">
-        <button class="btn" id="price-toggle" aria-expanded="false" aria-controls="price-list">가격 보기 · 수정</button>
+        <button class="btn" id="price-toggle" aria-expanded="false" aria-controls="price-list">가격 보기·수정</button>
         <button class="btn danger" id="price-reset" hidden>전부 기본값으로</button>
       </div>
       <div id="price-list" hidden></div>
@@ -345,7 +345,7 @@
 
     <section class="card">
       <h3>계산기</h3>
-      <p class="note">계산기 입력(시급 · 기간 · 목표 · 일회성 · 정기 지출)만 기본값으로 되돌림. 장부와 캐릭터는 그대로.</p>
+      <p class="note">계산기 입력만 기본값으로. 장부와 캐릭터는 그대로.</p>
       <div class="btns" style="margin-top:12px"><button class="btn danger" id="btn-calc-reset">계산기 초기화</button></div>
     </section>
 
@@ -460,11 +460,11 @@
       <button type="button" class="btn sm" id="boss-copy-btn">복사</button>
     </div>
     <div>
-      <div class="sh-lbl">주간 보스 · 목요일 리셋</div>
+      <div class="sh-lbl">주간 보스 (목요일 리셋)</div>
       <div id="boss-w"></div>
     </div>
     <div>
-      <div class="sh-lbl">월간 보스 · 매월 1일 리셋</div>
+      <div class="sh-lbl">월간 보스 (매월 1일 리셋)</div>
       <div id="boss-m"></div>
     </div>
     <div class="sh-foot">
