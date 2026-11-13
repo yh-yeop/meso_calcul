@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">"메소 계산기"</string>
+    <string name="main_activity_title">"메소 계산기"</string>
+</resources>

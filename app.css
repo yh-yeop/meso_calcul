@@ -58,7 +58,9 @@ a{color:inherit}
 .pos{color:var(--mint)} .neg{color:var(--rose)} .dim{color:var(--muted)}
 
 /* ---------- 헤더 · 탭 ---------- */
-.top{display:flex;align-items:center;gap:8px;padding:14px 0 12px}
+.top{display:flex;align-items:center;gap:8px;padding:calc(14px + env(safe-area-inset-top)) 0 12px}
+/* 화면 끝까지 그리는 앱(Android): 상태 표시줄 뒤를 가려 내용이 비쳐 보이지 않게 */
+body::before{content:"";position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top);background:var(--ink);z-index:20;pointer-events:none}
 .brand{flex:1;display:flex;align-items:center;gap:9px;font-size:18px;font-weight:750;letter-spacing:-.01em;text-decoration:none}
 .brand img{width:26px;height:26px;border-radius:7px}
 .icon-btn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:transparent;
@@ -69,7 +71,7 @@ a{color:inherit}
 .icon-btn.busy svg{animation:spin 1s linear infinite;color:var(--violet)}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-.tabs{position:sticky;top:0;z-index:5;background:var(--ink);display:flex;border-bottom:1px solid var(--line-soft);margin:0 -16px;padding:0 16px}
+.tabs{position:sticky;top:env(safe-area-inset-top);z-index:5;background:var(--ink);display:flex;border-bottom:1px solid var(--line-soft);margin:0 -16px;padding:0 16px}
 .tabs a{flex:1;text-decoration:none;border-bottom:2px solid transparent;padding:12px 0 10px;color:var(--muted);font-size:15px;
         display:flex;align-items:center;justify-content:center;gap:6px}
 .tabs a[aria-current="page"]{color:var(--text);border-bottom-color:var(--gold);font-weight:650}

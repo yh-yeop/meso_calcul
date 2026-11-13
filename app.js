@@ -94,16 +94,19 @@
   function renderSync(){
     var y = M.sync.state(), u = y.user, on = !!u && y.status !== "out";
     var label = {off:"", loading:"연결 중…", out:"", syncing:"동기화 중…", idle:"동기화됨", offline:"오프라인", error:"오류", ask:"선택 필요"}[y.status] || "";
+    // Android 앱은 웹뷰라 Google 이 로그인을 막는다 (disallowed_useragent) → 버튼 대신 안내
+    var noLogin = !on && M.sync.blocked();
     $("sync-state").textContent = label;
     $("sync-note").textContent =
       y.status === "off" ? "아직 연결 안 됨. 서버 설정(firebase-config.js)이 비어 있음." :
+      noLogin ? "Android 앱에서는 Google이 로그인을 막음. 동기화는 브라우저(웹)에서 쓰고, 이 앱으로는 ⚙ 데이터의 백업·불러오기로 옮길 것." :
       !on ? "로그인하면 폰, PC에서 같은 장부·캐릭터·계산기를 씀. API 키는 기기마다 따로." :
       (u.email || u.name) + ", " + (
         y.status === "offline" ? "연결되면 올림" :
         y.status === "error" ? "동기화 실패 (이 기기엔 저장됨)" :
         y.status === "ask" ? "이 기기와 클라우드에 둘 다 데이터가 있음" :
         y.at ? ago(y.at) + " 맞춤" : "맞추는 중");
-    $("sync-login").hidden = on || y.status === "off";
+    $("sync-login").hidden = on || y.status === "off" || noLogin;
     $("sync-login").disabled = y.status === "loading";
     $("sync-now").hidden = !on;
     $("sync-now").textContent = y.status === "ask" ? "다시 고르기" : "지금 동기화";

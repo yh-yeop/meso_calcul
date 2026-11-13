@@ -461,7 +461,10 @@ var Meso = (function(){
     if (p === "system") delete document.documentElement.dataset.theme;
     else document.documentElement.dataset.theme = p;
     var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.content = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim() || "#111112";
+    var cs = getComputedStyle(document.documentElement);
+    if (meta) meta.content = cs.getPropertyValue("--ink").trim() || "#111112";
+    // Android 앱: 상태 표시줄 아이콘 색을 앱 테마에 맞춘다 (시스템과 반대 테마여도 보이게)
+    try{ if (window.MesoNative) window.MesoNative.setLightStatusBar(cs.colorScheme === "light"); } catch(e){}
   }
 
   var bossApi = {

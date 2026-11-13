@@ -1,0 +1,19 @@
+{
+  "name": "meso_calcul-desktop",
+  "private": true,
+  "version": "1.0.0",
+  "description": "메소 계산기 설치판 (Tauri). 창은 배포된 사이트를 연다",
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "test": "cargo test --manifest-path src-tauri/Cargo.toml --lib",
+    "release": "node scripts/release.mjs"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  },
+  "platforms": [
+    "windows"
+  ]
+}

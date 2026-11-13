@@ -31,6 +31,9 @@
       <svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg>
     </a>
     <a class="brand" href="#home"><img src="icon.svg" alt="">메소 계산기</a>
+    <a class="icon-btn" id="btn-app" hidden href="#settings" title="앱 받기" aria-label="앱 받기">
+      <svg viewBox="0 0 24 24"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></svg>
+    </a>
     <button class="icon-btn" id="btn-sync" hidden title="넥슨 Open API 동기화" aria-label="동기화">
       <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/></svg>
     </button>
@@ -298,6 +301,12 @@
       </div>
     </section>
 
+    <section class="card" id="app-card">
+      <h3><span id="app-title">앱 설치</span> <small id="app-state"></small></h3>
+      <p class="note" id="app-note">설치판 정보를 불러오는 중…</p>
+      <div class="btns" id="app-btns" style="margin-top:10px"></div>
+    </section>
+
     <section class="card">
       <h3>테마</h3>
       <div class="seg" id="theme-seg" role="group" aria-label="테마">
@@ -521,6 +530,7 @@
 <script src="home.js"></script>
 <script src="firebase-config.js"></script>
 <script src="sync.js"></script>
+<script src="appinfo.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

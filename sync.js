@@ -462,8 +462,13 @@ Meso.sync = (function(M){
     watchStart();
     schedule(0);
   }
+  function blocked(){ return !!(window.MesoApp && window.MesoApp.platform === "android"); }
   function login(){
     if (!CFG) return Promise.resolve();
+    if (blocked()){
+      M.toast("Android 앱에서는 Google 로그인이 막혀 있음. 백업·불러오기로 옮길 것");
+      return Promise.resolve();
+    }
     set({status: "loading"});
     return loadSdk().then(function(){
       var p = new fb.auth.GoogleAuthProvider();
@@ -509,6 +514,8 @@ Meso.sync = (function(M){
 
   return {
     state: function(){ return st; },
+    // Android 앱(웹뷰)에서는 Google 이 로그인 화면을 막는다
+    blocked: blocked,
     pending: function(){ return ask ? {lc: ask.lc, rc: ask.rc} : null; },
     login: login, logout: logout, choose: choose,
     now: function(){ schedule(0); },

@@ -24,6 +24,7 @@
 | `store.js` | 공용 헬퍼 · 캐릭터 저장소 · 변경 알림 · 토스트 · 테마 (`Meso`) |
 | `api.js` | 넥슨 Open API 클라이언트 |
 | `ledger.js` · `calc.js` · `chars.js` · `home.js` | 탭별 화면 |
+| `appinfo.js` | 설치판 안내 — 브라우저엔 다운로드 버튼, 설치판 안에선 버전 · 업데이트 확인 (아래 "설치판") |
 | `app.js` | 해시 라우팅(`#home` `#ledger[/stats\|/budget]` `#calc` `#chars` `#settings`), 설정, 백업 |
 | `bosses.js` | 보스 결정석 가격표 (주간 24종 · 월간, 난이도별). ⚙에서 덮어쓰기 가능 |
 | `rules.js` | Open API 이력에 금액을 붙이는 비용표 |
@@ -140,6 +141,43 @@ Data based on NEXON Open API.
 Settings → Pages → Source를 **Deploy from a branch**, 브랜치 `main` / 폴더 `/ (root)` 로 두면 끝. 워크플로 파일 필요 없음.
 
 `main`에 푸시할 때마다 1~2분 뒤 반영됨. `.nojekyll`이 있어서 Jekyll 전처리는 건너뜀.
+
+## 설치판 — Windows · Android (`desktop/`)
+
+PWA와 별개로 설치 파일로 까는 앱. [Tauri 2](https://tauri.app)로 감쌈 — Windows 설치 파일 1MB 남짓(시스템 WebView2), Android는 APK. 받는 곳은 [yh-yeop/releases](https://github.com/yh-yeop/releases/releases?q=MesoCalc&expanded=true) (앱 id `MesoCalc`). Android는 **1.1.0부터**.
+
+- 앱 창은 **배포된 사이트(`https://yh-yeop.github.io/meso_calcul/`)를 그대로 연다.** 사이트를 고쳐 푸시하면 앱도 다음 실행부터 따라 바뀜(앱을 다시 낼 필요 없음). 오프라인은 사이트의 서비스 워커 캐시(첫 실행만 인터넷 필요).
+- Google 로그인 · 동기화: Windows는 웹과 똑같이 됨(로그인 팝업만 앱 안에 띄움). **Android는 Google이 웹뷰 로그인을 막아서 안 됨** — 설정에 안내가 뜨고, 백업 · 불러오기로 옮김.
+- 데이터는 앱 전용 저장소라 브라우저와 따로. 바깥 링크는 기본 브라우저로 연다 (`src-tauri/src/lib.rs`의 `in_app`).
+- 앱이 주입하는 `window.MesoApp` (`{platform, version, releases, checkUpdate()}`)으로 웹이 설치판인지 안다. `checkUpdate()`는 가짜 주소 `https://meso-app.invalid/check-update`로 이동하고 앱이 그걸 가로챈다 — 원격 페이지에 IPC 권한을 열지 않으려고.
+
+### 다운로드 버튼 · 업데이트 (ListUp 구조를 따름)
+
+releases 저장소의 Actions가 릴리스마다 만드는 앱별 manifest를 웹과 앱이 같이 읽는다: `https://yh-yeop.github.io/releases/apps/MesoCalc/manifest.json` (Pages 사본, CORS 허용, 횟수 제한 없음).
+
+| 어디서 | 무엇을 |
+|---|---|
+| 브라우저 (`appinfo.js`) | 이 기기(Windows · Android)에 맞는 설치 파일이 있으면 머리글에 ↓ 버튼, ⚙ "앱 설치" 카드에 모든 설치 파일 |
+| 설치판 안 (`appinfo.js`) | ⚙ "앱" 카드에 버전과 "업데이트 확인" (새 버전이 있으면 강조) |
+| 설치판이 열릴 때 (`src-tauri/src/update.rs`) | 새 버전을 처음 보면 한 번 묻는다(같은 버전은 다시 안 물음, `update.json`). Windows: 받아서 SHA-256 확인 → 조용한 설치(`/P /UPDATE /R`) → 다시 열림. Android: 브라우저로 APK 받기 |
+
+시험: `MESO_UPDATE_MANIFEST=<가짜 manifest 주소>` 로 앱을 띄우면 그걸 읽는다.
+
+### 빌드 · 배포
+
+Rust · Node 필요. Android는 Android SDK · NDK와 `rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android`.
+
+```
+cd desktop
+npm install
+npm test                 # Rust 단위 테스트 (버전 비교 · manifest 읽기 · 링크 판정)
+npm run build            # Windows → src-tauri/target/release/bundle/nsis/
+npm run build:android    # Android(1.1.0~) → src-tauri/gen/android/app/build/outputs/apk/universal/release/
+npm run release          # yh-yeop/releases 에 MesoCalc-v<버전> 으로 올림 (--dry-run 으로 미리 보기)
+```
+
+- 버전은 `desktop/package.json`의 `version` 하나 (tauri.conf.json · Android versionCode가 따라감). 내는 플랫폼은 같은 파일의 `platforms` — releases `apps.json`의 `platforms`와 맞춘다. 릴리스 노트는 `desktop/releases/v<버전>.md`.
+- **Android 서명**: 키와 비밀번호는 저장소 밖 `~/.meso_calcul/android-signing.properties` (+ `android-release.jks`). 키를 잃으면 이미 깐 앱에 업데이트를 못 하니 따로 백업할 것. 없으면 서명 안 된 APK가 나오고 `release`가 막는다.
 
 ## 로컬에서
 
