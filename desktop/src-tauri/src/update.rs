@@ -121,7 +121,8 @@ fn ask<R: Runtime>(app: &AppHandle<R>, msg: &str, ok: &str) -> bool {
 }
 
 fn info<R: Runtime>(app: &AppHandle<R>, msg: &str) {
-    dialog(app, msg).blocking_show();
+    // Android 기본 단추 글자가 영어("Ok")라서 직접 정한다
+    dialog(app, msg).buttons(MessageDialogButtons::OkCustom("확인".to_string())).blocking_show();
 }
 
 fn open<R: Runtime>(app: &AppHandle<R>, url: &str) {

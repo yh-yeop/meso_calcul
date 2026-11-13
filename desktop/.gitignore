@@ -4,3 +4,4 @@ src-tauri/gen/schemas/
 build.log
 out/
 test.log
+android.log

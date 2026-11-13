@@ -165,7 +165,7 @@ releases 저장소의 Actions가 릴리스마다 만드는 앱별 manifest를 �
 
 ### 빌드 · 배포
 
-Rust · Node 필요. Android는 Android SDK · NDK와 `rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android`.
+Rust · Node 필요. Android는 Android SDK · NDK와 `rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android`. SDK · NDK 경로는 `ANDROID_HOME` · `NDK_HOME`이 없으면 Android Studio 기본 위치를 씀(`scripts/android.mjs`).
 
 ```
 cd desktop
