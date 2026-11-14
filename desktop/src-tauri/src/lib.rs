@@ -1,4 +1,4 @@
-// 메소 계산기 설치판 (Windows · Android 공용).
+// 메소노믹스 설치판 (Windows · Android 공용).
 // 창은 배포된 사이트(GitHub Pages)를 그대로 연다: 사이트를 고치면 앱도 따라 바뀌고,
 // 출처가 같아서 Firebase 로그인 · 동기화가 웹과 똑같이 동작한다(Android 는 Google 이 웹뷰 로그인을 막음).
 // 오프라인은 사이트의 서비스 워커가 맡는다. 앱 자체의 새 버전은 update.rs.
@@ -51,7 +51,7 @@ fn desktop_window<'a, R: tauri::Runtime, M: tauri::Manager<R>>(
 
     let popups = AtomicUsize::new(0);
     builder
-        .title("메소 계산기")
+        .title("메소노믹스")
         .inner_size(480.0, 860.0)
         .min_inner_size(360.0, 560.0)
         .center()
@@ -109,7 +109,7 @@ pub fn run() {
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("메소 계산기 실행 실패");
+        .expect("메소노믹스 실행 실패");
 }
 
 #[cfg(test)]

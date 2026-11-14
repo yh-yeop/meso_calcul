@@ -105,7 +105,7 @@ fn set_prompted<R: Runtime>(app: &AppHandle<R>, version: &str) {
 // ---- 대화상자 ----
 
 fn dialog<R: Runtime>(app: &AppHandle<R>, msg: &str) -> tauri_plugin_dialog::MessageDialogBuilder<R> {
-    let b = app.dialog().message(msg).title("메소 계산기").kind(MessageDialogKind::Info);
+    let b = app.dialog().message(msg).title("메소노믹스").kind(MessageDialogKind::Info);
     #[cfg(desktop)]
     let b = match app.get_webview_window("main") {
         Some(w) => b.parent(&w),
@@ -170,7 +170,7 @@ fn run_check<R: Runtime>(app: &AppHandle<R>, manual: bool) {
         Some(asset) => install(app, &latest, asset, &current),
         None => {
             // 이 플랫폼 설치 파일이 없는 릴리스
-            let msg = format!("메소 계산기 v{} 이 나왔습니다 (지금 v{current}).\n릴리스 페이지를 열까요?", latest.version);
+            let msg = format!("메소노믹스 v{} 이 나왔습니다 (지금 v{current}).\n릴리스 페이지를 열까요?", latest.version);
             if ask(app, &msg, "열기") {
                 open(app, &latest.release_url);
             }
@@ -181,7 +181,7 @@ fn run_check<R: Runtime>(app: &AppHandle<R>, manual: bool) {
 #[cfg(target_os = "android")]
 fn install<R: Runtime>(app: &AppHandle<R>, latest: &Latest, asset: &Asset, current: &str) {
     let msg = format!(
-        "메소 계산기 v{} 이 나왔습니다 (지금 v{current}).\n브라우저로 새 APK 를 받을까요? 다 받으면 알림에서 열어 설치하세요.",
+        "메소노믹스 v{} 이 나왔습니다 (지금 v{current}).\n브라우저로 새 APK 를 받을까요? 다 받으면 알림에서 열어 설치하세요.",
         latest.version
     );
     if ask(app, &msg, "받기") {
@@ -192,7 +192,7 @@ fn install<R: Runtime>(app: &AppHandle<R>, latest: &Latest, asset: &Asset, curre
 #[cfg(not(target_os = "android"))]
 fn install<R: Runtime>(app: &AppHandle<R>, latest: &Latest, asset: &Asset, current: &str) {
     let msg = format!(
-        "메소 계산기 v{} 이 나왔습니다 (지금 v{current}).\n지금 받아서 설치할까요? 설치가 끝나면 다시 열립니다.",
+        "메소노믹스 v{} 이 나왔습니다 (지금 v{current}).\n지금 받아서 설치할까요? 설치가 끝나면 다시 열립니다.",
         latest.version
     );
     if !ask(app, &msg, "업데이트") {
