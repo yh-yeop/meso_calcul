@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>개인정보처리방침 · 이용약관 — 메소 계산기</title>
+<meta name="description" content="메소 계산기 개인정보처리방침과 이용약관.">
+<meta name="theme-color" content="#111112">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<script>
+  try{ var t = localStorage.getItem("meso-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch(e){}
+</script>
+<link rel="stylesheet" href="app.css">
+<style>
+  body{padding-bottom:48px}
+  .legal{padding:20px 0}
+  .legal .back{display:inline-block;margin-bottom:16px;color:var(--muted);text-decoration:none;font-size:14px}
+  .legal .back:hover{color:var(--text)}
+  .legal h1{font-size:22px;margin-bottom:6px}
+  .legal .toc{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 4px}
+  .legal section.doc{margin-top:28px;scroll-margin-top:16px}
+  .legal h2{font-size:19px;margin-bottom:4px}
+  .legal h3{font-size:15px;margin:20px 0 6px}
+  .legal p,.legal li{color:var(--text);font-size:14px;line-height:1.75}
+  .legal ul,.legal ol{padding-left:20px}
+  .legal .meta{color:var(--muted);font-size:13px}
+  .legal table{width:100%;border-collapse:collapse;font-size:13px;margin:6px 0}
+  .legal th,.legal td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+  .legal th{background:var(--surface);font-weight:600;white-space:nowrap}
+  .legal .tbl{overflow-x:auto}
+  .legal a{color:var(--gold)}
+</style>
+</head>
+<body>
+<div class="app legal">
+  <a class="back" href="index.html#settings">← 메소 계산기로</a>
+  <h1>개인정보처리방침 · 이용약관</h1>
+  <p class="meta">시행일 2026-11-14</p>
+  <div class="toc">
+    <a class="btn" href="#privacy">개인정보처리방침</a>
+    <a class="btn" href="#terms">이용약관</a>
+  </div>
+
+  <!-- ===================== 개인정보처리방침 ===================== -->
+  <section class="doc" id="privacy">
+    <h2>개인정보처리방침</h2>
+    <p>메소 계산기(이하 "서비스")는 개인이 운영하는 무료 도구입니다. 서비스는 「개인정보 보호법」에 따라 이용자의 개인정보를 보호하고, 관련 문의를 처리하기 위해 이 방침을 둡니다.</p>
+
+    <h3>1. 기본 원칙 — 로그인하지 않으면 서버에 아무것도 보내지 않습니다</h3>
+    <p>장부 · 캐릭터 · 계산기 입력은 이용자 기기의 브라우저 저장소(localStorage)에만 저장됩니다. 운영자는 이 데이터를 볼 수 없습니다. 아래 2항의 정보는 이용자가 <b>Google로 로그인(기기 간 동기화)</b>을 직접 켠 경우에만 처리됩니다.</p>
+
+    <h3>2. 처리하는 개인정보 항목과 목적</h3>
+    <div class="tbl"><table>
+      <tr><th>구분</th><th>항목</th><th>목적</th></tr>
+      <tr><td>로그인</td><td>Google 계정 식별자(UID), 이메일 주소, 표시 이름</td><td>본인 확인, 동기화 데이터를 계정별로 구분</td></tr>
+      <tr><td>동기화 데이터</td><td>장부 기록(날짜 · 금액 · 분류 · 메모), 캐릭터 정보(이름 · 월드 · 직업 · 레벨 · 보스 설정), 계산기 입력값, 결정석 가격 수정값, 기기 구분용 무작위 값, 저장 시각</td><td>여러 기기에서 같은 데이터를 쓰게 함</td></tr>
+    </table></div>
+    <p>넥슨 Open API 키, 테마 설정은 기기에만 저장되며 서버로 보내지 않습니다. 메모란에는 다른 사람의 개인정보를 적지 마십시오.</p>
+
+    <h3>3. 보유 기간과 파기</h3>
+    <ul>
+      <li>로그인 정보와 동기화 데이터는 이용자가 <b>⚙ 설정 → 계정·동기화 → 탈퇴(클라우드 데이터 삭제)</b>를 누를 때까지 보관하고, 누르면 지체 없이 삭제합니다. 별도 백업본은 두지 않습니다.</li>
+      <li>서비스를 종료하는 경우 미리 공지하고 저장된 정보를 모두 삭제합니다.</li>
+      <li>기기에 저장된 데이터는 이용자가 브라우저 데이터를 지우거나 앱을 삭제하면 사라집니다.</li>
+    </ul>
+
+    <h3>4. 처리 위탁과 국외 이전</h3>
+    <p>서비스는 로그인과 데이터 저장을 위해 Google의 Firebase를 이용합니다. 개인정보를 제3자에게 제공하거나 판매하지 않습니다.</p>
+    <div class="tbl"><table>
+      <tr><th>받는 자</th><th>위탁 업무</th><th>저장 위치</th><th>항목</th></tr>
+      <tr><td>Google LLC<br>(Firebase Authentication)</td><td>Google 로그인 · 계정 관리</td><td>미국 등 Google 데이터센터 (국외 이전)</td><td>UID, 이메일 주소, 표시 이름</td></tr>
+      <tr><td>Google LLC<br>(Cloud Firestore)</td><td>동기화 데이터 저장</td><td>대한민국 서울 리전(asia-northeast3)</td><td>2항의 동기화 데이터</td></tr>
+    </table></div>
+    <p>국외 이전은 이용자가 로그인 버튼을 누를 때 네트워크로 전송되는 방식으로 이루어지며, 보유 기간은 3항과 같습니다. 이전을 원하지 않으면 로그인하지 않고 쓰면 되며, 이 경우에도 동기화를 뺀 모든 기능을 쓸 수 있습니다. 문의: <a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">Firebase 개인정보 보호</a>.</p>
+
+    <h3>5. 자동으로 수집될 수 있는 정보</h3>
+    <ul>
+      <li>서비스는 광고 · 방문 통계 · 추적 도구를 쓰지 않습니다.</li>
+      <li>웹사이트를 호스팅하는 GitHub Pages(GitHub, Inc.)가 접속 기록(IP 주소 등)을 보안 목적으로 남길 수 있습니다. 이는 GitHub의 개인정보 처리방침을 따릅니다.</li>
+      <li>넥슨 Open API 기능을 쓰면 이용자의 기기가 넥슨 서버(open.api.nexon.com)에 직접 요청합니다. 설치판은 업데이트 확인을 위해 GitHub에 버전 정보를 요청합니다.</li>
+      <li>오프라인 사용을 위해 서비스 파일을 기기에 캐시(Service Worker)합니다. 쿠키는 쓰지 않으며, Google 로그인 과정에서 Google이 자체 쿠키를 쓸 수 있습니다.</li>
+    </ul>
+
+    <h3>6. 이용자의 권리</h3>
+    <ul>
+      <li><b>열람 · 내려받기</b>: ⚙ 설정 → 데이터 → 백업(JSON)으로 저장된 데이터를 모두 내려받을 수 있습니다.</li>
+      <li><b>정정</b>: 서비스 화면에서 직접 고치면 동기화로 반영됩니다.</li>
+      <li><b>삭제</b>: ⚙ 설정 → 계정·동기화 → 탈퇴로 클라우드의 데이터와 로그인 정보를 지웁니다.</li>
+      <li><b>처리 정지</b>: 로그아웃하면 동기화가 멈춥니다.</li>
+      <li>위 방법으로 처리가 안 되면 아래 문의처로 요청할 수 있으며, 지체 없이 처리합니다.</li>
+    </ul>
+
+    <h3>7. 만 14세 미만 이용자</h3>
+    <p>만 14세 미만은 법정대리인의 동의 없이 로그인(동기화) 기능을 쓸 수 없습니다. 로그인하지 않으면 개인정보를 처리하지 않으므로 나머지 기능은 그대로 쓸 수 있습니다.</p>
+
+    <h3>8. 안전성 확보 조치</h3>
+    <ul>
+      <li>모든 통신은 HTTPS로 암호화됩니다.</li>
+      <li>데이터베이스 보안 규칙으로 로그인한 본인만 자기 데이터를 읽고 쓸 수 있게 막습니다. 운영자 외에 관리 권한을 가진 사람은 없습니다.</li>
+    </ul>
+
+    <h3>9. 개인정보 보호책임자 · 문의</h3>
+    <p>보호책임자: 운영자(yh-yeop)<br>
+      문의: <a href="https://github.com/yh-yeop/meso_calcul/issues" target="_blank" rel="noopener">GitHub Issues</a> (공개 게시판이므로 이메일 등 개인정보는 적지 마십시오)</p>
+    <p>개인정보 침해에 대한 신고 · 상담은 아래 기관에도 할 수 있습니다.</p>
+    <ul>
+      <li>개인정보침해신고센터 (privacy.kisa.or.kr / 국번 없이 118)</li>
+      <li>개인정보분쟁조정위원회 (www.kopico.go.kr / 1833-6972)</li>
+      <li>대검찰청 사이버수사과 (www.spo.go.kr / 국번 없이 1301)</li>
+      <li>경찰청 사이버수사국 (ecrm.police.go.kr / 국번 없이 182)</li>
+    </ul>
+
+    <h3>10. 방침의 변경</h3>
+    <p>이 방침을 바꾸면 시행 7일 전부터 이 페이지에 공지합니다. 이용자에게 불리한 변경은 30일 전에 공지합니다.</p>
+  </section>
+
+  <!-- ===================== 이용약관 ===================== -->
+  <section class="doc" id="terms">
+    <h2>이용약관</h2>
+
+    <h3>1. 서비스</h3>
+    <p>메소 계산기는 메이플스토리 메소 장부, 목표 도달일 계산기, 보스 수익 계산을 제공하는 무료 도구입니다. 서비스를 이용하면 이 약관에 동의한 것으로 봅니다.</p>
+
+    <h3>2. 비공식 서비스</h3>
+    <p>이 서비스는 개인이 만든 비공식 팬 도구로, 넥슨코리아와 관련이 없으며 넥슨코리아가 보증하거나 후원하지 않습니다. 메이플스토리(MapleStory)와 관련 명칭 · 상표는 넥슨코리아의 자산입니다. 일부 데이터는 넥슨 Open API를 이용합니다(Data based on NEXON Open API).</p>
+
+    <h3>3. 계산 결과</h3>
+    <p>도달일 · 보스 수익 · 결정석 가격 · Open API로 추정한 지출 금액은 참고용이며, 게임 패치나 입력값에 따라 실제와 다를 수 있습니다. 운영자는 결과의 정확성을 보장하지 않으며, 이를 근거로 한 게임 안의 결정과 그 결과는 이용자가 책임집니다.</p>
+
+    <h3>4. 데이터 보관</h3>
+    <p>데이터는 기본적으로 이용자 기기에 저장됩니다. 브라우저 데이터 삭제 · 기기 분실 등으로 데이터가 사라질 수 있으니 ⚙ 설정의 백업을 이용하십시오. 운영자는 고의 또는 중대한 과실이 없는 한 데이터 손실에 책임을 지지 않습니다.</p>
+
+    <h3>5. 금지 행위</h3>
+    <ul>
+      <li>서비스나 서버의 정상적인 운영을 방해하는 행위 (과도한 자동 요청 등)</li>
+      <li>다른 사람의 계정이나 데이터에 접근하려는 행위</li>
+      <li>서비스를 법령에 어긋나는 목적으로 쓰는 행위</li>
+    </ul>
+
+    <h3>6. 서비스 변경 · 중단</h3>
+    <p>운영자는 서비스의 기능을 바꾸거나 중단할 수 있습니다. 동기화처럼 저장된 데이터에 영향을 주는 중단은 미리 공지하고, 데이터를 내려받을 기간을 둡니다.</p>
+
+    <h3>7. 약관의 변경</h3>
+    <p>약관을 바꾸면 시행 7일 전부터(이용자에게 불리하면 30일 전부터) 이 페이지에 공지합니다.</p>
+
+    <h3>8. 문의</h3>
+    <p><a href="https://github.com/yh-yeop/meso_calcul/issues" target="_blank" rel="noopener">GitHub Issues</a></p>
+  </section>
+</div>
+</body>
+</html>

@@ -111,6 +111,8 @@
     $("sync-now").hidden = !on;
     $("sync-now").textContent = y.status === "ask" ? "다시 고르기" : "지금 동기화";
     $("sync-logout").hidden = !on;
+    $("sync-delete").hidden = !on;
+    $("sync-legal").hidden = on || y.status === "off" || noLogin;
   }
   function openLink(){
     var p = M.sync.pending();
@@ -126,6 +128,17 @@
   $("sync-login").addEventListener("click", function(){ M.sync.login(); });
   $("sync-logout").addEventListener("click", function(){
     if (confirm("로그아웃 (이 기기 데이터는 그대로 남고 동기화만 멈춤). 계속?")) M.sync.logout();
+  });
+  $("sync-delete").addEventListener("click", function(){
+    if (!confirm("탈퇴: 클라우드에 올린 장부·캐릭터·계산기와 로그인 정보를 모두 지움. 되돌릴 수 없음.\n" +
+                 "이 기기 데이터는 그대로 남음. 다른 기기에서 다시 로그인하면 그 기기 데이터로 새로 시작함.\n계속?")) return;
+    var b = $("sync-delete");
+    b.disabled = true;
+    M.sync.deleteAccount().then(function(ok){
+      if (ok) M.toast("탈퇴 완료. 클라우드 데이터와 로그인 정보를 지움");
+    }, function(e){
+      M.toast("탈퇴 실패: " + (e && (e.message || e.code) || e));
+    }).then(function(){ b.disabled = false; });
   });
   $("sync-now").addEventListener("click", function(){
     if (M.sync.pending()) openLink(); else M.sync.now();

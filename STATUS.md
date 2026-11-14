@@ -5,3 +5,7 @@
 - [PC 전달] 2026-11-14: Android 서명 키 `C:\Users\hoyaj\.meso_calcul\` (jks + properties) 를 따로 백업할 것 — 잃으면 기존 설치에 업데이트 불가.
 - [PC 전달] 2026-11-14: Windows 앱 안 Google 로그인 · 동기화를 실제 계정으로 한 번 확인 (미검증).
 - 요청(소개 사이트 담당): `yh-yeop.github.io` `js/data.js` meso 항목에 `release: { repo: 'releases', prefix: 'MesoCalc' }` — 사이트 카드 다운로드 버튼.
+- 2026-11-14: **정식 서비스 필수 항목** — `legal.html`(개인정보처리방침 · 이용약관, Firestore 서울 리전 · Auth 국외이전 명시), 설정 푸터 비공식 고지 · 링크, 로그인 버튼 아래 동의 문구, **탈퇴(클라우드 데이터 + Firebase Auth 계정 삭제, 최근 로그인 요구 시 재인증)**. sw v22. 가짜 Firebase로 탈퇴 흐름 확인. 문의처는 GitHub Issues.
+- [PC 전달] 2026-11-14: `legal.html` 문구 검토 (운영자 표기 · 문의처). 공개 이메일을 문의처로 둘지 결정.
+- [PC 전달] 2026-11-14: Firebase 콘솔 — App Check(reCAPTCHA) 켜기, 결제 예산 알림, 승인된 도메인 점검. 실제 계정으로 탈퇴 한 번 시험(테스트 계정).
+- 다음(정식 서비스 결정 대기): 자체 도메인 · 광고 수익 · 스토어 배포(Play · MS Store) 여부.

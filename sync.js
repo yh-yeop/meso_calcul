@@ -496,6 +496,49 @@ Meso.sync = (function(M){
     M.toast("로그아웃. 이 기기 데이터는 그대로 남음");
   }
 
+  /* 탈퇴 — 클라우드의 내 데이터(meta · 장부 연도 문서 전부)와 로그인 계정(Firebase Auth)을 지움. 이 기기 데이터는 그대로.
+     Google 이 "최근 로그인"을 요구하면 다시 로그인 창을 띄움. 성공하면 true, 사용자가 창을 닫아 멈추면 false */
+  function deleteAccount(){
+    var user = fb && fb.auth().currentUser;
+    if (!user || !st.user) return Promise.reject(new Error("로그인 안 됨"));
+    var info = st.user, root = db.collection("users").doc(user.uid), wiped = false;
+    // 지우는 도중에 다시 올리지 않게 동기화부터 멈춤
+    reset();
+    ad = null;
+    set({status: "syncing"});
+    return locked(function(){
+      return tmo(root.collection("ledger").get()).then(function(q){
+        var b = db.batch();
+        q.forEach(function(d){ b.delete(d.ref); });
+        b.delete(root.collection("meta").doc("state"));
+        return tmo(b.commit());
+      });
+    }).then(function(){
+      wiped = true;
+      lsSet(BASE_KEY, null);
+      return user.delete().catch(function(e){
+        if (!e || e.code !== "auth/requires-recent-login") throw e;
+        return user.reauthenticateWithPopup(new fb.auth.GoogleAuthProvider()).then(function(){ return user.delete(); });
+      });
+    }).then(function(){
+      lsSet(ON_KEY, null);
+      set({status: CFG ? "out" : "off", user: null});
+      return true;
+    }, function(e){
+      if (wiped){
+        // 클라우드는 비었는데 계정만 남음 — 로그인 상태로 두면 이 기기 데이터가 다시 올라가므로 로그아웃
+        lsSet(ON_KEY, null);
+        try{ fb.auth().signOut(); } catch(x){}
+        set({status: CFG ? "out" : "off", user: null});
+        if (e && /popup-closed|cancelled-popup/.test(e.code)){
+          M.toast("클라우드 데이터는 지움. 로그인 정보까지 지우려면 다시 로그인해 탈퇴를 한 번 더 누를 것");
+          return false;
+        }
+      } else attach(adapter(user.uid), info);   // 아무것도 안 지워졌으면 동기화를 되살림
+      throw e;
+    });
+  }
+
   /* ---------- 연결 ---------- */
   M.on("saved", function(key){
     if (applying || !ad) return;
@@ -517,7 +560,7 @@ Meso.sync = (function(M){
     // Android 앱(웹뷰)에서는 Google 이 로그인 화면을 막는다
     blocked: blocked,
     pending: function(){ return ask ? {lc: ask.lc, rc: ask.rc} : null; },
-    login: login, logout: logout, choose: choose,
+    login: login, logout: logout, choose: choose, deleteAccount: deleteAccount,
     now: function(){ schedule(0); },
     _attach: attach
   };
