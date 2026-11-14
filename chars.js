@@ -33,8 +33,8 @@ Meso.charsView = (function(M){
       return "<b>" + esc(w) + "</b> 월드 루틴이 주 " + wc[w] + "개. 월드당 " + B.data.worldLimit + "개까지만 팔 수 있어 계산보다 덜 받음";
     }).join("<br>");
     if (!list.length){
-      box.innerHTML = '<div class="empty"><h4>아직 캐릭터가 없음</h4>도는 보스를 고르면 주·월 수익이 자동 계산됨' +
-        '<div><button type="button" class="btn" data-add>+ 캐릭터 추가</button></div></div>';
+      // 추가 버튼은 카드 아래 줄(직접 추가 · Open API)에 있으니 여기엔 두지 않음
+      box.innerHTML = '<div class="empty"><h4>아직 캐릭터가 없음</h4>아래에서 직접 추가하거나 Open API로 불러오면, 도는 보스로 주·월 수익이 자동 계산됨</div>';
       return;
     }
     box.innerHTML = list.map(function(c){
@@ -297,7 +297,6 @@ Meso.charsView = (function(M){
   $("ch-list").addEventListener("click", function(e){
     var open = e.target.closest("[data-cid]");
     if (open) openChar(open.dataset.cid);
-    else if (e.target.closest("[data-add]")) openChar(null);
   });
   $("ch-add").addEventListener("click", function(){ openChar(null); });
   $("ch-form").addEventListener("submit", saveChar);

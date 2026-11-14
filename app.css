@@ -201,7 +201,7 @@ select{cursor:pointer}
 .badge{font-size:11px;font-weight:600;letter-spacing:.02em;color:var(--violet);border:1px solid currentColor;border-radius:5px;padding:0 5px;line-height:16px;white-space:nowrap}
 .badge.lock{color:var(--gold)}
 .badge.main{color:var(--gold)}
-.crow .badge{flex:none}   /* 배지 클래스 main 이 .crow .main(flex:1)에 걸려 늘어나지 않게 */
+.crow .badge, .crow .badge.main{flex:none}   /* 배지 클래스 main 이 .crow .main(flex:1)에 걸려 늘어나지 않게 */
 
 /* ---------- 통계 ---------- */
 .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
@@ -491,3 +491,13 @@ dialog.sheet[open]{animation:up .22s ease}
   .irow input,.irow select,.prow input,.bs-p{font-size:16px}
   .amt-box input{font-size:34px}
 }
+
+/* 새 소식 */
+.news{list-style:none;padding:0;margin:4px 0 0;display:flex;flex-direction:column;gap:8px}
+.news li{display:flex;gap:12px;font-size:14px;line-height:1.5}
+.news time{flex:none;width:40px;color:var(--muted);font-variant-numeric:tabular-nums}
+.news-more{margin-top:8px}
+.news-more summary{cursor:pointer;color:var(--muted);font-size:13px;padding:4px 0}
+.news-more .news{margin-top:6px}
+#btn-settings{position:relative}
+#btn-settings.has-new::after{content:"";position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--gold)}
