@@ -1,8 +1,10 @@
 {
+  "id": "./",
   "name": "메소노믹스",
   "short_name": "메소노믹스",
   "description": "메이플스토리 메소 장부, 목표 도달일 계산기, 캐릭터별 보스 수익.",
   "lang": "ko",
+  "categories": ["games", "utilities", "finance"],
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

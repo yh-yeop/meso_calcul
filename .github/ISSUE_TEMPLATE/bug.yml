@@ -1,0 +1,31 @@
+name: 오류 신고
+description: 계산이 틀리거나, 화면이 깨지거나, 동작하지 않는 것
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "공개 게시판입니다. 이메일 · Open API 키 · 백업 파일 같은 개인정보는 올리지 마세요."
+  - type: textarea
+    id: what
+    attributes:
+      label: 무슨 일이 있었나요?
+      placeholder: "예: 계산기에서 목표를 바꾸면 도달일이 비어 보임"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 다시 일어나게 하는 순서
+      placeholder: "1. 계산기 탭\n2. 목표 메소에 100억 입력\n3. ..."
+  - type: dropdown
+    id: where
+    attributes:
+      label: 어디서 썼나요?
+      options: [웹 (PC 브라우저), 웹 (휴대폰 브라우저), 홈 화면에 설치한 웹 앱, Windows 설치판, Android 설치판]
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: 브라우저 · 버전 (알면)
+      placeholder: "예: Chrome 130, 설치판 1.1.0"

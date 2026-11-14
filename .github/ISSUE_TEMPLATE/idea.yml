@@ -1,0 +1,13 @@
+name: 기능 제안 · 문의
+description: 있으면 좋겠는 기능, 그 밖의 문의
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: "공개 게시판입니다. 이메일 같은 개인정보는 적지 마세요."
+  - type: textarea
+    id: idea
+    attributes:
+      label: 내용
+    validations:
+      required: true
