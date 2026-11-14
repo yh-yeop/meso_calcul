@@ -111,7 +111,7 @@ Meso.charsView = (function(M){
     $("ch-weekly").value = c ? c.weekly || "" : "";
     $("ch-monthly").value = c ? c.monthly || "" : "";
     $("ch-main").checked = c ? c.main : !M.chars.all().length;
-    $("ch-meta").innerHTML = c && metaText(c) ? metaText(c) + (c.ocid ? ", Open API 연결됨" : "") : "";
+    $("ch-meta").innerHTML = c && metaText(c) ? metaText(c) + (c.ocid ? ", Open API 연결됨 <small class=\"dim\">(Data based on NEXON Open API)</small>" : "") : "";
     $("ch-stats").innerHTML = c ? statsHtml(c) : "";
     $("ch-stats").hidden = !c;
     $("ch-del").hidden = !c;
@@ -361,6 +361,27 @@ Meso.charsView = (function(M){
     var c = M.chars.get(bossId);
     if (c) M.toast(c.name + ": " + routineText(c) + ", 주 " + fmtFine(M.chars.weekly(c)));
   });
+
+  /* ---------- Open API 정보 자동 갱신 ----------
+     넥슨 고지: API 로 받은 데이터는 30일 안에 갱신해야 함. 키가 있으면 7일마다 계정 캐릭터 목록 1건으로 조용히 갱신,
+     키가 없거나 계속 실패해서 30일을 넘기면 월드 · 직업 · 레벨 · 연결 정보를 지움 (다시 불러오면 돌아옴) */
+  var REFRESH_DAYS = 7, KEEP_DAYS = 30, refreshing = false;
+  function dropStale(){
+    var n = M.chars.dropApi(KEEP_DAYS);
+    if (n) M.toast("Open API 정보가 30일 넘게 갱신되지 않아 " + n + "명의 월드·직업·레벨을 지움. 키를 넣고 다시 불러오면 돌아옴");
+  }
+  function autoRefresh(){
+    if (refreshing) return;
+    if (!M.api.key()){ dropStale(); return; }
+    if (!M.chars.apiDue(REFRESH_DAYS)) return;
+    refreshing = true;
+    M.api.characterList().then(function(list){
+      var r = M.chars.refreshApi(list);
+      if (r.dropped) M.toast("계정에서 찾을 수 없는 캐릭터 " + r.dropped + "명의 Open API 정보를 지움");
+    }, dropStale).then(function(){ refreshing = false; });
+  }
+  setTimeout(autoRefresh, 4000);
+  document.addEventListener("visibilitychange", function(){ if (document.visibilityState === "visible") autoRefresh(); });
 
   $("ch-api-btn").addEventListener("click", openImport);
   $("imp-list").addEventListener("change", syncImportBtn);

@@ -24,7 +24,7 @@ var Meso = (function(){
   }
   // 메이플 주간 리셋은 목요일 0시
   function weekStart(d){ return addDays(d, -((d.getDay() - 4 + 7) % 7)); }
-  function today(){ var n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); }
+  function today(now){ var n = now || new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); }
   function coarse(){ return !!(window.matchMedia && matchMedia("(pointer:coarse)").matches); }
 
   /* ---------- 포맷 ---------- */
@@ -167,7 +167,7 @@ var Meso = (function(){
   }
 
   /* ---------- 캐릭터 ----------
-     {id, name, weekly(억/주), monthly(억/월), main, world?, cls?, level?, ocid?,
+     {id, name, weekly(억/주), monthly(억/월), main, world?, cls?, level?, ocid?, apiAt?("YYYY-MM-DD", Open API 로 받은 날),
       bosses?:[{id, d, p}] 주간 루틴, mbosses?:[{id, d, p}] 월간 루틴} — 배열 순서가 곧 표시 순서.
      루틴이 있으면 주보 · 월보는 루틴 합계, 없으면 직접 넣은 weekly · monthly.
      예전엔 계산기 저장값의 r([이름, 주보, 월보])에만 있었음. 처음 열 때 거기서 옮겨 옴. */
@@ -185,11 +185,24 @@ var Meso = (function(){
     var lv = Math.floor(+c.level);
     if (lv >= 1 && lv <= 400) x.level = lv;
     if (c.ocid) x.ocid = String(c.ocid).slice(0, 80);
+    if (typeof c.apiAt === "string" && /^\d{4}-\d{2}-\d{2}$/.test(c.apiAt)) x.apiAt = c.apiAt;
     var wb = cleanRoutine("w", c.bosses), mb = cleanRoutine("m", c.mbosses);
     if (wb.length) x.bosses = wb;
     if (mb.length) x.mbosses = mb;
     return x;
   }
+  /* Open API 로 채운 칸 — 넥슨 고지: API 로 받은 데이터는 30일 안에 갱신해야 함.
+     받은 날(apiAt)을 기억해 두고, 갱신하지 못하면 이 칸들을 지움 (이름 · 루틴 · 수익은 이용자가 정한 값이라 그대로) */
+  var API_FIELDS = ["world", "cls", "level", "ocid", "apiAt"];
+  function dayStr(d){
+    return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
+  }
+  function apiAge(c, now){
+    var p = c.apiAt.split("-");
+    return Math.round((today(now) - new Date(+p[0], +p[1] - 1, +p[2])) / 864e5);
+  }
+  function isLinked(c){ return !!(c.ocid || c.apiAt); }
+  function stripApi(c){ API_FIELDS.forEach(function(k){ delete c[k]; }); }
   // 이름은 겹치면 안 됨 (장부가 이름으로 캐릭터를 찾음). 나중 것을 "이름 (2)", "이름 (3)"…
   function dupName(name, taken){
     for (var n = 2; ; n++){
@@ -320,7 +333,7 @@ var Meso = (function(){
     },
     // Open API 캐릭터 목록: ocid 가 같으면(게임 안에서 이름을 바꿨어도) 같은 캐릭터, 아니면 이름으로 맞춤.
     // 월드·직업·레벨·ocid만 채움
-    mergeApi: function(list){
+    mergeApi: function(list, now){
       var added = 0, updated = 0;
       (Array.isArray(list) ? list : []).forEach(function(a){
         var name = a && a.character_name != null ? String(a.character_name).trim() : "";
@@ -328,6 +341,7 @@ var Meso = (function(){
         var meta = {world:a.world_name, cls:a.character_class, level:a.character_level, ocid:a.ocid};
         // 응답에 빠진 칸은 기존 값을 지우지 않게 아예 뺌
         Object.keys(meta).forEach(function(k){ if (meta[k] == null || meta[k] === "") delete meta[k]; });
+        meta.apiAt = dayStr(today(now));
         var c = a.ocid ? findCharByOcid(String(a.ocid).slice(0, 80)) : null;
         if (c && c.name !== name){
           var other = findCharByName(name);
@@ -341,6 +355,46 @@ var Meso = (function(){
       });
       saveChars();
       return {added:added, updated:updated};
+    },
+    // Open API 정보가 days 일 이상 묵은 연결 캐릭터 수. 받은 날이 없는 예전 연결은 오늘부터 셈
+    apiDue: function(days, now){
+      var n = 0, stamped = false, d = dayStr(today(now));
+      chars.forEach(function(c){
+        if (!isLinked(c)) return;
+        if (!c.apiAt){ c.apiAt = d; stamped = true; return; }
+        if (apiAge(c, now) >= days) n++;
+      });
+      if (stamped) saveChars(true);
+      return n;
+    },
+    // 계정 캐릭터 목록으로 연결된 캐릭터를 갱신. 목록에서 사라진 캐릭터(삭제 · 이전 · ocid 변경)는 API 칸을 지움.
+    // 연결 안 된 캐릭터는 새로 붙이지 않음 (불러오기는 이용자가 고름)
+    refreshApi: function(list, now){
+      list = Array.isArray(list) ? list : [];
+      var byOcid = {}, byName = {}, pick = [], dropped = 0;
+      list.forEach(function(a){
+        if (!a) return;
+        if (a.ocid) byOcid[String(a.ocid).slice(0, 80)] = a;
+        if (a.character_name != null) byName[String(a.character_name).trim()] = a;
+      });
+      chars.forEach(function(c){
+        if (!isLinked(c)) return;
+        var a = (c.ocid && byOcid[c.ocid]) || byName[c.name];
+        if (a){ if (pick.indexOf(a) < 0) pick.push(a); }
+        else { stripApi(c); dropped++; }
+      });
+      if (dropped && !pick.length) saveChars();
+      var r = pick.length ? charsApi.mergeApi(pick, now) : {updated: 0};
+      return {updated: r.updated, dropped: dropped};
+    },
+    // days 일 넘게 갱신하지 못한 캐릭터의 API 칸을 지움. 지운 수
+    dropApi: function(days, now){
+      var n = 0;
+      chars.forEach(function(c){
+        if (c.apiAt && apiAge(c, now) > days){ stripApi(c); n++; }
+      });
+      if (n) saveChars();
+      return n;
     },
     // 계산기 공유 링크에 담겨 온 로스터 — 링크를 연 쪽의 캐릭터를 링크 것으로 바꿈.
     // 이름이 같은 캐릭터는 id · 루틴 · 본캐 · 월드 등을 그대로 두고 주보 · 월보만 링크 값으로

@@ -311,3 +311,58 @@ test('fmtEok: 반올림으로 1조가 넘어가면 조 단위로 올림', () => 
   assert.equal(M.fmtEok(19999.6), '2조');
   assert.equal(M.fmtEok(12345), '1조 2,345억');
 });
+
+// ---------- Open API 정보 30일 갱신 ----------
+const day = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d, 15); };
+
+test('Open API 불러오기는 받은 날(apiAt)을 남기고, 형식이 틀린 apiAt 은 버림', () => {
+  const chars = { v: 1, list: [{ id: 'a', name: '본캐', main: true }, { id: 'b', name: '부캐', apiAt: '어제' }] };
+  const { M } = boot({ 'meso-chars-v1': JSON.stringify(chars) });
+  M.chars.mergeApi([{ ocid: 'o1', character_name: '본캐', world_name: '베라', character_level: 280 }], day('2026-11-14'));
+  assert.equal(M.chars.get('a').apiAt, '2026-11-14');
+  assert.equal(M.chars.get('b').apiAt, undefined);
+});
+
+test('apiDue: 받은 날이 없는 예전 연결은 오늘부터 세고, 묵은 연결만 셈', () => {
+  const chars = { v: 1, list: [
+    { id: 'a', name: '옛연결', main: true, ocid: 'o1', level: 270 },
+    { id: 'b', name: '최근', ocid: 'o2', apiAt: '2026-11-10' },
+    { id: 'c', name: '묵음', ocid: 'o3', apiAt: '2026-11-01' },
+    { id: 'd', name: '직접추가' }] };
+  const { M, json } = boot({ 'meso-chars-v1': JSON.stringify(chars) });
+  assert.equal(M.chars.apiDue(7, day('2026-11-14')), 1);
+  assert.equal(M.chars.get('a').apiAt, '2026-11-14', '예전 연결에 오늘 날짜를 찍음');
+  assert.equal(json('meso-chars-v1').list[0].apiAt, '2026-11-14', '찍은 날짜를 저장');
+  assert.equal(M.chars.get('d').apiAt, undefined, '연결 안 된 캐릭터는 그대로');
+});
+
+test('refreshApi: 연결된 캐릭터만 갱신, 계정에서 사라진 캐릭터는 API 칸만 지움, 새로 추가하지 않음', () => {
+  const chars = { v: 1, list: [
+    { id: 'a', name: '본캐', main: true, weekly: 3, ocid: 'o1', level: 270, apiAt: '2026-11-01', bosses: [{ id: 'lucid', d: 'hard', p: 1 }] },
+    { id: 'b', name: '지운캐', ocid: 'o2', world: '베라', cls: '비숍', level: 260, apiAt: '2026-11-01' },
+    { id: 'c', name: '직접추가', weekly: 1 }] };
+  const { M } = boot({ 'meso-chars-v1': JSON.stringify(chars) });
+  const r = M.chars.refreshApi([
+    { ocid: 'o1', character_name: '본캐', world_name: '베라', character_class: '아델', character_level: 275 },
+    { ocid: 'o9', character_name: '안고른캐', character_level: 200 },
+    { ocid: 'o8', character_name: '직접추가', character_level: 230 }], day('2026-11-14'));
+  assert.deepEqual(plain(r), { updated: 1, dropped: 1 });
+  const a = plain(M.chars.get('a')), b = plain(M.chars.get('b')), c = plain(M.chars.get('c'));
+  assert.equal(a.level, 275);
+  assert.equal(a.apiAt, '2026-11-14');
+  assert.equal(a.bosses.length, 1, '루틴 유지');
+  assert.deepEqual(b, { id: 'b', name: '지운캐', weekly: 0, monthly: 0, main: false }, '이름 · 수익은 남고 API 칸만 지움');
+  assert.equal(c.level, undefined, '연결 안 된 캐릭터는 이름이 같아도 붙이지 않음');
+  assert.equal(M.chars.all().length, 3, '안 고른 캐릭터를 추가하지 않음');
+});
+
+test('dropApi: 30일 넘게 못 갱신한 캐릭터의 월드 · 직업 · 레벨 · 연결을 지움', () => {
+  const chars = { v: 1, list: [
+    { id: 'a', name: '본캐', main: true, weekly: 3, ocid: 'o1', world: '베라', level: 270, apiAt: '2026-10-14' },
+    { id: 'b', name: '부캐', ocid: 'o2', level: 260, apiAt: '2026-10-15' }] };
+  const { M, json } = boot({ 'meso-chars-v1': JSON.stringify(chars) });
+  assert.equal(M.chars.dropApi(30, day('2026-11-14')), 1);
+  assert.deepEqual(plain(M.chars.get('a')), { id: 'a', name: '본캐', weekly: 3, monthly: 0, main: true });
+  assert.equal(M.chars.get('b').level, 260, '딱 30일은 아직 둠');
+  assert.equal(json('meso-chars-v1').list[0].ocid, undefined, '지운 결과를 저장');
+});

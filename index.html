@@ -320,7 +320,7 @@
 
     <section class="card">
       <h3>넥슨 Open API <small id="api-state">키 없음</small></h3>
-      <p class="note">키를 넣으면 <b>잠재능력·에디셔널 재설정</b> 지출이 장부에 자동 기록되고, 캐릭터 탭에서 계정 캐릭터를 불러올 수 있음. 금액은 추정치(≈)라 오차는 잔고 확인 시 미기록으로 드러남.</p>
+      <p class="note">키를 넣으면 <b>잠재능력·에디셔널 재설정</b> 지출이 장부에 자동 기록되고, 캐릭터 탭에서 계정 캐릭터를 불러올 수 있음. 금액은 추정치(≈)라 오차는 잔고 확인 시 미기록으로 드러남. 키는 이 기기에서 넥슨 서버로만 보내고, 이 서비스의 서버로는 보내지 않음.<br><small class="dim">Data based on NEXON Open API</small></p>
       <div class="field" style="margin-top:8px">
         <label for="api-key">API 키<small>이 기기에만 저장, 백업 제외</small></label>
         <div class="ctl"><input type="password" id="api-key" autocomplete="off" spellcheck="false" placeholder="발급받은 키 붙여넣기"></div>
@@ -498,6 +498,7 @@
     </div>
     <div class="note" id="imp-msg"></div>
     <div id="imp-list"></div>
+    <p class="note" style="margin-top:8px">불러온 월드·직업·레벨은 키가 있으면 일주일마다 자동으로 갱신됨. Data based on NEXON Open API</p>
     <div class="sh-foot">
       <button type="submit" class="btn primary" id="imp-ok" disabled>불러오기</button>
     </div>
