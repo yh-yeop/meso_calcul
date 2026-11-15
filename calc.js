@@ -452,6 +452,7 @@ Meso.calc = (function(M){
 
     renderIncome();
     renderLedgerButtons();
+    if (M.basis) M.basis.render("c", true);
     renderSkipChips(c.start);
     c.skipWeeks = C.skipOffsets(c.start, skipWeeks);
 

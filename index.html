@@ -281,6 +281,10 @@
       <button class="btn" id="btn-share" title="계산기 설정과 캐릭터가 담긴 링크">링크 복사</button>
       <button class="btn" id="btn-image" title="도달 날짜·월 순수익이 담긴 결과 카드">이미지 저장</button>
     </div>
+    <details class="card basis" id="c-basis">
+      <summary><span>계산 기준</span><small id="c-basis-sub"></small></summary>
+      <div class="basis-body" id="c-basis-body"></div>
+    </details>
   </main>
 
   <!-- ===================== 캐릭터 ===================== -->
@@ -295,6 +299,10 @@
       <button class="btn" id="ch-api-btn">Open API로 불러오기</button>
     </div>
     <p class="note">캐릭터를 눌러 <b>보스 설정</b>에서 보스를 고르면 주·월 수익이 자동 계산됨. 가격은 설정에서 수정.</p>
+    <details class="card basis" id="ch-basis">
+      <summary><span>계산 기준</span><small id="ch-basis-sub"></small></summary>
+      <div class="basis-body" id="ch-basis-body"></div>
+    </details>
   </main>
 
   <!-- ===================== 설정 ===================== -->
@@ -546,6 +554,7 @@
 <script src="bosses.js"></script>
 <script src="core.js"></script>
 <script src="store.js"></script>
+<script src="basis.js"></script>
 <script src="api.js"></script>
 <script src="ledger.js"></script>
 <script src="calc.js"></script>

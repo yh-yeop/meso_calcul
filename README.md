@@ -22,6 +22,7 @@
 |---|---|
 | `core.js` | 계산기 순수 로직 `MesoCore` — 달력 시뮬레이션, 도달일, 민감도, 정산표 파서. DOM 안 만짐 |
 | `store.js` | 공용 헬퍼 · 캐릭터 저장소 · 변경 알림 · 토스트 · 테마 (`Meso`) |
+| `basis.js` | 캐릭터 · 계산기 맨 아래 "계산 기준" 접는 칸. 문장은 `bosses.js` · `core.js` 값으로 만듦 (`MesoBasis`, 순수 함수) |
 | `api.js` | 넥슨 Open API 클라이언트 |
 | `ledger.js` · `calc.js` · `chars.js` · `home.js` | 탭별 화면 |
 | `appinfo.js` | 설치판 안내 — 브라우저엔 다운로드 버튼, 설치판 안에선 버전 · 업데이트 확인 (아래 "설치판") |
