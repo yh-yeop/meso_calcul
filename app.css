@@ -501,3 +501,22 @@ dialog.sheet[open]{animation:up .22s ease}
 .news-more .news{margin-top:6px}
 #btn-settings{position:relative}
 #btn-settings.has-new::after{content:"";position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--gold)}
+
+/* 계산 기준 (캐릭터 · 계산기 맨 아래 접는 칸) — 머리는 .card h3 와 같은 모양, 오른쪽 화살표 */
+.basis{padding:0}
+.basis > summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:16px 18px;
+                 font-size:16px;font-weight:650;border-radius:var(--radius)}
+.basis > summary::-webkit-details-marker{display:none}
+.basis > summary > span{flex:none}
+.basis > summary small{flex:1;min-width:0;font-size:13px;font-weight:400;color:var(--muted);text-align:right}
+.basis > summary::after{content:"";flex:none;width:8px;height:8px;border-right:1.8px solid var(--muted);border-bottom:1.8px solid var(--muted);
+                        transform:rotate(45deg);margin:-4px 2px 0 0;transition:transform .15s}
+.basis[open] > summary::after{transform:rotate(-135deg);margin-top:4px}
+.basis > summary:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
+.basis-body{padding:0 18px 18px}
+.basis-h{font-size:14px;font-weight:650;margin:4px 0 6px}
+.basis-h ~ .basis-h{margin-top:16px}
+.basis-list{margin:0;padding-left:18px;font-size:13px;color:var(--muted);line-height:1.6;display:flex;flex-direction:column;gap:4px;word-break:keep-all;overflow-wrap:anywhere}
+.basis-list b{color:var(--text);font-weight:600}
+.basis-list a{color:var(--gold)}
+.basis-src{display:block;color:var(--faint);font-size:12px}

@@ -25,6 +25,7 @@ Meso.charsView = (function(M){
 
   function render(){
     var list = M.chars.all(), tot = M.chars.totals(), box = $("ch-list");
+    if (M.basis) M.basis.render("ch", false);
     $("ch-sum").textContent = list.length ? list.length + "명, 주 " + fmtFine(tot.weekly) + ", 월 " + fmtFine(tot.monthly) : "";
     // 월드당 주 90개 판매 제한
     var wc = M.chars.worldCounts(), over = Object.keys(wc).filter(function(w){ return wc[w] > B.data.worldLimit; });
