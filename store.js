@@ -109,7 +109,7 @@ var Meso = (function(){
   /* ---------- 보스 결정석 ----------
      가격표는 bosses.js, 사용자가 ⚙에서 덮어쓴 값은 meso-boss-prices {"lucid:hard": 메소}.
      kind 는 "w"(주간) | "m"(월간) */
-  var BOSSES = window.MESO_BOSSES || {weekly:[], monthly:[], diffs:{}, weeklyLimit:12, worldLimit:90};
+  var BOSSES = window.MESO_BOSSES || {weekly:[], monthly:[], diffs:{}, recommendMax:12, worldLimit:90};
   var priceOver = cleanPrices(read(KEYS.prices));
   function hasOwn(o, k){ return Object.prototype.hasOwnProperty.call(o, k); }
   // 백업 · 저장값은 믿지 않음: 있는 보스 · 난이도의 유한한 양수만 남김
@@ -158,7 +158,7 @@ var Meso = (function(){
     return out.sort(function(a, b){ return order.indexOf(a.id) - order.indexOf(b.id); });
   }
   /* 추천 구성 (주간): "잡을 수 있는 마지막 보스 · 난이도"를 고르면, 진행 순서로 그 보스까지에서
-     보스마다 그 가격 이하인 가장 비싼 난이도를 골라 비싼 순으로 주간 한도만큼 채운다.
+     보스마다 그 가격 이하인 가장 비싼 난이도를 골라 비싼 순으로 recommendMax 개까지 채운다.
      익스트림은 고른 보스 자신만 (가격보다 훨씬 어려움). prev(원래 루틴)에 있던 보스는 파티 인원을 그대로 */
   function recommend(lastId, lastD, prev){
     var list = BOSSES.weekly, cap = bossPrice("w", lastId, lastD), end = -1, party = {}, picks = [];
@@ -175,7 +175,7 @@ var Meso = (function(){
       if (best) picks.push({id:b.id, d:best, p:party[b.id] || 1, v:bp});
     }
     picks.sort(function(a, b){ return b.v - a.v; });
-    return cleanRoutine("w", picks.slice(0, BOSSES.weeklyLimit));
+    return cleanRoutine("w", picks.slice(0, BOSSES.recommendMax));
   }
   function bossLabel(kind, r){
     var b = bossInfo(kind, r.id);

@@ -21,7 +21,9 @@ test('보스 기준: 가격 기준일 · 출처 · 주간 한도 · 월드 한�
   const t = text(Basis.html({ bosses: B, over: 0 }));
   assert.ok(t.includes(B.version.replace(/-/g, '.')));
   assert.ok(t.includes('출처:'));
-  assert.ok(t.includes('주 ' + B.weeklyLimit + '회'));
+  assert.ok(t.includes('판매 개수 제한은 없음'), '캐릭터당 12개 제한은 2026-09-17 삭제');
+  assert.ok(t.includes(B.recommendMax + '개까지'));
+  if (B.worldNote) assert.ok(t.includes(B.worldNote));
   assert.ok(t.includes('주 ' + B.worldLimit + '개'));
   assert.ok(t.includes('소수점 아래는 버림'));
   assert.ok(t.includes('목요일 0시') && t.includes('매월 1일'));
@@ -31,10 +33,11 @@ test('보스 기준: 가격 기준일 · 출처 · 주간 한도 · 월드 한�
 });
 
 test('값을 바꾸면 문장도 바뀜 — 화면에 숫자를 박지 않음', () => {
-  const B = Object.assign({}, bosses(), { version: '2030-01-02', weeklyLimit: 14, worldLimit: 120, source: '' });
+  const B = Object.assign({}, bosses(), { version: '2030-01-02', recommendMax: 14, worldLimit: 120, source: '', worldNote: '' });
   const t = text(Basis.html({ bosses: B, over: 0 }));
   assert.ok(t.includes('2030.01.02'));
-  assert.ok(t.includes('주 14회') && t.includes('주 14개까지'));
+  assert.ok(t.includes('비싼 순으로 14개까지'));
+  assert.ok(!t.includes('바뀔 예정'), 'worldNote 가 비면 예고 줄 없음');
   assert.ok(t.includes('주 120개'));
   assert.ok(!t.includes('출처:'), '출처가 비면 출처 줄 없음');
 });

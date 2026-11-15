@@ -13,18 +13,19 @@ var MesoBasis = (function(){
 
   /* 보스 수익 기준. b = MESO_BOSSES, over = ⚙에서 덮어쓴 가격 개수 */
   function bossItems(b, over){
-    var lim = b.weeklyLimit, world = b.worldLimit, items = [];
+    var world = b.worldLimit, items = [];
     items.push("결정석 가격은 <b>" + esc(dot(b.version)) + "</b> 패치 기준" +
       (b.source ? '<span class="basis-src">출처: ' + esc(b.source) + "</span>" : ""));
     if (over > 0) items.push('<a href="#settings">⚙ 설정</a>에서 고친 가격 <b>' + over + "개</b>는 기본값 대신 고친 값으로 계산");
     items.push("파티로 잡으면 결정석 가격 ÷ 인원, 소수점 아래는 버림");
-    items.push("주간 보스는 캐릭터당 주 <b>" + lim + "회</b>까지 고를 수 있음");
-    items.push("결정석은 월드당 주 <b>" + world + "개</b>까지만 팔 수 있음. 넘어도 계산에서 빼지는 않고 캐릭터 화면에 경고만 띄움 (월드를 아는 캐릭터만 셈)");
+    items.push("캐릭터당 주간 결정 판매 개수 제한은 없음 (2026-09-17 패치로 삭제). 고른 보스는 전부 더함");
+    items.push("결정석은 월드당 주 <b>" + world + "개</b>까지만 팔 수 있음. 넘어도 계산에서 빼지는 않고 캐릭터 화면에 경고만 띄움 (월드를 아는 캐릭터만 셈)" +
+      (b.worldNote ? '<span class="basis-src">' + esc(b.worldNote) + "</span>" : ""));
     items.push("주간 보스는 <b>목요일 0시</b>, 월간 보스는 <b>매월 1일</b> 리셋. 홈의 이번 주 보스 체크도 이 기준");
     items.push("홈에서 체크한 보스는 체크한 때의 금액으로 장부에 남음. 나중에 가격 · 파티를 바꿔도 다시 계산하지 않음");
     items.push("보스를 안 고른 캐릭터는 직접 넣은 주 · 월 수익을 그대로 씀");
-    items.push("추천 구성은 난이도 대신 결정석 가격으로 줄 세움: 고른 보스까지 보스마다 그 가격 이하인 가장 비싼 난이도를 하나씩 골라 비싼 순으로 주 " +
-      lim + "개까지. 익스트림은 고른 보스만");
+    items.push("추천 구성은 난이도 대신 결정석 가격으로 줄 세움: 고른 보스까지 보스마다 그 가격 이하인 가장 비싼 난이도를 하나씩 골라 비싼 순으로 " +
+      b.recommendMax + "개까지 (게임 제한이 아니라 싼 결정으로 판매 한도를 채우지 않게 하는 앱 기준). 익스트림은 고른 보스만");
     return items;
   }
 

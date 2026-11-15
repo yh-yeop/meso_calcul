@@ -20,7 +20,7 @@ Meso.charsView = (function(M){
   function routineText(c){
     var n = c.bosses ? c.bosses.length : 0, m = c.mbosses ? c.mbosses.length : 0;
     if (!n && !m) return "보스 미설정";
-    return "보스 " + n + "/" + B.data.weeklyLimit + (m ? ", 월간 " + m : "");
+    return "보스 " + n + (m ? ", 월간 " + m : "");
   }
 
   function render(){
@@ -192,6 +192,8 @@ Meso.charsView = (function(M){
   // 추천 구성 목록: 진행 순서 그대로 보스 × 난이도. 루틴이 있으면 그중 가장 비싼 보스를 미리 골라 둠
   function fillRecSelect(c){
     var top = null, tv = 0;
+    $("boss-rec-note").textContent = "가장 어려운 보스를 고르면 그 앞 보스를 비싼 순으로 " + B.data.recommendMax +
+      "개까지 채움 (그 가격 이하 난이도, 익스트림은 고른 보스만). 채운 뒤 하나씩 고칠 수 있음";
     (c.bosses || []).forEach(function(r){ var v = B.price("w", r.id, r.d); if (v > tv){ top = r; tv = v; } });
     $("boss-rec").innerHTML = '<option value="">추천 구성: 마지막으로 잡는 보스…</option>' + B.list("w").map(function(b){
       return Object.keys(b.p).map(function(d){
@@ -220,8 +222,6 @@ Meso.charsView = (function(M){
   function bossRows(kind, routine){
     var cur = {};
     routine.forEach(function(r){ cur[r.id] = r; });
-    // 주간 12마리가 차면 새 보스는 못 고르게 (이미 고른 보스의 난이도 변경 · 빼기는 가능)
-    var full = kind === "w" && routine.length >= B.data.weeklyLimit;
     // "고른 보스" 보기: 고른 것 + 이 시트에서 뺀 것만 (뺀 행이 바로 사라지면 되돌리기 어려움)
     var rows = B.list(kind).filter(function(b){ return bossView === "all" || cur[b.id] || touched[kind + b.id]; });
     if (!rows.length) return '<div class="note">고른 보스 없음</div>';
@@ -229,7 +229,7 @@ Meso.charsView = (function(M){
       var r = cur[b.id], diffs = Object.keys(b.p), nm = esc(b.n);
       var chips = '<button type="button" class="chip" data-k="' + kind + '" data-b="' + b.id + '" data-d="" aria-pressed="' + !r + '" aria-label="' + nm + ' 안 함">없음</button>' +
         diffs.map(function(d){
-          return '<button type="button" class="chip" data-k="' + kind + '" data-b="' + b.id + '" data-d="' + d + '" aria-pressed="' + !!(r && r.d === d) + '" aria-label="' + nm + ' ' + B.data.diffs[d] + '"' + (full && !r ? ' disabled' : '') + '>' +
+          return '<button type="button" class="chip" data-k="' + kind + '" data-b="' + b.id + '" data-d="' + d + '" aria-pressed="' + !!(r && r.d === d) + '" aria-label="' + nm + ' ' + B.data.diffs[d] + '">' +
                  B.data.diffs[d] + '</button>';
         }).join("");
       var party = r ? '<select class="bs-p" data-k="' + kind + '" data-b="' + b.id + '" aria-label="' + esc(b.n) + ' 파티 인원">' +
@@ -244,12 +244,11 @@ Meso.charsView = (function(M){
   function renderBossSheet(){
     var c = M.chars.get(bossId);
     if (!c) return;
-    var w = c.bosses || [], m = c.mbosses || [], lim = B.data.weeklyLimit;
+    var w = c.bosses || [], m = c.mbosses || [];
     $("boss-title").textContent = c.name + " 보스";
-    $("boss-sum").innerHTML = '주간 <b class="' + (w.length > lim ? "neg" : "") + '">' + w.length + "/" + lim + '</b>, 주 <b>' +
-      fmtFine(M.chars.weekly(c)) + '</b>' + (m.length ? ', 월 <b>' + fmtFine(M.chars.monthly(c)) + '</b>' : '') +
-      (w.length > lim ? '<br><span class="neg">주간 보스는 캐릭터당 ' + lim + '마리까지. ' + (w.length - lim) + '개 빼야 함</span>'
-        : w.length === lim ? '<br>' + lim + '/' + lim + '. 새 보스는 하나 빼고 고르기' : '');
+    // 캐릭터당 주간 12개 판매 제한은 2026-09-17 패치로 삭제 — 개수만 보여 줌
+    $("boss-sum").innerHTML = '주간 <b>' + w.length + '</b>개, 주 <b>' +
+      fmtFine(M.chars.weekly(c)) + '</b>' + (m.length ? ', 월 <b>' + fmtFine(M.chars.monthly(c)) + '</b>' : '');
     var views = {mine: "고른 보스 " + (w.length + m.length), all: "전체 " + (B.list("w").length + B.list("m").length)};
     Array.prototype.forEach.call($("boss-view").querySelectorAll("[data-v]"), function(btn){
       var on = btn.dataset.v === bossView;
