@@ -182,9 +182,38 @@ Meso.charsView = (function(M){
     $("boss-copy").innerHTML = '<option value="">다른 캐릭터 루틴 복사…</option>' + others.map(function(o){
       return '<option value="' + o.id + '">' + esc(o.name) + ' (' + routineText(o) + ')</option>';
     }).join("");
+    fillRecSelect(c);
     renderBossSheet();
     $("boss-sheet").showModal();
     if (revived) M.toast(c.name + ": " + GONE_CHAR);
+  }
+
+  // 추천 구성 목록: 진행 순서 그대로 보스 × 난이도. 루틴이 있으면 그중 가장 비싼 보스를 미리 골라 둠
+  function fillRecSelect(c){
+    var top = null, tv = 0;
+    (c.bosses || []).forEach(function(r){ var v = B.price("w", r.id, r.d); if (v > tv){ top = r; tv = v; } });
+    $("boss-rec").innerHTML = '<option value="">추천 구성: 마지막으로 잡는 보스…</option>' + B.list("w").map(function(b){
+      return Object.keys(b.p).map(function(d){
+        var v = b.id + ":" + d, sel = top && top.id === b.id && top.d === d;
+        return '<option value="' + v + '"' + (sel ? ' selected' : '') + '>' + esc(b.n + " " + B.data.diffs[d]) + '</option>';
+      }).join("");
+    }).join("");
+  }
+  function applyRec(){
+    var v = $("boss-rec").value, c = bossChar();
+    if (!c) return;
+    if (!v){ M.toast("마지막으로 잡는 보스를 먼저 고를 것"); $("boss-rec").focus(); return; }
+    var i = v.indexOf(":"), before = c.bosses || [];
+    var list = B.recommend(v.slice(0, i), v.slice(i + 1), before);
+    if (!list.length) return;
+    M.chars.setRoutine(bossId, "w", list);
+    bossView = "mine";
+    touched = {};
+    renderBossSheet();
+    M.toast("추천 구성으로 채움: 주간 " + list.length + "개, 주 " + fmtFine(M.chars.weekly(M.chars.get(bossId) || c)), function(){
+      M.chars.setRoutine(bossId, "w", before);
+      if ($("boss-sheet").open) renderBossSheet();
+    });
   }
 
   function bossRows(kind, routine){
@@ -339,6 +368,7 @@ Meso.charsView = (function(M){
     var r = ((k === "m" ? c.mbosses : c.bosses) || []).filter(function(x){ return x.id === sel.dataset.b; })[0];
     if (r) setBoss(k, r.id, r.d, +sel.value);
   });
+  $("boss-rec-btn").addEventListener("click", applyRec);
   $("boss-copy-btn").addEventListener("click", function(){
     var from = $("boss-copy").value;
     if (!from) return;

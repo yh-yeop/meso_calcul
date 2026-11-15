@@ -366,3 +366,35 @@ test('dropApi: 30일 넘게 못 갱신한 캐릭터의 월드 · 직업 · 레�
   assert.equal(M.chars.get('b').level, 260, '딱 30일은 아직 둠');
   assert.equal(json('meso-chars-v1').list[0].ocid, undefined, '지운 결과를 저장');
 });
+
+test('추천 구성: 고른 보스까지 그 가격 이하 난이도를 비싼 순으로 12개, 익스트림은 고른 보스만', () => {
+  const { M } = boot();
+  const r = plain(M.bosses.recommend('kaling', 'easy'));
+  assert.equal(r.length, 12);
+  assert.deepEqual(r.map(x => x.id + ':' + x.d), [
+    'lotus:hard', 'damien:hard', 'slime:chaos', 'lucid:hard', 'will:hard', 'dusk:chaos',
+    'dunkel:hard', 'jinhilla:hard', 'seren:hard', 'kalos:easy', 'adversary:easy', 'kaling:easy'
+  ], '진행 순서로 정렬, 카링 이지(3.2억) 이하만');
+  assert.ok(r.every(x => x.p === 1), '새로 채운 보스는 솔로');
+  const ex = plain(M.bosses.recommend('seren', 'extreme')).map(x => x.id + ':' + x.d);
+  assert.ok(ex.includes('seren:extreme'), '고른 보스는 익스트림 그대로');
+  assert.ok(ex.includes('lotus:hard') && !ex.includes('lotus:extreme'), '다른 보스는 익스트림 제외');
+});
+
+test('추천 구성: 원래 루틴의 파티 인원 유지, 12개가 안 되면 있는 만큼, 없는 보스 · 난이도는 빈 목록', () => {
+  const { M } = boot();
+  const r = plain(M.bosses.recommend('lucid', 'hard', [{ id: 'lucid', d: 'normal', p: 3 }]));
+  assert.equal(r.find(x => x.id === 'lucid').p, 3);
+  assert.equal(r.length, 11, '루시드까지 보스 11마리');
+  assert.ok(r.some(x => x.id === 'lotus' && x.d === 'hard'), '스우 하드(4.89억)는 루시드 하드(5.97억) 이하');
+  assert.deepEqual(plain(M.bosses.recommend('lucid', 'chaos')), []);
+  assert.deepEqual(plain(M.bosses.recommend('nope', 'hard')), []);
+});
+
+test('추천 구성: 덮어쓴 가격으로 고름', () => {
+  const { M } = boot();
+  const pick = () => plain(M.bosses.recommend('jinhilla', 'normal')).find(x => x.id === 'will').d;
+  assert.equal(pick(), 'normal', '윌 하드(7320만)는 진 힐라 노멀(6760만)보다 비싸서 제외');
+  M.bosses.setPrice('w', 'will', 'hard', 50000000);
+  assert.equal(pick(), 'hard', '하드를 5000만으로 덮어쓰면 하드');
+});

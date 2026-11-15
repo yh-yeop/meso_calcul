@@ -157,6 +157,26 @@ var Meso = (function(){
     var order = bossList(kind).map(function(b){ return b.id; });
     return out.sort(function(a, b){ return order.indexOf(a.id) - order.indexOf(b.id); });
   }
+  /* 추천 구성 (주간): "잡을 수 있는 마지막 보스 · 난이도"를 고르면, 진행 순서로 그 보스까지에서
+     보스마다 그 가격 이하인 가장 비싼 난이도를 골라 비싼 순으로 주간 한도만큼 채운다.
+     익스트림은 고른 보스 자신만 (가격보다 훨씬 어려움). prev(원래 루틴)에 있던 보스는 파티 인원을 그대로 */
+  function recommend(lastId, lastD, prev){
+    var list = BOSSES.weekly, cap = bossPrice("w", lastId, lastD), end = -1, party = {}, picks = [];
+    for (var i = 0; i < list.length; i++) if (list[i].id === lastId) end = i;
+    if (end < 0 || !cap) return [];
+    (Array.isArray(prev) ? prev : []).forEach(function(r){ if (r && r.id) party[r.id] = r.p; });
+    for (var j = 0; j <= end; j++){
+      var b = list[j], best = null, bp = 0;
+      Object.keys(b.p).forEach(function(d){
+        var v = bossPrice("w", b.id, d);
+        if (j === end ? d !== lastD : (d === "extreme" || v > cap)) return;
+        if (v > bp){ best = d; bp = v; }
+      });
+      if (best) picks.push({id:b.id, d:best, p:party[b.id] || 1, v:bp});
+    }
+    picks.sort(function(a, b){ return b.v - a.v; });
+    return cleanRoutine("w", picks.slice(0, BOSSES.weeklyLimit));
+  }
   function bossLabel(kind, r){
     var b = bossInfo(kind, r.id);
     return (b ? b.n : r.id) + " " + (BOSSES.diffs[r.d] || r.d);
@@ -523,7 +543,7 @@ var Meso = (function(){
 
   var bossApi = {
     data: BOSSES, list: bossList, info: bossInfo, price: bossPrice, share: bossShare, sum: routineSum,
-    label: bossLabel, short: bossShort,
+    label: bossLabel, short: bossShort, recommend: recommend,
     defaultPrice: function(kind, id, d){ var b = bossInfo(kind, id); return b && hasOwn(b.p, d) ? b.p[d] : 0; },
     overrides: function(){ return Object.assign({}, priceOver); },
     // 메소 단위. 0 이나 기본값과 같으면 덮어쓰기 해제
