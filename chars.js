@@ -27,12 +27,14 @@ Meso.charsView = (function(M){
     var list = M.chars.all(), tot = M.chars.totals(), box = $("ch-list");
     if (M.basis) M.basis.render("ch", false);
     $("ch-sum").textContent = list.length ? list.length + "명, 주 " + fmtFine(tot.weekly) + ", 월 " + fmtFine(tot.monthly) : "";
-    // 월드당 주 90개 판매 제한
-    var wc = M.chars.worldCounts(), over = Object.keys(wc).filter(function(w){ return wc[w] > B.data.worldLimit; });
-    $("ch-warn").hidden = !over.length;
-    if (over.length) $("ch-warn").innerHTML = over.map(function(w){
-      return "<b>" + esc(w) + "</b> 월드 루틴이 주 " + wc[w] + "개. 월드당 " + B.data.worldLimit + "개까지만 팔 수 있어 계산보다 덜 받음";
-    }).join("<br>");
+    // 메이플ID당 주 90개 판매 제한 (이벤트 월드는 따로)
+    var sc = M.chars.sellCounts(), lim = B.data.sellLimit, warn = [];
+    if (sc.main > lim) warn.push("캐릭터 주간 루틴을 다 합치면 결정석 주 <b>" + sc.main + "개</b>. 메이플ID당 " + lim + "개까지만 팔 수 있어 계산보다 덜 받음");
+    Object.keys(sc.events).forEach(function(w){
+      if (sc.events[w] > lim) warn.push("<b>" + esc(w) + "</b> 루틴이 주 " + sc.events[w] + "개. 이벤트 월드도 " + lim + "개까지만 팔 수 있음");
+    });
+    $("ch-warn").hidden = !warn.length;
+    if (warn.length) $("ch-warn").innerHTML = warn.join("<br>");
     if (!list.length){
       // 추가 버튼은 카드 아래 줄(직접 추가 · Open API)에 있으니 여기엔 두지 않음
       box.innerHTML = '<div class="empty"><h4>아직 캐릭터가 없음</h4>아래에서 직접 추가하거나 Open API로 불러오면, 도는 보스로 주·월 수익이 자동 계산됨</div>';

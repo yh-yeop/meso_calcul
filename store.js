@@ -109,7 +109,7 @@ var Meso = (function(){
   /* ---------- 보스 결정석 ----------
      가격표는 bosses.js, 사용자가 ⚙에서 덮어쓴 값은 meso-boss-prices {"lucid:hard": 메소}.
      kind 는 "w"(주간) | "m"(월간) */
-  var BOSSES = window.MESO_BOSSES || {weekly:[], monthly:[], diffs:{}, weeklyLimit:12, worldLimit:90};
+  var BOSSES = window.MESO_BOSSES || {weekly:[], monthly:[], diffs:{}, weeklyLimit:12, sellLimit:90};
   var priceOver = cleanPrices(read(KEYS.prices));
   function hasOwn(o, k){ return Object.prototype.hasOwnProperty.call(o, k); }
   // 백업 · 저장값은 믿지 않음: 있는 보스 · 난이도의 유한한 양수만 남김
@@ -177,6 +177,7 @@ var Meso = (function(){
     picks.sort(function(a, b){ return b.v - a.v; });
     return cleanRoutine("w", picks.slice(0, BOSSES.weeklyLimit));
   }
+  function isEventWorld(w){ return /챌린저스|스페셜/.test(w || ""); }
   function bossLabel(kind, r){
     var b = bossInfo(kind, r.id);
     return (b ? b.n : r.id) + " " + (BOSSES.diffs[r.d] || r.d);
@@ -449,10 +450,15 @@ var Meso = (function(){
     },
     weekly: charWeekly,
     monthly: charMonthly,
-    // 월드마다 주간 루틴 결정석 수 (월드당 주 90개 제한 확인용, 월드를 아는 캐릭터만)
-    worldCounts: function(){
-      var out = {};
-      chars.forEach(function(c){ if (c.world && c.bosses) out[c.world] = (out[c.world] || 0) + c.bosses.length; });
+    /* 주간 루틴 결정석 수 — 주 90개 판매 제한 확인용. 2026-11-19 패치부터 제한은 메이플ID당이라 여기 캐릭터를 모두 한 ID로 보고 합침.
+       이벤트 월드(챌린저스 · 스페셜)는 판매 수량을 따로 세므로 월드마다 따로. 월드를 모르는 캐릭터는 일반 쪽에 넣음 */
+    sellCounts: function(){
+      var out = {main: 0, events: {}};
+      chars.forEach(function(c){
+        if (!c.bosses) return;
+        if (isEventWorld(c.world)) out.events[c.world] = (out.events[c.world] || 0) + c.bosses.length;
+        else out.main += c.bosses.length;
+      });
       return out;
     },
     // 공유 링크엔 계산된 주보 · 월보를 실음 (받는 쪽은 직접 입력값으로)

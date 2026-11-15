@@ -13,13 +13,14 @@ var MesoBasis = (function(){
 
   /* 보스 수익 기준. b = MESO_BOSSES, over = ⚙에서 덮어쓴 가격 개수 */
   function bossItems(b, over){
-    var lim = b.weeklyLimit, world = b.worldLimit, items = [];
+    var lim = b.weeklyLimit, sell = b.sellLimit, items = [];
     items.push("결정석 가격은 <b>" + esc(dot(b.version)) + "</b> 패치 기준" +
       (b.source ? '<span class="basis-src">출처: ' + esc(b.source) + "</span>" : ""));
     if (over > 0) items.push('<a href="#settings">⚙ 설정</a>에서 고친 가격 <b>' + over + "개</b>는 기본값 대신 고친 값으로 계산");
     items.push("파티로 잡으면 결정석 가격 ÷ 인원, 소수점 아래는 버림");
     items.push("주간 보스는 캐릭터당 주 <b>" + lim + "회</b>까지 고를 수 있음");
-    items.push("결정석은 월드당 주 <b>" + world + "개</b>까지만 팔 수 있음. 넘어도 계산에서 빼지는 않고 캐릭터 화면에 경고만 띄움 (월드를 아는 캐릭터만 셈)");
+    items.push("결정석은 메이플ID당 주 <b>" + sell + "개</b>까지만 팔 수 있음 (11/19 패치부터. 챌린저스 · 스페셜 같은 이벤트 월드는 따로). " +
+      "넘어도 계산에서 빼지는 않고 캐릭터 화면에 경고만 띄움. 여기 있는 캐릭터를 모두 한 메이플ID로 보고 셈");
     items.push("주간 보스는 <b>목요일 0시</b>, 월간 보스는 <b>매월 1일</b> 리셋. 홈의 이번 주 보스 체크도 이 기준");
     items.push("홈에서 체크한 보스는 체크한 때의 금액으로 장부에 남음. 나중에 가격 · 파티를 바꿔도 다시 계산하지 않음");
     items.push("보스를 안 고른 캐릭터는 직접 넣은 주 · 월 수익을 그대로 씀");

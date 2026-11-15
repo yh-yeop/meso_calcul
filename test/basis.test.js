@@ -22,7 +22,7 @@ test('보스 기준: 가격 기준일 · 출처 · 주간 한도 · 월드 한�
   assert.ok(t.includes(B.version.replace(/-/g, '.')));
   assert.ok(t.includes('출처:'));
   assert.ok(t.includes('주 ' + B.weeklyLimit + '회'));
-  assert.ok(t.includes('주 ' + B.worldLimit + '개'));
+  assert.ok(t.includes('메이플ID당 주 ' + B.sellLimit + '개'));
   assert.ok(t.includes('소수점 아래는 버림'));
   assert.ok(t.includes('목요일 0시') && t.includes('매월 1일'));
   assert.ok(t.includes('익스트림은 고른 보스만'));
@@ -31,7 +31,7 @@ test('보스 기준: 가격 기준일 · 출처 · 주간 한도 · 월드 한�
 });
 
 test('값을 바꾸면 문장도 바뀜 — 화면에 숫자를 박지 않음', () => {
-  const B = Object.assign({}, bosses(), { version: '2030-01-02', weeklyLimit: 14, worldLimit: 120, source: '' });
+  const B = Object.assign({}, bosses(), { version: '2030-01-02', weeklyLimit: 14, sellLimit: 120, source: '' });
   const t = text(Basis.html({ bosses: B, over: 0 }));
   assert.ok(t.includes('2030.01.02'));
   assert.ok(t.includes('주 14회') && t.includes('주 14개까지'));

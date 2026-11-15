@@ -220,15 +220,16 @@ test('결정석 가격 덮어쓰기가 합계에 바로 반영되고, 기본값�
   assert.equal(M.chars.weekly(M.chars.get('a')), 0.597);
 });
 
-test('루틴 복사와 월드별 결정석 수', () => {
+test('루틴 복사와 판매 제한용 결정석 수 (메이플ID 합계, 이벤트 월드는 따로)', () => {
   const chars = { v: 1, list: [
     { id: 'a', name: 'A', world: '베라', bosses: [{ id: 'lucid', d: 'hard', p: 1 }, { id: 'will', d: 'hard', p: 1 }] },
-    { id: 'b', name: 'B', world: '베라' }, { id: 'c', name: 'C', world: '스카니아', bosses: [{ id: 'seren', d: 'hard', p: 1 }] }
+    { id: 'b', name: 'B', world: '베라' }, { id: 'c', name: 'C', world: '스카니아', bosses: [{ id: 'seren', d: 'hard', p: 1 }] },
+    { id: 'd', name: 'D', bosses: [{ id: 'dusk', d: 'chaos', p: 1 }] }, { id: 'e', name: 'E', world: '챌린저스2', bosses: [{ id: 'will', d: 'hard', p: 1 }] }
   ] };
   const { M } = boot({ 'meso-chars-v1': JSON.stringify(chars) });
   M.chars.copyRoutine('a', 'b');
   assert.deepEqual(plain(M.chars.get('b').bosses), plain(M.chars.get('a').bosses));
-  assert.deepEqual(plain(M.chars.worldCounts()), { '베라': 4, '스카니아': 1 });
+  assert.deepEqual(plain(M.chars.sellCounts()), { main: 6, events: { '챌린저스2': 1 } });
 });
 
 /* ---------- 입력 방어 · 중복 · 되돌리기 ---------- */
