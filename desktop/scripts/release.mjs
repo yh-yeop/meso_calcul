@@ -4,7 +4,7 @@
 //   node scripts/release.mjs --dry-run  무엇을 올릴지만 보기
 //
 // 먼저 빌드해 둔다: npm run build (Windows), 1.1.0 부터는 npm run build:android 도.
-// - 태그 MesoCalc-v<버전>, 제목 "메소노믹스 <버전>", 본문 releases/v<버전>.md
+// - 태그 MesoCalc-v<버전>, 제목 "메소노믹스 <표시 버전>"(package.json displayVersion, 없으면 버전), 본문 releases/v<버전>.md
 // - Windows MesoCalc-Setup-<버전>.exe, Android MesoCalc-<버전>.apk, 각각 .sha256
 // - manifest · 다운로드 표 · 소개 사이트는 releases 저장소의 Actions 가 맞춘다.
 //   앱의 업데이트 확인과 웹의 다운로드 버튼은 그 manifest(Pages 사본)를 읽는다.
@@ -77,7 +77,10 @@ if (platforms.includes('android')) {
   files.push(...stage(apk, `${APP}-${version}.apk`));
 }
 
-const title = `${NAME} ${version.replace(/-beta(?:\.(\d+))?$/, (_, n) => ` 베타${n ? ` ${n}` : ''}`)}`;
+// 패치노트 · 릴리스 제목의 버전: package.json displayVersion (메소노믹스 이름으로 다시 센 번호, 1.3.0 = 1.0).
+// 앱의 업데이트 비교 · 태그 · 파일 이름은 실제 version 을 쓴다 (낮추면 옛 앱이 업데이트를 못 받음).
+const shown = pkg.displayVersion || version;
+const title = `${NAME} ${shown.replace(/-beta(?:\.(\d+))?$/, (_, n) => ` 베타${n ? ` ${n}` : ''}`)}`;
 console.log(`\n${tag}  "${title}"  → ${REPO}${beta ? ' (프리릴리스)' : ''}`);
 
 let exists = true;
