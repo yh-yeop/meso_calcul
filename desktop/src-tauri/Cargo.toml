@@ -1,6 +1,6 @@
 [package]
 name = "meso-calcul"
-version = "1.1.0"
+version = "1.2.0"
 description = "메소노믹스 설치판 (Windows · Android)"
 edition = "2021"
 publish = false

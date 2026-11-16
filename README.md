@@ -2,7 +2,7 @@
 
 (옛 이름: 메소 계산기) 메이플스토리 메소를 한곳에서 관리하는 웹서비스. **어디서 벌고 어디에 썼는지 적는 장부**, **목표 메소 도달일 계산기**, 그 둘이 같이 쓰는 **캐릭터별 보스 수익**을 탭 하나씩으로 묶음.
 
-**→ https://yh-yeop.github.io/meso_calcul/**
+**→ https://yh-yeop.github.io/mesonomics/** (2026-11-16 전 주소 `yh-yeop.github.io/meso_calcul/` 은 새 주소로 넘어감 — 넘김 페이지는 `yh-yeop.github.io` 저장소의 `meso_calcul/`)
 
 빌드 없음. 의존성 없음. 서버 없음. `index.html`을 그냥 브라우저로 열어도 동작함(Open API · 오프라인 캐시만 http(s)에서).
 
@@ -148,7 +148,7 @@ Settings → Pages → Source를 **Deploy from a branch**, 브랜치 `main` / �
 
 PWA와 별개로 설치 파일로 까는 앱. [Tauri 2](https://tauri.app)로 감쌈 — Windows 설치 파일 1MB 남짓(시스템 WebView2), Android는 APK. 받는 곳은 [yh-yeop/releases](https://github.com/yh-yeop/releases/releases?q=MesoCalc&expanded=true) (앱 id `MesoCalc`). Android는 **1.1.0부터**.
 
-- 앱 창은 **배포된 사이트(`https://yh-yeop.github.io/meso_calcul/`)를 그대로 연다.** 사이트를 고쳐 푸시하면 앱도 다음 실행부터 따라 바뀜(앱을 다시 낼 필요 없음). 오프라인은 사이트의 서비스 워커 캐시(첫 실행만 인터넷 필요).
+- 앱 창은 **배포된 사이트(`https://yh-yeop.github.io/mesonomics/`)를 그대로 연다.** 사이트를 고쳐 푸시하면 앱도 다음 실행부터 따라 바뀜(앱을 다시 낼 필요 없음). 오프라인은 사이트의 서비스 워커 캐시(첫 실행만 인터넷 필요).
 - Google 로그인 · 동기화: Windows는 웹과 똑같이 됨(로그인 팝업만 앱 안에 띄움). **Android는 Google이 웹뷰 로그인을 막아서 안 됨** — 설정에 안내가 뜨고, 백업 · 불러오기로 옮김.
 - 데이터는 앱 전용 저장소라 브라우저와 따로. 바깥 링크는 기본 브라우저로 연다 (`src-tauri/src/lib.rs`의 `in_app`).
 - 앱이 주입하는 `window.MesoApp` (`{platform, version, releases, checkUpdate()}`)으로 웹이 설치판인지 안다. `checkUpdate()`는 가짜 주소 `https://meso-app.invalid/check-update`로 이동하고 앱이 그걸 가로챈다 — 원격 페이지에 IPC 권한을 열지 않으려고.
@@ -184,7 +184,7 @@ npm run release          # yh-yeop/releases 에 MesoCalc-v<버전> 으로 올림
 ## 로컬에서
 
 ```
-git clone https://github.com/yh-yeop/meso_calcul.git
+git clone https://github.com/yh-yeop/mesonomics.git
 ```
 
 `index.html`을 브라우저로 열면 됨. 서버 불필요. 서비스 워커만 `file://`에서 안 돌 뿐 나머지는 똑같음.

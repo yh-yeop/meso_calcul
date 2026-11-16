@@ -9,7 +9,7 @@ mod version;
 use tauri::{Url, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_opener::OpenerExt;
 
-const SITE: &str = "https://yh-yeop.github.io/meso_calcul/";
+const SITE: &str = "https://yh-yeop.github.io/mesonomics/";
 /// 웹이 앱에 부탁할 때 이동하는 가짜 주소. on_navigation 이 가로채고 실제로는 이동하지 않는다
 /// (원격 페이지에 IPC 권한을 열지 않으려고). 웹 쪽은 appinfo.js 가 부르는 MesoApp.checkUpdate().
 const BRIDGE_HOST: &str = "meso-app.invalid";
@@ -23,10 +23,16 @@ fn in_app(url: &Url) -> bool {
         return false;
     }
     let host = url.host_str().unwrap_or("");
-    (host == "yh-yeop.github.io" && url.path().starts_with("/meso_calcul"))
+    (host == "yh-yeop.github.io" && site_path(url.path()))
         || host == "meso-save.firebaseapp.com"
         || host == "accounts.google.com"
         || (host.ends_with(".google.com") && url.path().contains("signin"))
+}
+
+/// 앱 창 안에서 여는 사이트 경로. 옛 주소(/meso_calcul)는 2026-11 저장소 이름을 바꾼 뒤
+/// 새 주소로 넘기는 안내 페이지만 남아 있다(옛 설치판도 거기서 업데이트를 받게)
+fn site_path(p: &str) -> bool {
+    ["/mesonomics", "/meso_calcul"].iter().any(|b| p == *b || p.starts_with(&format!("{b}/")))
 }
 
 /// 페이지가 열릴 때마다 먼저 도는 스크립트 — 웹이 설치판인지, 몇 버전인지 알게 한다
@@ -119,13 +125,16 @@ mod tests {
     #[test]
     fn links() {
         let ok = |s: &str| in_app(&s.parse().unwrap());
-        assert!(ok("https://yh-yeop.github.io/meso_calcul/#home"));
+        assert!(ok("https://yh-yeop.github.io/mesonomics/#home"));
+        assert!(ok("https://yh-yeop.github.io/mesonomics"));
+        assert!(ok("https://yh-yeop.github.io/meso_calcul/"));
+        assert!(!ok("https://yh-yeop.github.io/mesonomicsx/"));
         assert!(ok("https://meso-save.firebaseapp.com/__/auth/handler?x=1"));
         assert!(ok("https://accounts.google.com/o/oauth2/auth"));
         assert!(ok("about:blank"));
         assert!(!ok("https://yh-yeop.github.io/#maple"));
         assert!(!ok("https://openapi.nexon.com/ko/my-application/"));
-        assert!(!ok("http://yh-yeop.github.io/meso_calcul/"));
+        assert!(!ok("http://yh-yeop.github.io/mesonomics/"));
     }
 
     #[test]

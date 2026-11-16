@@ -5,7 +5,7 @@
   "version": "../package.json",
   "identifier": "io.github.yh-yeop.meso-calcul",
   "build": {
-    "frontendDist": "https://yh-yeop.github.io/meso_calcul/"
+    "frontendDist": "https://yh-yeop.github.io/mesonomics/"
   },
   "app": {
     "windows": [],

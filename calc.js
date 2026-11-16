@@ -504,7 +504,7 @@ Meso.calc = (function(M){
       }
       last = {hitDate:hitDate, days:g.days, goal:c.goal, inc:inc,
               skipN: c.skipWeeks ? Object.keys(c.skipWeeks).length : 0, pushed: pushed || 0,
-              url: location.host ? location.host + location.pathname.replace(/index\.html$/, "") : "yh-yeop.github.io/meso_calcul/"};
+              url: location.host ? location.host + location.pathname.replace(/index\.html$/, "") : "yh-yeop.github.io/mesonomics/"};
       $("out-days").innerHTML = "<b>" + g.days + "일 뒤</b>, 목표 " + fmtEok(c.goal) +
         ', 여유 +' + fmtEok(over) + skipNote;
     }
