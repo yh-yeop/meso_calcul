@@ -42,12 +42,19 @@ Meso.news = (function(M){
     $("news-sub").textContent = LIST[0][0].replace(/-/g, ".");
   }
 
+  // 본 소식 표시 = "최신 날짜#그 날짜의 소식 개수". 같은 날 소식이 더 붙어도 점이 뜨게
+  // (예전엔 날짜만 저장해서 같은 날 추가분을 놓쳤음. 옛 값 "2026-11-15"도 다르니 점이 뜸)
+  function stamp(){
+    var d = LIST[0][0];
+    return d + "#" + LIST.filter(function(n){ return n[0] === d; }).length;
+  }
+
   // 처음 온 사람에게는 점을 찍지 않음 (전부 새 소식이라 의미가 없음)
   function mark(){
-    var btn = $("btn-settings"), seen = get(), latest = LIST[0][0];
+    var btn = $("btn-settings"), seen = get(), latest = stamp();
     if (/^#settings/.test(location.hash)){ if (seen !== latest) set(latest); seen = latest; }
     else if (!seen){ set(latest); seen = latest; }
-    if (btn) btn.classList.toggle("has-new", seen < latest);
+    if (btn) btn.classList.toggle("has-new", seen !== latest);
   }
 
   render();
