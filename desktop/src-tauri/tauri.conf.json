@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "메소 계산기",
+  "productName": "메소노믹스",
   "mainBinaryName": "meso-calcul",
   "version": "../package.json",
   "identifier": "io.github.yh-yeop.meso-calcul",
@@ -21,7 +21,8 @@
       "nsis": {
         "installMode": "currentUser",
         "languages": ["Korean"],
-        "displayLanguageSelector": false
+        "displayLanguageSelector": false,
+        "installerHooks": "./windows/hooks.nsh"
       }
     }
   }

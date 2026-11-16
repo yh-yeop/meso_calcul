@@ -4,7 +4,7 @@
 //   node scripts/release.mjs --dry-run  무엇을 올릴지만 보기
 //
 // 먼저 빌드해 둔다: npm run build (Windows), 1.1.0 부터는 npm run build:android 도.
-// - 태그 MesoCalc-v<버전>, 제목 "메소 계산기 <버전>", 본문 releases/v<버전>.md
+// - 태그 MesoCalc-v<버전>, 제목 "메소노믹스 <버전>", 본문 releases/v<버전>.md
 // - Windows MesoCalc-Setup-<버전>.exe, Android MesoCalc-<버전>.apk, 각각 .sha256
 // - manifest · 다운로드 표 · 소개 사이트는 releases 저장소의 Actions 가 맞춘다.
 //   앱의 업데이트 확인과 웹의 다운로드 버튼은 그 manifest(Pages 사본)를 읽는다.
@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const REPO = 'yh-yeop/releases';
 const APP = 'MesoCalc';
-const NAME = '메소 계산기';
+const NAME = '메소노믹스'; // 1.2.0 까지는 '메소 계산기'
 const dry = process.argv.includes('--dry-run');
 
 const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));

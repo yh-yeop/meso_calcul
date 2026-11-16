@@ -10,7 +10,7 @@
 - [PC 전달] 2026-11-14: Firebase 콘솔 — App Check(reCAPTCHA) 켜기, 결제 예산 알림, 승인된 도메인 점검. 실제 계정으로 탈퇴 한 번 시험(테스트 계정).
 - 다음(정식 서비스 결정 대기): 자체 도메인 · 광고 수익 · 스토어 배포(Play · MS Store) 여부.
 - 2026-11-14: **서비스 이름 → 메소노믹스(Mesonomics)**. 웹 제목 · 헤더 · manifest · legal · README, 설치판 소스(창 제목 · 업데이트 안내 문구)를 바꿈. 검색용 설명엔 "메소 계산기" 유지. sw v23. 앱 식별자 · 저장소 주소 · 릴리스 접두어(MesoCalc)는 업데이트가 끊기지 않게 그대로.
-- [PC 전달] 2026-11-14: 설치판 `tauri.conf.json` productName("메소 계산기")은 그대로 둠 — 바꾸면 Windows 설치 폴더 · 제거 항목이 달라져 자동 업데이트가 옛 앱 옆에 따로 설치될 수 있음. 다음 릴리스 때 이름까지 바꿀지(옛 설치 정리 방법 포함) 결정.
+- [PC 전달] 2026-11-14 (결정됨 2026-11-16: 바꿈, 1.3.0): 설치판 `tauri.conf.json` productName("메소 계산기")은 그대로 둠 — 바꾸면 Windows 설치 폴더 · 제거 항목이 달라져 자동 업데이트가 옛 앱 옆에 따로 설치될 수 있음. 다음 릴리스 때 이름까지 바꿀지(옛 설치 정리 방법 포함) 결정.
 - 요청(소개 사이트 담당): `yh-yeop.github.io` `js/data.js` meso 항목 제목을 "메소노믹스"로. 요청(releases): `apps.json` MesoCalc 표시 이름을 "메소노믹스"로.
 - 2026-11-14: 넥슨 Open API 정식 서비스 요건 조사 → `docs/openapi-design.md` "정식 서비스 체크리스트". 코드로 할 일: 불러온 캐릭터 정보 30일 안 자동 갱신, API 데이터 근처 표기.
 - [PC 전달] 2026-11-14: Open API 서비스 단계 앱 등록(넥슨 로그인 필요 — 서비스명 메소노믹스 · URL · 소개 · 대표 이미지), 광고를 붙일 거면 help_openapi@nexon.co.kr 로 영리 이용 문의. → 2026-11-16 등록 처리함(기존 서비스 단계 앱 68286을 메소노믹스로 수정: 소개 · 태그 calculation/history/character · 대표 이미지 · 스크린샷 2장, `docs/openapi/`). 남은 것: 광고를 붙일 때 영리 이용 문의.
@@ -29,3 +29,4 @@ ename-to-mesonomics.ps1` 실행. 작업 폴더(→ `C:\App\web_projects\mesonomi
 - [PC 전달] 2026-11-16: 검색 등록 — 구글 서치 콘솔 · 네이버 서치어드바이저에 `https://yh-yeop.github.io/mesonomics/` 등록하고 sitemap `https://yh-yeop.github.io/mesonomics/sitemap.xml` 제출(확인용 메타 태그가 필요하면 값을 알려 주면 넣음). 홈 화면에 옛 주소로 설치한 웹앱은 새 주소에서 다시 설치.
 - 2026-11-16 **다음 세션 이어받기**: 폴더 이름을 바꿨으면 `C:\App\web_projects\mesonomics`에서 새 세션. 남은 일 — ① 11/19 패치 당일 공지 확인 → 결정석 가격 · 보스 변경을 `bosses.js` · 새 소식에 반영(가격 출처 줄 · basis 시험도) ② 서치 콘솔 · 네이버 확인 메타 태그를 받으면 `index.html` `<head>`에 넣기 ③ 설치판 앱 이름(productName '메소 계산기', releases apps.json · release.mjs NAME) 바꿀지 사용자 결정 대기 ④ 옛 주소 넘김 폴더(`yh-yeop.github.io/meso_calcul/`)는 옛 설치판이 남아 있는 동안 지우지 말 것.
 - 2026-11-16: 새 폴더에서 이어받음. 남은 일은 모두 대기 — ① 11/19 패치 공지(그날 확인) ② 검색 등록 확인 메타 태그(사용자) ③ 설치판 앱 이름 결정(사용자).
+- 2026-11-16: **설치판 앱 이름 → 메소노믹스 (1.3.0, 빌드만 · 아직 안 올림)**. productName · Android app_name · release.mjs NAME. NSIS 설치 훅 `desktop/src-tauri/windows/hooks.nsh`(UTF-8 BOM 유지)이 옛 "메소 계산기" 설치를 조용히 제거하고, 업데이트 모드에서도 시작 메뉴 · (있었으면) 바탕 화면 바로가기를 새로 만듦. 이 PC에서 1.2.0 설치 → 1.3.0 `/P /UPDATE` 로 옮겨짐 · 바로가기 대상 확인 후 시험 설치 제거. 앱 데이터는 식별자 폴더라 그대로. 다음: `npm run release` (사용자 허가 후), releases `apps.json` 표시 이름 · 새 소식.
